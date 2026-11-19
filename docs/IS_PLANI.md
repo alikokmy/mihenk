@@ -69,6 +69,17 @@ Ajanın bağlamı dolunca durması, işin durumu bağlamın içinde tutulduğu i
 Sınır: kullanıcının kendi açtığı etkileşimli oturumda (ör. bir CLI penceresi) bağlamı dışarıdan sıkıştıramayız. Orada yardım üç şeyle
 sınırlıdır: küçük araç çıktısı, varsa aracın kancası, skill metni. Kesintisiz çalışma garantisi sürücü kipindedir.
 
+## İlke 3: kodlama bilmeyen kullanıcı için kolay; yönetici izni istemez (kullanıcı isteği, 2026-11-20)
+
+Kullanıcının sözü: "program kodlamayı bilmeyen birisi için de kolayca kullanılacak bir program olmalı, mümkünse admin isteği olmamalı."
+
+- **Yönetici izni yok:** kurulum ve çalışma yalnız kullanıcının kendi klasörlerine yazar; küresel ayar, sistem servisi, sürücü kurulmaz.
+  Denetimi: `test/kur.test.ts` "kur: yalniz hedef projenin icine yazar". Bugün gereken tek ön koşul Node.js'tir (kullanıcı düzeyinde kurulur).
+- **Tek adım:** kullanıcının yapacağı iş bir komut ya da bir çift tıklamadır; ayar dosyası elle düzenletilmez. Bugün kurulum bir komut
+  satırı komutudur; çift tıklanır kurulum ve sürücünün tek adımda başlaması Aşama 3'ün ölçütüne yazıldı.
+- **Düz dil:** programın kullanıcıya yazdığı her ileti kısa ve Türkçedir; ne olduğunu ve sıradaki adımı söyler.
+- Sınır: ajan araçlarının kendisini (Claude Code, Codex, Antigravity) kurmak ve onlarda oturum açmak kullanıcının işidir.
+
 ## Yöntemden ne alıyoruz, ne almıyoruz
 
 metamorfik denetimi (2026-11-18) hangi alışkanlığın kazandırdığını, hangisinin yalnız yük olduğunu gösterdi. mihenk yalın olanı taşır.
@@ -105,7 +116,7 @@ Her aşamanın kabul ölçütü işe başlamadan yazılıdır; aşama, ölçüt 
 | 0 | Depo, araştırma, bu plan | **tamam** (gizli depo, push edildi) |
 | 1 | Defter çekirdeği: MCP sunucusu, durum makinesi, doğrulamayı sunucunun koşması, sınırlı çıktı | **tamam, bir açık kalemle** (2026-11-19; `npm test`: 49 test geçti). Ölçüt 1 ve 2 gösterildi. Ölçüt 3 iki bağımsız MCP istemcisiyle gösterildi; gerçek bir ajan aracıyla gösterim açık (bkz. "Aşama 1 sonucu") |
 | 2 | Yöntem paketi: 6-8 skill + AGENTS.md; her kuralın denetimiyle birlikte; Claude Code, Codex, Gemini CLI | **sürüyor** (2026-11-19): paket, kural tablosu, kurulum komutu ve kabul betiği hazır (`npm test`: 65 test geçti). Ölçüt gösterilemedi: hiçbir araçta açık oturum yok (bkz. "Aşama 2"). Ölçüt: üç araçta skill'ler listeleniyor; aynı küçük görevde üçü de defteri kullanıyor |
-| 3 | Sürücü: iş listesi döngüsü, taze oturum, devir notu, bağlam bütçesi, zaman aşımı, isteğe bağlı uyanık tutma; önce iki araç | on küçük işlik liste kullanıcı girişi olmadan bitiyor; yapay büyük çıktılı işte oturum devri çalışıyor; takılan iş listeyi durdurmuyor; uyku açıkken sürücü uyarıyor, uyanık tutma seçeneği açıkken sistem uykuya geçmiyor |
+| 3 | Sürücü: iş listesi döngüsü, taze oturum, devir notu, bağlam bütçesi, zaman aşımı, isteğe bağlı uyanık tutma; önce iki araç | on küçük işlik liste kullanıcı girişi olmadan bitiyor; yapay büyük çıktılı işte oturum devri çalışıyor; takılan iş listeyi durdurmuyor; uyku açıkken sürücü uyarıyor, uyanık tutma seçeneği açıkken sistem uykuya geçmiyor; kurulum ve sürücü tek adımda (çift tıklama ya da tek komut) başlıyor, yönetici izni istemiyor |
 | 4 | Uyum testleri: senaryolar ve tuzak görevler; araç başına uyum oranı raporu | her desteklenen araç için rapor üretiliyor; kasıtlı bozuk ajan taklidi yakalanıyor |
 | 5 | Maliyet ve süre: kullanım verisini işe bağlama | kapanan her işte süre ve maliyet dolu; elle hesapla örneklemde uyuşuyor |
 | 6 | Öneri: iş türü × ajan / model başına doğrulanmış başarı, uyum, süre, maliyet; belirsizlikle birlikte | sentetik defterde bilinen en iyi seçeneği buluyor; az veride "veri yetersiz" diyor |
@@ -155,7 +166,11 @@ skill metniyle tablonun ayrışmasını ve bu tablonun eksik kalmasını reddede
 | Claude Code | `.claude/skills/` | `.mcp.json` (`mcpServers`) | `CLAUDE.md` içinde `@AGENTS.md` | code.claude.com/docs/en/skills, /mcp, /memory |
 | Codex CLI | `.agents/skills/` | `.codex/config.toml` (`[mcp_servers.mihenk]`) | `AGENTS.md` | learn.chatgpt.com/docs/build-skills, /extend/mcp |
 | Gemini CLI | `.agents/skills/` | `.gemini/settings.json` (`mcpServers`) | `context.fileName` ile `AGENTS.md` | geminicli.com/docs/cli/skills, /tools/mcp-server |
-| Antigravity CLI | `.agents/skills/` | `.agents/mcp_config.json` (`mcpServers`) | `AGENTS.md` | antigravity.google/docs/skills.md, /mcp |
+| Antigravity | `.agents/skills/` | `.agents/plugins/mihenk/` (`plugin.json` + `mcp_config.json`) | `AGENTS.md` | kurulu sürümün (44.9.1) kendi belgesi: `agy-customizations` skill'i |
+
+Antigravity notu (2026-11-20): makinede yalnız masaüstü uygulaması var, komut satırı aracı (`agy`) yok; başsız koşulamıyor. Web belgesi
+proje düzeyinde `.agents/mcp_config.json` diyordu; kurulu sürümün kendi belgesi MCP sunucusunun yalnız küresel ayarda ya da bir eklentinin
+içinde tanımlandığını söylüyor. Küresel ayara dokunmamak için proje içi eklenti yolu seçildi. Doğru olup olmadığını elle deneme gösterecek.
 
 **Plana etkisi olan bulgu:** Gemini CLI'nin belgeleri, ücretsiz katman ve Google One kullanıcıları için aracın 18 Haziran 2026'da
 Antigravity CLI ile değiştirildiğini söylüyor; Gemini CLI yalnız ücretli API anahtarı ve kurumsal lisansla sürüyor. Bu yüzden kurulum
@@ -166,9 +181,12 @@ dizine kopyalar, paketi kurar, aracı başsız kipte çalıştırır ve sonucu a
 Bugünkü sonuç: paketli Claude Code "Not logged in" dedi, betik "ATLANDI" yazdı. Codex ve Gemini / Antigravity için başsız komut henüz
 yazılmadı: araçlar kurulu olmadığından komutları denenemedi, denenmemiş komut yazılmadı.
 
-**Aşamayı kapatmak için kullanıcıdan gereken:** (1) Claude Code'da komut satırı oturumu (`claude` çalıştırıp `/login`) ya da masaüstü
-uygulamasında bu depoda `mihenk` sunucusunu onaylamak; (2) Codex CLI ile Gemini CLI ya da Antigravity CLI'yi kurup oturum açmak.
-Araç kurmak küresel yazılım kurmaktır; ajan bunu kendiliğinden yapmaz.
+Başsız kipi olmayan araç için betik iki adımdır: `--asama hazirla` deneme projesini `deneme/<araç>/` altına (git dışı) kurar ve
+kullanıcıya üç satırlık yönerge yazar; kullanıcı görevi araçta verir; `--asama denetle` sonucu defterden okur.
+
+**Aşamayı kapatmak için kullanıcıdan gereken:** (1) Antigravity: deneme projesi hazır (`deneme/antigravity`); klasörü açıp görevi vermek.
+(2) Claude Code: komut satırı oturumu (`claude` çalıştırıp `/login`). (3) Üçüncü araç (Codex CLI) kurulu değil; kurmak küresel yazılım
+kurmaktır, ajan bunu kendiliğinden yapmaz.
 
 | Kod | Madde | Skill | Durum |
 |---|---|---|---|

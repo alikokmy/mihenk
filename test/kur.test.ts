@@ -30,7 +30,9 @@ test('kur: skiller iki dizine kurulur ve resmi denetleyiciden gecer', async () =
 test('kur: her aracin MCP ayari kendi dosyasina, kendi biciminde yazilir', () => {
   const h = hedef();
   kur(h);
-  for (const dosya of ['.mcp.json', '.gemini/settings.json', '.agents/mcp_config.json']) {
+  // Antigravity proje duzeyinde MCP'yi eklenti icinden okur: plugin.json isaret dosyasidir.
+  assert.equal(JSON.parse(oku(h, '.agents/plugins/mihenk/plugin.json')).name, 'mihenk');
+  for (const dosya of ['.mcp.json', '.gemini/settings.json', '.agents/plugins/mihenk/mcp_config.json']) {
     const sunucu = JSON.parse(oku(h, dosya)).mcpServers.mihenk;
     assert.equal(sunucu.command, 'node', dosya);
     assert.match(sunucu.args[0], /bin\.js$/, dosya);
@@ -90,6 +92,15 @@ test('kur: yalniz secilen araca kurar', () => {
   assert.ok(!existsSync(join(h, '.agents')));
   assert.ok(!existsSync(join(h, '.codex')));
   assert.ok(!existsSync(join(h, '.gemini')));
+});
+
+test('kur: yalniz hedef projenin icine yazar (kuresel ayar, yonetici izni gerektiren yer yok)', () => {
+  const h = hedef();
+  const sonuc = kur(h);
+  for (const goreli of [...sonuc.yazilan, ...sonuc.degismeyen]) {
+    assert.ok(!goreli.startsWith('..') && !/^([A-Za-z]:|[\\/])/.test(goreli), `proje disina yazildi: ${goreli}`);
+    assert.ok(existsSync(join(h, goreli)), `yazildi denen dosya yok: ${goreli}`);
+  }
 });
 
 test('kur: bozuk JSON ayar dosyasini ezmez, hata verir', () => {

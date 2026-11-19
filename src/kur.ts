@@ -136,7 +136,12 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
   }
 
   if (araclar.includes('antigravity')) {
-    jsonGuncelle('.agents/mcp_config.json', (n) => {
+    // Antigravity (kurulu 44.9.1 surumunun kendi belgesi): MCP sunucusu ya kullanicinin kuresel ayarinda ya da bir eklentinin icinde
+    // tanimlanir. Kuresel ayara dokunmamak icin proje icinde kucuk bir eklenti yazilir: .agents/plugins/mihenk/.
+    jsonGuncelle('.agents/plugins/mihenk/plugin.json', (n) => {
+      n.name = 'mihenk';
+    });
+    jsonGuncelle('.agents/plugins/mihenk/mcp_config.json', (n) => {
       n.mcpServers = { ...(n.mcpServers ?? {}), mihenk: mcpKaydi };
     });
   }
