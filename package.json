@@ -8,6 +8,7 @@
     "node": ">=22.13"
   },
   "bin": {
+    "mihenk": "dist/src/cli.js",
     "mihenk-defter": "dist/src/bin.js"
   },
   "scripts": {

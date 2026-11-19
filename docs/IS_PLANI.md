@@ -141,6 +141,36 @@ istemci süreciyle gösterildi (`test/mcp.test.ts`). Gerçek araçla kapatmak i�
   silen bir ajanı durdurmaz. Kurcalamaya karşı iz (ör. özet zinciri) yok.
 - Doğrulama komutu kullanıcının haklarıyla koşar.
 
+## Aşama 2: yöntem paketi (sürüyor)
+
+Paket `paket/` altındadır: yedi skill (`paket/skills/*/SKILL.md`), her oturuma giren kısa blok (`paket/AGENTS.md`) ve madde tablosu
+(`paket/kurallar.json`). Tablonun kaynağı JSON dosyasıdır; `test/paket.test.ts` denetimi olmayan maddenin "kural" etiketi taşımasını,
+skill metniyle tablonun ayrışmasını ve bu tablonun eksik kalmasını reddeder.
+
+| Kod | Madde | Skill | Durum |
+|---|---|---|---|
+| K1 | Kayıt açılmadan iş başlamaz | mihenk-is-kaydi | kural: testi var |
+| K2 | Doğrulama komutu kabuksuz koşar, izinsiz program reddedilir | mihenk-is-kaydi | kural: testi var |
+| K3 | Kayıt tam ve kısadır, açıldıktan sonra değişmez | mihenk-is-kaydi | kural: testi var |
+| K4 | Kanıtı ajan beyan etmez | mihenk-kanit-ve-hukum | kural: testi var |
+| K5 | Doğrulama geçmeden iş kapanmaz | mihenk-kanit-ve-hukum | kural: testi var |
+| K6 | Kapanan iş değişmez | mihenk-kanit-ve-hukum | kural: testi var |
+| K7 | "Kaldı" ve "belirsiz" gerekçe ister | mihenk-kanit-ve-hukum | kural: testi var |
+| K8 | Karar notu seçenek, seçilen ve karşı görüş ister | mihenk-karar-notu | kural: testi var |
+| K9 | Araç dönüşü sınırlıdır | mihenk-kanit-ve-hukum | kural: testi var |
+| O1 | Önce ucuz denetim | mihenk-ucuz-denetim | öneri: denetimi Aşama 4 ve 7'de |
+| O2 | Tek koşuda tek değişiklik | mihenk-tek-degisiklik | öneri: denetimi Aşama 4'te |
+| O3 | Yazan doğrulamaz | mihenk-bagimsiz-dogrulama | öneri: denetimi Aşama 3-4'te |
+| O4 | Kök neden logdan | mihenk-kok-neden | öneri: denetimi Aşama 4'te |
+| O5 | Durmadan devam | mihenk-karar-notu | öneri: denetimi Aşama 3'te (sürücü) |
+| O6 | İki vites: keşif hafif, hüküm tam | mihenk-is-kaydi | öneri: ayrı denetim planlanmıyor |
+
+Dokuz madde kural, altısı öneridir. Öneriler ajana ne yapacağını söyler ama uyulduğunu şu an hiçbir şey garanti etmez (İlke 1).
+
+**Karar (açık karar 1):** skill metinleri ve AGENTS.md bloğu İngilizce, araç ve alan adları Türkçe (ASCII) yazıldı. En güçlü karşı görüş:
+kullanıcı metinleri kendi dilinde denetleyemez ve karışık dil ajanı şaşırtabilir. Kullanıcının okuyacağı Türkçe karşılık bu tablodur;
+hangi dilin daha iyi izlendiği Aşama 4'te ölçülünce yeniden bakılır.
+
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 
 - **Birim:** kapanmış iş. Alanlar: iş türü, ajan, model, süre, maliyet, hüküm (geçti / kaldı / belirsiz), yeniden deneme sayısı, uyum işaretleri.
