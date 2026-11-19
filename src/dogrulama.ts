@@ -123,7 +123,7 @@ function baslat(k: CozulmusKomut, cwd: string): ChildProcess {
   return spawn(tam, k.argumanlar, ortak);
 }
 
-function agaciOldur(cocuk: ChildProcess): void {
+export function agaciOldur(cocuk: ChildProcess): void {
   if (cocuk.pid === undefined) return;
   try {
     if (process.platform === 'win32') {

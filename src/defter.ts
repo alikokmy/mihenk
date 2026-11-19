@@ -55,6 +55,8 @@ export interface IsGirdisi {
   zaman_asimi_sn?: number;
   /** Baglanan MCP istemcisinin kendi bildirdigi ad ve surum; sunucu doldurur. */
   istemci?: string;
+  /** Is listesindeki kimlik; surucu doldurur. Kesilen liste bununla kaldigi yerden surer. */
+  etiket?: string;
 }
 
 export interface IsKaydi {
@@ -68,6 +70,7 @@ export interface IsKaydi {
   ajan: string;
   model: string;
   istemci: string | null;
+  etiket: string | null;
   durum: Durum;
   baslangic: string;
   bitis: string | null;
@@ -233,6 +236,23 @@ export class Defter {
     // Birden cok surec (her ajan araci kendi sunucusunu baslatir) ayni dosyaya yazar.
     this.db.exec('PRAGMA busy_timeout = 10000; PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
     this.db.exec(SEMA);
+    // Sema gocu: etiket sutunu Asama 3'te eklendi; eski defterler acilirken tamamlanir.
+    const sutunlar = this.db.prepare('PRAGMA table_info(isler)').all() as Array<{ name: string }>;
+    if (!sutunlar.some((s) => s.name === 'etiket')) {
+      try {
+        this.db.exec('ALTER TABLE isler ADD COLUMN etiket TEXT');
+      } catch (e) {
+        // Ayni anda acilan ikinci surec sutunu eklemis olabilir.
+        if (!String(e).includes('duplicate column')) throw e;
+      }
+    }
+    this.db.exec(`CREATE TRIGGER IF NOT EXISTS etiket_degismez BEFORE UPDATE OF etiket ON isler
+      BEGIN SELECT RAISE(ABORT, 'mihenk: is kaydi acildiktan sonra degismez'); END;`);
+  }
+
+  /** Is listesindeki kimligiyle acilmis en son isi doner; yoksa undefined. */
+  etiketleBul(etiket: string): IsKaydi | undefined {
+    return this.db.prepare('SELECT * FROM isler WHERE etiket = ? ORDER BY id DESC LIMIT 1').get(etiket) as unknown as IsKaydi | undefined;
   }
 
   kapat(): void {
@@ -259,16 +279,17 @@ export class Defter {
       const ajan = dolu('ajan', g.ajan, SINIRLAR.kisa);
       const model = dolu('model', g.model, SINIRLAR.kisa);
       komutuCoz(komut, this.ayarlar.izinli_programlar);
+      const etiket = g.etiket === undefined ? null : dolu('etiket', g.etiket, SINIRLAR.kisa);
       const zamanAsimi = g.zaman_asimi_sn ?? this.ayarlar.zaman_asimi_sn;
       if (!Number.isInteger(zamanAsimi) || zamanAsimi < 1 || zamanAsimi > this.ayarlar.en_fazla_zaman_asimi_sn) {
         throw new Ret('GECERSIZ_DEGER', `zaman_asimi_sn 1 ile ${this.ayarlar.en_fazla_zaman_asimi_sn} arasinda tam sayi olmalidir.`);
       }
       const sonuc = this.db
         .prepare(
-          `INSERT INTO isler (tur, soru, beklenti, yanlissa, dogrulama_komutu, zaman_asimi_sn, ajan, model, istemci, baslangic)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO isler (tur, soru, beklenti, yanlissa, dogrulama_komutu, zaman_asimi_sn, ajan, model, istemci, etiket, baslangic)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .run(tur, soru, beklenti, yanlissa, komut, zamanAsimi, ajan, model, g.istemci ?? null, new Date().toISOString());
+        .run(tur, soru, beklenti, yanlissa, komut, zamanAsimi, ajan, model, g.istemci ?? null, etiket, new Date().toISOString());
       const is = this.isGetir(Number(sonuc.lastInsertRowid));
       this.dokumYaz();
       return is;
