@@ -6,7 +6,8 @@ Kodlama ajanlarının bağlandığı, işi kayda alan, kanıtı kendisi denetley
 Ad: mihenk taşı, altının ayarını sınamak için kullanılan taştır. Proje iki şeyi sınar: yapılan işin doğruluğunu ve işi yapan ajanın o iş türündeki
 değerini (doğruluk, süre, maliyet).
 
-**Durum:** Aşama 1 (defter çekirdeği) yazıldı. Sürücü, yöntem paketi ve öneri henüz yok.
+**Durum:** Aşama 1 (defter çekirdeği) yazıldı. Aşama 2 (yöntem paketi ve kurulum) yazıldı ama gerçek ajan araçlarında henüz denenemedi
+(makinede açık oturumlu araç yok). Sürücü ve öneri henüz yok.
 
 - [docs/ARASTIRMA.md](docs/ARASTIRMA.md): benzer açık kaynak projelerin taraması ve hüküm.
 - [docs/IS_PLANI.md](docs/IS_PLANI.md): onaylı iş planı, iki bağlayıcı ilke, aşama sonuçları ve açık kararlar.
@@ -28,11 +29,20 @@ Kurallar metinde değil, kodda ve veritabanında durur: kaydı olmayan işe yaz�
 
 ```
 npm install
-npm test          # derler ve 49 testi koşar
+npm test          # derler ve testleri koşar
 node dist/src/bin.js --kok <proje dizini>    # sunucuyu stdio üzerinden başlatır
 ```
 
-Bir ajan aracına tanıtmak için aracın MCP ayarına şu komut yazılır: `node <mihenk yolu>/dist/src/bin.js --kok <proje dizini>`.
+## Bir projeye kurmak
+
+```
+node <mihenk yolu>/dist/src/cli.js kur --hedef <proje dizini>
+```
+
+Bu komut yedi skill'i (`.claude/skills` ve `.agents/skills`), her oturuma giren kısa kural bloğunu (`AGENTS.md`) ve defterin MCP kaydını
+(Claude Code, Codex CLI, Gemini CLI, Antigravity CLI için ayrı ayar dosyaları) yazar. Var olan içeriği ezmez; yalnız bir araç için
+`--arac claude` gibi daraltılır. Skill'lerin hangisinin testle zorlanan kural, hangisinin öneri olduğu
+[docs/IS_PLANI.md](docs/IS_PLANI.md) "Aşama 2" tablosundadır.
 
 Veri proje içinde `.mihenk/` altında durur (git dışı): `defter.db` (SQLite), `defter.jsonl` (okunur döküm), `log.jsonl` (her işlemin başla /
 bitti satırı), `ciktilar/` (doğrulama çıktılarının tamamı).
