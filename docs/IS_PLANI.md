@@ -115,7 +115,7 @@ Her aşamanın kabul ölçütü işe başlamadan yazılıdır; aşama, ölçüt 
 |---|---|---|
 | 0 | Depo, araştırma, bu plan | **tamam** (gizli depo, push edildi) |
 | 1 | Defter çekirdeği: MCP sunucusu, durum makinesi, doğrulamayı sunucunun koşması, sınırlı çıktı | **tamam, bir açık kalemle** (2026-11-19; `npm test`: 49 test geçti). Ölçüt 1 ve 2 gösterildi. Ölçüt 3 iki bağımsız MCP istemcisiyle gösterildi; gerçek bir ajan aracıyla gösterim açık (bkz. "Aşama 1 sonucu") |
-| 2 | Yöntem paketi: 6-8 skill + AGENTS.md; her kuralın denetimiyle birlikte; Claude Code, Codex, Gemini CLI | **sürüyor** (2026-11-19): paket, kural tablosu, kurulum komutu ve kabul betiği hazır (`npm test`: 65 test geçti). Ölçüt gösterilemedi: hiçbir araçta açık oturum yok (bkz. "Aşama 2"). Ölçüt: üç araçta skill'ler listeleniyor; aynı küçük görevde üçü de defteri kullanıyor |
+| 2 | Yöntem paketi: 6-8 skill + AGENTS.md; her kuralın denetimiyle birlikte; Claude Code, Codex, Gemini CLI | **sürüyor** (2026-11-19): paket, kural tablosu, kurulum komutu ve kabul betiği hazır (`npm test`: 65 test geçti). Antigravity ile ilk deneme 4 ölçütten 3'ünü sağladı; Claude Code ve üçüncü araç denenemedi (bkz. "Aşama 2"). Ölçüt: üç araçta skill'ler listeleniyor; aynı küçük görevde üçü de defteri kullanıyor |
 | 3 | Sürücü: iş listesi döngüsü, taze oturum, devir notu, bağlam bütçesi, zaman aşımı, isteğe bağlı uyanık tutma; önce iki araç | on küçük işlik liste kullanıcı girişi olmadan bitiyor; yapay büyük çıktılı işte oturum devri çalışıyor; takılan iş listeyi durdurmuyor; uyku açıkken sürücü uyarıyor, uyanık tutma seçeneği açıkken sistem uykuya geçmiyor; kurulum ve sürücü tek adımda (çift tıklama ya da tek komut) başlıyor, yönetici izni istemiyor |
 | 4 | Uyum testleri: senaryolar ve tuzak görevler; araç başına uyum oranı raporu | her desteklenen araç için rapor üretiliyor; kasıtlı bozuk ajan taklidi yakalanıyor |
 | 5 | Maliyet ve süre: kullanım verisini işe bağlama | kapanan her işte süre ve maliyet dolu; elle hesapla örneklemde uyuşuyor |
@@ -181,10 +181,20 @@ dizine kopyalar, paketi kurar, aracı başsız kipte çalıştırır ve sonucu a
 Bugünkü sonuç: paketli Claude Code "Not logged in" dedi, betik "ATLANDI" yazdı. Codex ve Gemini / Antigravity için başsız komut henüz
 yazılmadı: araçlar kurulu olmadığından komutları denenemedi, denenmemiş komut yazılmadı.
 
+**Antigravity ile ilk gerçek deneme (2026-11-20, kullanıcı görevi araçta verdi):** betiğin hükmü "KALDI" (4 ölçütten 3'ü tamam).
+- Tamam: Antigravity mihenk sunucusunu kendisi başlattı (eklenti yolu çalışıyor); önce açık işlere baktı (`rapor`), kayıt açtı (`is_ac`,
+  doğrulama komutu `npm test`), kök nedeni not etti (`kanit_ekle`), `hukum_ver` çağırdı; sunucu komutu koştu, çıkış kodu 0, iş 45
+  saniyede "geçti" diye kapandı; örnek projenin testi bağımsız koşuda da geçiyor.
+- Eksik: defter aracın kimliğini okuyamadı (`istemci` alanı boş, bağlantı olayı yok). Kök neden: kimlik yalnız eski el sıkışmadan
+  okunuyordu; yeni protokol çağında (2026-07-28) kimlik her isteğin içinde gelir. Düzeltildi ve aynı belirtiyi üreten bir testle
+  sınandı (`test/mcp.test.ts` "yeni cag istemcisi"). Düzeltme Antigravity'nin kendisiyle henüz yeniden denenmedi.
+- Bakılmadı: skill'lerin Antigravity içinde listelendiği.
+
 Başsız kipi olmayan araç için betik iki adımdır: `--asama hazirla` deneme projesini `deneme/<araç>/` altına (git dışı) kurar ve
 kullanıcıya üç satırlık yönerge yazar; kullanıcı görevi araçta verir; `--asama denetle` sonucu defterden okur.
 
-**Aşamayı kapatmak için kullanıcıdan gereken:** (1) Antigravity: deneme projesi hazır (`deneme/antigravity`); klasörü açıp görevi vermek.
+**Aşamayı kapatmak için kullanıcıdan gereken:** (1) Antigravity: kimlik düzeltmesini doğrulamak için denemeyi bir kez daha yapmak ve
+araç içinde skill listesine bakmak.
 (2) Claude Code: komut satırı oturumu (`claude` çalıştırıp `/login`). (3) Üçüncü araç (Codex CLI) kurulu değil; kurmak küresel yazılım
 kurmaktır, ajan bunu kendiliğinden yapmaz.
 

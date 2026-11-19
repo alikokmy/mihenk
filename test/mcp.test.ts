@@ -73,6 +73,23 @@ test('KABUL 3: iki farkli istemci ayni deftere baglanir, ikisi de is acar, birbi
   }
 });
 
+test('yeni cag istemcisi (2026-07-28, istek basina kimlik): kimligi yine kayda ve loga girer', async () => {
+  // Kok neden kaydi (2026-11-20): Antigravity deftere is acti ama istemci alani bos kaldi; kimlik yalniz eski el sikismadan okunuyordu.
+  const kok = kokKur();
+  const istemci = new Client({ name: 'yeni-cag-araci', version: '2.0.0' }, { versionNegotiation: { mode: { pin: '2026-07-28' } } });
+  await istemci.connect(new StdioClientTransport({ command: process.execPath, args: [BIN, '--kok', kok], stderr: 'pipe' }));
+  try {
+    const is = JSON.parse((await cagir(istemci, 'is_ac', kayit())).metin);
+    const ayrinti = JSON.parse((await cagir(istemci, 'rapor', { is_id: is.is_id })).metin);
+    assert.match(String(ayrinti.is.istemci), /yeni-cag-araci 2\.0\.0/);
+    const baglananlar = readFileSync(join(kok, '.mihenk', 'log.jsonl'), 'utf8').trim().split('\n')
+      .map((s) => JSON.parse(s)).filter((l) => l.islem === 'baglanti').map((l) => l.girdi.istemci);
+    assert.deepEqual(baglananlar, ['yeni-cag-araci 2.0.0'], 'baglanti olayi istemci basina bir kez yazilmali');
+  } finally {
+    await istemci.close();
+  }
+});
+
 test('KABUL 1 (MCP): kayitsiz baslatma hata olarak doner', async () => {
   const kok = kokKur();
   const a = await baglan('arac', kok);
