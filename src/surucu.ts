@@ -10,7 +10,7 @@ import { appendFileSync, closeSync, existsSync, openSync, readFileSync, writeFil
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AJANLAR, type AjanTanimi } from './ajanlar.js';
-import { Defter, type Durum, type IsKaydi } from './defter.js';
+import { Defter, SURUCU_ISTEMCISI, type Durum, type IsKaydi } from './defter.js';
 import { agaciOldur } from './dogrulama.js';
 import { Ret } from './hata.js';
 import { depoDurumu, sakla, SAKLAMA_KIPLERI, type SaklamaKipi } from './saklama.js';
@@ -110,7 +110,7 @@ function istemYaz(is: IsKaydi, devirNotu: string | null): string {
     `Beklenti: ${is.beklenti}`,
     `Yanlissa ne gorulur: ${is.yanlissa}`,
     `Isin bittigini gosteren komut: ${is.dogrulama_komutu}`,
-    'Kurallar: Bu komutu surucu kendisi kosacak; "bitti" demen yetmez, komut gecmeli.',
+    'Kurallar: Bu komutu surucu kendisi kosacak; "bitti" demen yetmez, komut gecmeli. Hukmu surucu verir: hukum_ver cagirma (reddedilir); not icin kanit_ekle, karar icin karar_yaz kullanabilirsin.',
     'Yalniz bu proje klasorunde calis; disindaki hicbir dosyayi degistirme. Commit ya da push yapma, saklamayi surucu yapar.',
     'Karar gereken yerde onerdigin secenegi uygula ve devam et; soru sorma. Is bitince dur.',
   ];
@@ -280,7 +280,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
           is = defter.isAc({
             tur: listeIsi.tur, soru: listeIsi.soru, beklenti: listeIsi.beklenti, yanlissa: listeIsi.yanlissa,
             dogrulama_komutu: listeIsi.dogrulama_komutu, ajan: ajanAdi === '' ? 'belirtilmedi' : ajanAdi, model: 'aracin varsayilani',
-            istemci: 'mihenk-surucu', etiket: kimlik,
+            istemci: SURUCU_ISTEMCISI, etiket: kimlik,
             ...(listeIsi.zaman_asimi_sn === undefined ? {} : { zaman_asimi_sn: listeIsi.zaman_asimi_sn }),
           });
         } catch (e) {
@@ -344,7 +344,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
 
         deneme += 1;
         if ((defter.rapor({ is_id: isId }).is as IsKaydi).durum !== 'acik') break; // ajan defteri kullanip isi kendisi kapatti
-        const hukum = await defter.hukumVer({ is_id: isId });
+        const hukum = await defter.hukumVer({ is_id: isId, surucu: true });
         if (hukum.kapandi) break;
         const neden = kosu.zaman_asimi
           ? `ajan oturumu ${s.ajanZamanAsimiSn ?? 900} saniyede bitmedi, kapatildi`
@@ -365,11 +365,11 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
       if (son.durum === 'acik') {
         const gerekce = gecersiz ? not : `takildi: ${not || `${deneme} denemede dogrulama gecmedi`}`;
         try {
-          await defter.hukumVer({ is_id: isId, hukum: gecersiz ? 'belirsiz' : 'kaldi', gerekce: kisalt(gerekce, 900).metin });
+          await defter.hukumVer({ surucu: true, is_id: isId, hukum: gecersiz ? 'belirsiz' : 'kaldi', gerekce: kisalt(gerekce, 900).metin });
         } catch (e) {
           // Son anda dogrulama gecerse "kaldi" verilemez: is gercekten gecmistir.
           if (!(e instanceof Ret) || e.kod !== 'HUKUM_CELISKILI') throw e;
-          await defter.hukumVer({ is_id: isId });
+          await defter.hukumVer({ is_id: isId, surucu: true });
         }
         son = defter.rapor({ is_id: isId }).is as IsKaydi;
       }

@@ -8,6 +8,7 @@ export type RetKodu =
   | 'IS_KAPALI' // is kapanmis, artik degismez
   | 'GEREKCE_YOK' // "kaldi" ya da "belirsiz" hukmu gerekcesiz verilmez
   | 'HUKUM_CELISKILI' // istenen hukum dogrulama sonucuyla celisiyor
+  | 'SURUCU_ISI' // isi surucu yonetiyor: hukmu ajan degil surucu verir
   | 'GECERSIZ_DEGER';
 
 export class Ret extends Error {

@@ -44,8 +44,37 @@ Bu komut yedi skill'i (`.claude/skills` ve `.agents/skills`), her oturuma giren 
 `--arac claude` gibi daraltılır. Skill'lerin hangisinin testle zorlanan kural, hangisinin öneri olduğu
 [docs/IS_PLANI.md](docs/IS_PLANI.md) "Aşama 2" tablosundadır.
 
+Kurulum ayrıca proje klasörüne örnek bir iş listesi (`mihenk-isler.ornek.json`) ve Windows'ta çift tıklanır bir başlatma dosyası
+(`mihenk-baslat.cmd`) bırakır.
+
+## İş listesini yürütmek (sürücü)
+
+Sürücü, yazdığınız iş listesini sırayla bir ajan aracına verir ve liste bitene dek siz başında olmadan sürdürür.
+
+1. `mihenk-isler.ornek.json` dosyasını `mihenk-isler.json` adıyla kopyalayın ve işlerinizi yazın. Her iş için dört şey gerekir: ne
+   yapılacak (`soru`), doğru yapılınca ne görülür (`beklenti`), yanlışsa ne görülür (`yanlissa`) ve işin bittiğini gösteren tek komut
+   (`dogrulama_komutu`, ör. `npm test`).
+2. `mihenk-baslat.cmd` dosyasına çift tıklayın. (Komut satırından: `node <mihenk yolu>/dist/src/cli.js sur --hedef <proje>`.)
+3. Bitince pencerede kaç işin geçtiği, kaçının kaldığı yazar. Ayrıntı `.mihenk/defter.jsonl` içindedir.
+
+Bilmeniz gerekenler:
+
+- **İşin bittiğine ajan değil sürücü karar verir:** doğrulama komutunu kendisi koşar. Ajan "bitti" dese de komut geçmeden iş kapanmaz.
+- **Liste tek iş yüzünden durmaz:** bir iş üç denemede geçmezse "kaldı" diye kapanır, sıradakine geçilir. Yarıda kesilen liste yeniden
+  başlatılınca biten işleri atlar.
+- **Hangi araç:** listede `ajan` yazarsınız (`codex`, `opencode`, `claude`); yazmazsanız kurulu olan ilk araç kullanılır. İş başına ayrı
+  araç da seçilebilir.
+- **Saklama (`saklama`):** `yok` (yalnız kayıt tutulur), `yerel` (her geçen iş için yalnız bu bilgisayarda commit; varsayılan),
+  `yerel_gonder` (commit ve uzak depoya gönderme). İnternet ya da GitHub gerekmez; siz açmadıkça hiçbir şey gönderilmez.
+- **Uyku:** bilgisayar uyursa liste durur. Uyku açıksa sürücü başlarken uyarır. Listede `"uyanik_tut": true` yazarsanız liste bitene dek
+  bilgisayarı uyanık tutar (yalnız Windows; yönetici izni istemez; kapağı kapatmak ya da güç düğmesi yine uyutur).
+- **Yönetici izni gerekmez.** Sürücü yalnız proje klasörüne yazar. Ajan proje dışında bir şey değiştirirse o iş geçersiz sayılır ve
+  size bildirilir.
+- Sınır: Antigravity'nin komut satırı kipi olmadığı için sürücü onu kullanamaz. Ajan araçlarını kurmak ve onlarda oturum açmak sizin
+  işinizdir.
+
 Veri proje içinde `.mihenk/` altında durur (git dışı): `defter.db` (SQLite), `defter.jsonl` (okunur döküm), `log.jsonl` (her işlemin başla /
-bitti satırı), `ciktilar/` (doğrulama çıktılarının tamamı).
+bitti satırı), `surucu.jsonl` (sürücünün olay kaydı), `ciktilar/` (doğrulama ve ajan çıktılarının tamamı).
 
 **Doğrulama komutu nasıl koşar:** kabuk kullanılmaz; `&&`, boru, yönlendirme reddedilir. Program izin listesinden olmalıdır (`node`, `npm`,
 `pytest`, `cargo`, `go`, `git` gibi test ve derleme araçları). Liste, proje kökündeki `mihenk.json` dosyasında `izinli_programlar` ile

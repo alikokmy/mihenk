@@ -122,7 +122,7 @@ test('kur: defter klasorunu .gitignore\'a ekler (var olani koruyarak), ornek is 
   assert.equal(ornek.saklama, 'yerel');
   if (process.platform === 'win32') {
     const baslat = oku(h, 'mihenk-baslat.cmd');
-    assert.match(baslat, /node ".*cli\.js" sur --hedef "%~dp0\."/);
+    assert.match(baslat, /node --disable-warning=ExperimentalWarning ".*cli\.js" sur --hedef "%~dp0\."/);
     assert.match(baslat, /pause/);
   }
   assert.deepEqual(kur(h, { araclar: ['codex'] }).yazilan, [], 'ikinci kosuda degisiklik olmamali');

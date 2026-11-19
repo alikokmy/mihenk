@@ -13,6 +13,8 @@ import { kisalt } from './sinir.js';
 export type Durum = 'acik' | 'gecti' | 'kaldi' | 'belirsiz';
 export type Hukum = 'gecti' | 'kaldi' | 'belirsiz';
 const HUKUMLER: readonly Hukum[] = ['gecti', 'kaldi', 'belirsiz'];
+/** Surucunun actigi islerin istemci alani. */
+export const SURUCU_ISTEMCISI = 'mihenk-surucu';
 const DURUMLAR: readonly Durum[] = ['acik', 'gecti', 'kaldi', 'belirsiz'];
 
 export interface Ayarlar {
@@ -327,13 +329,18 @@ export class Defter {
   }
 
   /** Dogrulama komutunu kosar ve hukmu sonuca gore yazar. Ajanin beyani burada hicbir sey degistirmez. */
-  hukumVer(g: { is_id: number; hukum?: Hukum; gerekce?: string }): Promise<HukumSonucu> {
+  hukumVer(g: { is_id: number; hukum?: Hukum; gerekce?: string; surucu?: boolean }): Promise<HukumSonucu> {
     return this.log.sarAsenk('hukum_ver', g, async () => {
       const istenen: Hukum = g.hukum ?? 'gecti';
       if (!HUKUMLER.includes(istenen)) {
         throw new Ret('GECERSIZ_DEGER', `hukum su degerlerden biridir: ${HUKUMLER.join(', ')}.`);
       }
       const is = this.acikIs(g.is_id);
+      // Surucunun actigi iste hakem surucudur: ajan (MCP uzerinden) hukum isteyemez. Boylece surucu, isi kapatmadan once
+      // kendi denetimlerini (or. ajan proje disina yazdi mi) yapabilir.
+      if (is.istemci === SURUCU_ISTEMCISI && g.surucu !== true) {
+        throw new Ret('SURUCU_ISI', `is ${is.id} surucu tarafindan yonetiliyor: hukmu surucu verir. Isi bitirip durun; hukum_ver cagirmayin.`);
+      }
       const gerekce = (g.gerekce ?? '').trim();
       if (istenen !== 'gecti' && gerekce === '') {
         throw new Ret('GEREKCE_YOK', `"${istenen}" hukmu gerekcesiz verilmez: gerekce alanina neden yazin.`);

@@ -212,6 +212,19 @@ test('ret: gecersiz hukum degeri', async () => {
   defter.kapat();
 });
 
+test('ret: surucunun actigi iste hukmu ajan veremez; surucu verir (ajan not ekleyebilir)', async () => {
+  const { defter } = ortam();
+  const is = defter.isAc(girdi({ istemci: 'mihenk-surucu', etiket: 'liste-1' }));
+  await retBekleAsenk(() => defter.hukumVer({ is_id: is.id }), 'SURUCU_ISI');
+  await retBekleAsenk(() => defter.hukumVer({ is_id: is.id, hukum: 'belirsiz', gerekce: 'ajan kapatmak istedi' }), 'SURUCU_ISI');
+  assert.equal(defter.rapor({ is_id: is.id }).is?.durum, 'acik');
+  assert.equal(defter.rapor({ is_id: is.id }).is?.deneme_sayisi, 0, 'reddedilen istek dogrulamayi kosturmamali');
+  defter.kanitEkle({ is_id: is.id, icerik: 'ajanin notu' });
+  assert.equal((await defter.hukumVer({ is_id: is.id, surucu: true })).durum, 'gecti');
+  assert.equal(defter.etiketleBul('liste-1')?.id, is.id);
+  defter.kapat();
+});
+
 // ---- kapali is degismez ----
 
 test('ret: kapali ise kanit eklenmez, karar yazilmaz, yeniden hukum verilmez', async () => {
