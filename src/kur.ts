@@ -154,5 +154,35 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
     });
   }
 
+  // Defter klasoru projeyle birlikte saklanmaz.
+  const yoksay = oku('.gitignore') ?? '';
+  if (/^\.mihenk\/?\s*$/m.test(yoksay)) sonuc.degismeyen.push('.gitignore');
+  else yaz('.gitignore', `${yoksay}${yoksay === '' || yoksay.endsWith('\n') ? '' : '\n'}.mihenk/\n`);
+
+  // Surucu icin ornek is listesi: kullanici kopyalayip mihenk-isler.json adiyla duzenler.
+  yaz('mihenk-isler.ornek.json', JSON.stringify(ORNEK_LISTE, null, 2) + '\n');
+
+  // Tek adimda baslatma (Ilke 3): Windows'ta cift tiklanir dosya. Baska sistemde denenmedigi icin yazilmaz.
+  if (process.platform === 'win32') {
+    const cli = egik(join(BURASI, 'cli.js'));
+    yaz('mihenk-baslat.cmd', ['@echo off', 'rem mihenk: is listesini (mihenk-isler.json) yurutur. Cift tiklayin.', `node "${cli}" sur --hedef "%~dp0."`, 'echo.', 'pause', ''].join('\r\n'));
+  }
+
   return sonuc;
 }
+
+const ORNEK_LISTE = {
+  aciklama: 'Bu dosyayi mihenk-isler.json adiyla kopyalayip duzenleyin. Her is icin: ne yapilacak (soru), dogru yapilinca ne gorulur (beklenti), yanlissa ne gorulur (yanlissa) ve isin bittigini gosteren tek komut (dogrulama_komutu).',
+  ajan: 'codex',
+  saklama: 'yerel',
+  uyanik_tut: false,
+  isler: [
+    {
+      tur: 'hata_duzeltme',
+      soru: 'npm test kaliyor; hatayi bul ve duzelt.',
+      beklenti: 'npm test gecer.',
+      yanlissa: 'npm test yine kalir.',
+      dogrulama_komutu: 'npm test',
+    },
+  ],
+};

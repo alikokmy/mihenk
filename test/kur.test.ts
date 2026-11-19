@@ -110,6 +110,24 @@ test('kur: yalniz hedef projenin icine yazar (kuresel ayar, yonetici izni gerekt
   }
 });
 
+test('kur: defter klasorunu .gitignore\'a ekler (var olani koruyarak), ornek is listesi ve Windows\'ta baslatma dosyasi yazar', async () => {
+  const h = hedef();
+  writeFileSync(join(h, '.gitignore'), 'node_modules/');
+  kur(h, { araclar: ['codex'] });
+  assert.equal(oku(h, '.gitignore'), 'node_modules/\n.mihenk/\n');
+  // Ornek liste surucunun okuyabildigi bicimdedir.
+  const { listeOku } = await import('../src/surucu.js');
+  const ornek = listeOku(join(h, 'mihenk-isler.ornek.json'));
+  assert.equal(ornek.isler.length, 1);
+  assert.equal(ornek.saklama, 'yerel');
+  if (process.platform === 'win32') {
+    const baslat = oku(h, 'mihenk-baslat.cmd');
+    assert.match(baslat, /node ".*cli\.js" sur --hedef "%~dp0\."/);
+    assert.match(baslat, /pause/);
+  }
+  assert.deepEqual(kur(h, { araclar: ['codex'] }).yazilan, [], 'ikinci kosuda degisiklik olmamali');
+});
+
 test('kur: bozuk JSON ayar dosyasini ezmez, hata verir', () => {
   const h = hedef();
   writeFileSync(join(h, '.mcp.json'), '{ bozuk');

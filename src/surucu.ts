@@ -96,6 +96,12 @@ export function isKimligi(is: ListeIsi): string {
   return createHash('sha1').update(`${is.soru}\n${is.dogrulama_komutu}`).digest('hex').slice(0, 12);
 }
 
+/** Ileti ve commit basligi icin: tek satir, en fazla n karakter. */
+function tekSatir(metin: string, n: number): string {
+  const duz = metin.replace(/\s+/g, ' ').trim();
+  return duz.length <= n ? duz : `${duz.slice(0, n - 3)}...`;
+}
+
 function istemYaz(is: IsKaydi, devirNotu: string | null): string {
   const satirlar = [
     `Bu bir mihenk is kaydidir (is_id=${is.id}). Yalniz bu isi yap.`,
@@ -265,7 +271,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
 
       let is = defter.etiketleBul(kimlik);
       if (is && is.durum !== 'acik') {
-        yaz(`${baslik} zaten kapali (${is.durum}): ${kisalt(listeIsi.soru, 70).metin}`);
+        yaz(`${baslik} zaten kapali (${is.durum}): ${tekSatir(listeIsi.soru, 70)}`);
         sonuclar.push({ kimlik, is_id: is.id, durum: is.durum, atlandi: true, deneme: 0, devir: 0, gecersiz: false, not: 'onceki kosuda kapanmis' });
         continue;
       }
@@ -287,7 +293,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
         }
       }
       const isId = is.id;
-      yaz(`${baslik} basliyor (is ${isId}, ajan: ${ajanAdi || 'yok'}): ${kisalt(listeIsi.soru, 70).metin}`);
+      yaz(`${baslik} basliyor (is ${isId}, ajan: ${ajanAdi || 'yok'}): ${tekSatir(listeIsi.soru, 70)}`);
 
       let deneme = 0;
       let devir = 0;
@@ -368,7 +374,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
         son = defter.rapor({ is_id: isId }).is as IsKaydi;
       }
       if (son.durum === 'gecti' && !gecersiz) {
-        const saklama = sakla(kok, kip, `mihenk: is ${isId} gecti: ${kisalt(listeIsi.soru, 60).metin}`);
+        const saklama = sakla(kok, kip, `mihenk: is ${isId} gecti: ${tekSatir(listeIsi.soru, 60)}`);
         not = saklama.not;
         olay('saklama', { is_id: isId, kip, commit: saklama.commit, push: saklama.push, not: saklama.not });
       } else if (not === '') {
