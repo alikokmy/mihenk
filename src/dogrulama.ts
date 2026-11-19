@@ -19,6 +19,8 @@ export interface CozulmusKomut {
 
 const KABUK_KARAKTERLERI = /[&|;<>`$()^%!'\r\n]/;
 const PROGRAM_ADI = /^[A-Za-z0-9_.+-]+$/;
+/** Komut ciktiktan sonra borularin kendiliginden kapanmasi icin beklenen sure. */
+const CIKIS_PAYI_MS = 500;
 
 /** Komut metnini kabuk kullanmadan program + argumanlara ayirir; kural disi olani reddeder. */
 export function komutuCoz(komut: string, izinli: readonly string[]): CozulmusKomut {
@@ -142,8 +144,10 @@ export function komutuCalistir(k: CozulmusKomut, s: KosuSecenekleri): Promise<Ko
   let bayt = 0;
   let yazilan = 0;
   let kesildi = false;
+  let dosyaKapali = false;
 
   const yaz = (parca: Buffer): void => {
+    if (dosyaKapali) return; // sonuc verildikten sonra gelen cikti kapali dosyaya yazilmaz
     bayt += parca.length;
     if (yazilan >= enFazla) {
       kesildi = true;
@@ -160,13 +164,20 @@ export function komutuCalistir(k: CozulmusKomut, s: KosuSecenekleri): Promise<Ko
     let zamanAsimi = false;
     let zamanlayici: NodeJS.Timeout | undefined;
     let emniyet: NodeJS.Timeout | undefined;
+    let cikisPayi: NodeJS.Timeout | undefined;
+    let arkadaSurecKaldi = false;
 
     const bitir = (cikis: number | null, baslatmaHatasi?: string): void => {
       if (bitti) return;
       bitti = true;
       clearTimeout(zamanlayici);
       clearTimeout(emniyet);
+      clearTimeout(cikisPayi);
       if (kesildi) writeSync(fd, `\n[mihenk: cikti ${enFazla} baytta kesildi; toplam ${bayt} bayt]\n`);
+      if (arkadaSurecKaldi) {
+        writeSync(fd, '\n[mihenk: komut cikti ama arkada cikti borusunu acik tutan bir surec birakti; o surec beklenmedi]\n');
+      }
+      dosyaKapali = true;
       closeSync(fd);
       coz({
         cikis_kodu: cikis,
@@ -189,6 +200,20 @@ export function komutuCalistir(k: CozulmusKomut, s: KosuSecenekleri): Promise<Ko
     cocuk.stdout?.on('data', yaz);
     cocuk.stderr?.on('data', yaz);
     cocuk.on('error', (e) => bitir(null, e.message));
+    // 'exit' komutun bittigini, 'close' ise cikti borularinin da kapandigini soyler. Komut arkada boruyu acik tutan bir surec
+    // birakirsa (or. test sunucusu) 'close' o surec olene dek gelmez. Hukum komutun cikis kodudur: 'exit' gorulunce zaman asimi
+    // sayaci durur, kalan cikti icin kisa bir pay beklenir, sonra borular kapatilip sonuc verilir.
+    // Kok neden kaydi (2026-11-20): basarili biten komut 6 sn zaman asimi + 3 sn emniyetle 9 sn sonra "zaman asimi" sayiliyordu.
+    cocuk.on('exit', (kod) => {
+      if (bitti || zamanAsimi) return;
+      clearTimeout(zamanlayici);
+      cikisPayi = setTimeout(() => {
+        arkadaSurecKaldi = true;
+        cocuk.stdout?.destroy();
+        cocuk.stderr?.destroy();
+        bitir(kod);
+      }, CIKIS_PAYI_MS);
+    });
     cocuk.on('close', (kod) => bitir(kod));
 
     zamanlayici = setTimeout(() => {

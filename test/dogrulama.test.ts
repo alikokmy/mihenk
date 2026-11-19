@@ -98,6 +98,28 @@ test('calistirma: zaman asimi sureci oldurur, gecti sayilmaz', async () => {
   assert.ok(Date.now() - t0 < 10_000, 'surec oldurulmedi, 30 saniyeyi bekledi');
 });
 
+test('calistirma: komut 0 ile cikip arkada borusu acik surec biraksa da sonuc hemen ve dogru doner', async () => {
+  // Senaryo: dogrulama komutu basarili biter ama arkada calisan bir surec (or. test sunucusu) cikti borusunu acik tutar.
+  // Yanlissa ne gorulur: kosucu boru kapanana dek bekler; arka surec zaman asimindan uzun yasarsa basarili is "zaman asimi" sayilir.
+  const kok = gecici();
+  writeFileSync(join(kok, 'arkada-birak.js'), [
+    "import { spawn } from 'node:child_process';",
+    "const arka = spawn(process.execPath, ['-e', 'setTimeout(function () {}, 12000)'], { stdio: ['ignore', 1, 2], detached: true });",
+    'arka.unref();',
+    'console.log("on surec bitti");',
+    'process.exit(0);',
+  ].join('\n'));
+  const t0 = Date.now();
+  const s = await komutuCalistir(komutuCoz('node arkada-birak.js', VARSAYILAN_IZINLI), {
+    cwd: kok, zamanAsimiMs: 6_000, ciktiDosyasi: join(kok, 'cikti.txt'),
+  });
+  const sure = Date.now() - t0;
+  assert.equal(s.zaman_asimi, false, `basarili komut zaman asimi sayildi (${sure} ms)`);
+  assert.equal(s.cikis_kodu, 0);
+  assert.ok(sure < 3_000, `kosucu arka sureci bekledi: ${sure} ms`);
+  assert.match(readFileSync(join(kok, 'cikti.txt'), 'utf8'), /on surec bitti/, 'on surecin ciktisi kaybolmamali');
+});
+
 test('calistirma: bulunamayan program hata olarak doner, gecti sayilmaz', async () => {
   const kok = gecici();
   const s = await komutuCalistir(komutuCoz('yokboyleprogram x', ['yokboyleprogram']), {

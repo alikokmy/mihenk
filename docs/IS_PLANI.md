@@ -228,7 +228,10 @@ Denemelerin öğrettikleri (Aşama 3'te sürücü bunları bilmek zorunda):
   açıkça verir ve koşudan önce / sonra deponun durumunu karşılaştırır; değişmişse sonucu "GECERSIZ" sayar. **Sürücü de ajanı başlatırken
   aynı iki önlemi alacak** (Aşama 3 ölçütüne eklendi).
 - O yanlış koşuda OpenCode gerçek olabilecek bir zayıflık bildirdi: doğrulama komutu 0 ile çıkıp arkasında borusu açık bir torun süreç
-  bırakırsa `hukum_ver` zaman aşımına kadar bekler ve işi "kaldı" sayar. Henüz doğrulanmadı; ayrı bir iş olarak ele alınacak.
+  bırakırsa `hukum_ver` zaman aşımına kadar bekler ve işi "kaldı" sayar. **Doğrulandı ve düzeltildi (2026-11-20):** üreten test
+  düzeltmeden önce kaldı (başarılı komut 9,2 saniye sonra "zaman aşımı" sayıldı), düzeltmeden sonra 0,6 saniyede çıkış kodu 0 ile
+  döndü (`test/dogrulama.test.ts` "komut 0 ile cikip arkada borusu acik surec biraksa da"). Hüküm artık komutun çıkış kodudur; arkada
+  kalan süreç beklenmez ve çıktıya not düşülür. OpenCode'un yaması girdi olarak okundu, olduğu gibi uygulanmadı.
 
 **Aşama 2'de durum:** ölçütün ikinci yarısı (aynı küçük görevde üç araç defteri kullanıyor) Claude Code, Codex ve OpenCode ile
 gösterildi. Birinci yarı (skill'ler listeleniyor) Claude Code'da tam, Codex ve OpenCode'da dolaylı gösterildi: skill'leri bulup
