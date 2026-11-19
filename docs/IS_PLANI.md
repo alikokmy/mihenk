@@ -123,7 +123,7 @@ Her aşamanın kabul ölçütü işe başlamadan yazılıdır; aşama, ölçüt 
 | 0 | Depo, araştırma, bu plan | **tamam** (gizli depo, push edildi) |
 | 1 | Defter çekirdeği: MCP sunucusu, durum makinesi, doğrulamayı sunucunun koşması, sınırlı çıktı | **tamam** (2026-11-20). Ölçüt 1 ve 2 testle gösterildi. Ölçüt 3 gerçek araçla gösterildi: Claude Code 2.1.326 ve bağımsız test istemcisi aynı deftere iş açtı (bkz. "Aşama 1 sonucu") |
 | 2 | Yöntem paketi: 6-8 skill + AGENTS.md; her kuralın denetimiyle birlikte; Claude Code, Codex, Gemini CLI | **tamam, bir notla** (2026-11-20). Aynı küçük görevde Claude Code, Codex CLI ve OpenCode defteri kullandı (üçünde betik hükmü GEÇTİ); Antigravity 4 ölçütten 3'ünü sağladı. Not: skill listesi Claude Code'da tam, Codex ve OpenCode'da dolaylı gösterildi (bkz. "Aşama 2"). Gemini CLI yerine OpenCode denendi: Gemini CLI ücretsiz katmanda kaldırılmış |
-| 3 | Sürücü: iş listesi döngüsü, taze oturum, devir notu, bağlam bütçesi, zaman aşımı, isteğe bağlı uyanık tutma, saklama kipi (yok / yerel / yerel + gönder); önce iki araç | on küçük işlik liste kullanıcı girişi olmadan bitiyor; yapay büyük çıktılı işte oturum devri çalışıyor; takılan iş listeyi durdurmuyor; uyku açıkken sürücü uyarıyor, uyanık tutma seçeneği açıkken sistem uykuya geçmiyor; kurulum ve sürücü tek adımda (çift tıklama ya da tek komut) başlıyor, yönetici izni istemiyor; uzak deposu olmayan bir projede liste "yerel" kipte bitiyor ve hiçbir kipte kullanıcı açmadan push yapılmıyor; ajan yalnız kendisine verilen proje dizininde çalışıyor (başka dizinde değişiklik yaparsa iş geçersiz sayılıyor) |
+| 3 | Sürücü: iş listesi döngüsü, taze oturum, devir notu, bağlam bütçesi, zaman aşımı, isteğe bağlı uyanık tutma, saklama kipi (yok / yerel / yerel + gönder); önce iki araç | **tamam, iki açık kalemle** (2026-11-20; `npm test`: 84 test geçti; gerçek araçlarla on işlik liste 10/10). Açık: uyanık tutmanın uykuyu gerçekten önlediği gözlenmedi; oturum devri yalnız sahte ajanla gösterildi (bkz. "Aşama 3 sonucu"). Ölçüt: on küçük işlik liste kullanıcı girişi olmadan bitiyor; yapay büyük çıktılı işte oturum devri çalışıyor; takılan iş listeyi durdurmuyor; uyku açıkken sürücü uyarıyor, uyanık tutma seçeneği açıkken sistem uykuya geçmiyor; kurulum ve sürücü tek adımda (çift tıklama ya da tek komut) başlıyor, yönetici izni istemiyor; uzak deposu olmayan bir projede liste "yerel" kipte bitiyor ve hiçbir kipte kullanıcı açmadan push yapılmıyor; ajan yalnız kendisine verilen proje dizininde çalışıyor (başka dizinde değişiklik yaparsa iş geçersiz sayılıyor) |
 | 4 | Uyum testleri: senaryolar ve tuzak görevler; araç başına uyum oranı raporu | her desteklenen araç için rapor üretiliyor; kasıtlı bozuk ajan taklidi yakalanıyor |
 | 5 | Maliyet ve süre: kullanım verisini işe bağlama | kapanan her işte süre ve maliyet dolu; elle hesapla örneklemde uyuşuyor |
 | 6 | Öneri: iş türü × ajan / model başına doğrulanmış başarı, uyum, süre, maliyet; belirsizlikle birlikte | sentetik defterde bilinen en iyi seçeneği buluyor; az veride "veri yetersiz" diyor |
@@ -266,6 +266,50 @@ Dokuz madde kural, altısı öneridir. Öneriler ajana ne yapacağını söyler 
 **Karar (açık karar 1):** skill metinleri ve AGENTS.md bloğu İngilizce, araç ve alan adları Türkçe (ASCII) yazıldı. En güçlü karşı görüş:
 kullanıcı metinleri kendi dilinde denetleyemez ve karışık dil ajanı şaşırtabilir. Kullanıcının okuyacağı Türkçe karşılık bu tablodur;
 hangi dilin daha iyi izlendiği Aşama 4'te ölçülünce yeniden bakılır.
+
+## Aşama 3 sonucu (2026-11-20)
+
+Sürücü `src/surucu.ts` içindedir; kullanıcı onu proje klasöründeki `mihenk-baslat.cmd` dosyasına çift tıklayarak ya da
+`node dist/src/cli.js sur --hedef <proje>` ile başlatır. İş listesi proje kökündeki `mihenk-isler.json` dosyasıdır.
+
+| Ölçüt | Sonuç | Kanıt |
+|---|---|---|
+| On işlik liste kullanıcı girişi olmadan bitiyor | gösterildi (gerçek araçlarla) | `node dist/test/kabul_asama3.js`: Codex ve OpenCode dönüşümlü, 10/10 "geçti", 5,9 dakika, stdin kapalı. Ayrıca sahte ajanla test |
+| Yapay büyük çıktılı işte oturum devri çalışıyor | gösterildi (yalnız sahte ajanla) | `test/surucu.test.ts` "baglami sisiren oturum kapatilir, yenisi devir notuyla acilir" |
+| Takılan iş listeyi durdurmuyor | gösterildi (sahte ajanla) | "takilan is listeyi durdurmaz"; ayrıca "bitti diyen ama yapmayan ajan" testi |
+| Uyku açıkken sürücü uyarıyor | gösterildi (yalnız testte) | uyku ayarı çıktısı çözülüp uyarı üretiliyor; bu makinede uyku kapalı olduğundan canlı görülmedi |
+| Uyanık tutma açıkken sistem uykuya geçmiyor | **yarım** | işletim sistemi isteği kabul ediyor (test ve gerçek koşu); uyumadığı gözlenmedi |
+| Tek adımda başlıyor, yönetici izni istemiyor | gösterildi | `mihenk-baslat.cmd` normal kullanıcı haklarıyla çalıştırıldı; `kur` yalnız proje içine yazıyor (test) |
+| Uzak deposuz projede "yerel" kipte bitiyor; kullanıcı açmadan push yok | gösterildi | saklama testleri; gerçek koşuda iş başına bir yerel commit, uzak depo yok |
+| Ajan başka dizinde değişiklik yaparsa iş geçersiz | gösterildi | "ajan proje disinda degisiklik yaparsa is gecersiz sayilir"; gerçek koşuda mihenk deposu değişmedi |
+
+Gerçek araç koşuları: on işlik liste (Codex 5 iş, ortalama 46 sn; OpenCode 5 iş, ortalama 24 sn; hepsi ilk denemede), tek işlik Codex
+(26 sn), tek işlik Claude Code (20 sn). Üç araç da sürücüyle çalıştı. Ajanlar `hukum_ver` çağırmayı denemedi; her işte bir not yazdılar.
+
+**Açık kalemler ve sınırlar:**
+- Uyanık tutma: `SetThreadExecutionState` çağrısı başarılı dönüyor, ama sistemin gerçekten uyumadığı gözlenmedi (uykusu açık bir
+  makinede bekleme süresini aşan bir koşu gerekir; `powercfg /requests` yönetici ister). Yalnız Windows için yazıldı; başka sistemde
+  denenmemiş kod yok, orada "desteklenmiyor" der. Kullanıcının bilgisayarı elle uyutmasını (kapak, güç düğmesi) engellemez.
+- Oturum devri gerçek bir ajanla tetiklenmedi (küçük işlerde bağlam eşiği aşılmadı). Bağlam ölçümü araca göre değişiyor: Claude Code
+  ve OpenCode adım başına gerçek token sayısı bildiriyor (ölçülen: yaklaşık 46 bin ve 12 bin); Codex yalnız tur sonunda toplam
+  bildirdiği için canlı ölçüm çıktı hacminden tahmin ediliyor ve gerçeğin çok altında kalıyor. Codex'te eşik fiilen çalışmayabilir.
+- Dizin koruması yalnız listelenen git depolarına bakar (varsayılan: mihenk'in kendi deposu); bütün diski izleyemez.
+- Antigravity'nin başsız kipi olmadığı için sürücü onu kullanamaz.
+- Sürücü çalışırken korunan depoda (mihenk) başka biri dosya değiştirirse o sıradaki iş geçersiz sayılır: ilk on işlik koşu bu yüzden
+  durduruldu (değiştiren bu oturumdu, ajan değil).
+
+**Alınan kararlar (öneri uygulandı; veto edilebilir):**
+
+| Karar | Seçilen | En güçlü karşı görüş |
+|---|---|---|
+| İş listesinin biçimi | proje kökünde `mihenk-isler.json`; `kur` örneğini bırakır | JSON, kodlama bilmeyen biri için kırılgan (bir virgül dosyayı bozar). Hata iletisi anlaşılır yazıldı ama bir form ya da düz metin biçimi İlke 3'e daha uygun olurdu |
+| "Takıldı" durumu | ayrı durum eklenmedi: iş, gerekçesi "takildi:" ile başlayan "kaldı" hükmüyle kapanır | Ayrı durum raporlamayı ve öneri hesabını netleştirirdi; var olan defterlerde şema değişikliği gerektirdiği için ertelendi |
+| Devir notunu kim yazar | sürücü yazar (önceki oturumun son iletisi ve doğrulama çıktısının sonu) | Plan "ajana yazdırır" diyordu; başsız tek seferlik oturuma araya girilemediği için ajan yazamıyor. Ajanın kendi notu daha zengin olurdu |
+| Sürücü işinde hüküm | yalnız sürücü verir; ajanın `hukum_ver` çağrısı reddedilir (`SURUCU_ISI`) | Ajan işi kendisi kapatabilse bir doğrulama koşusu kazanılırdı; ama o zaman sürücü kapanıştan önce kendi denetimini yapamıyor (gerçek koşuda görüldü) |
+| Yeniden deneme | dış döngü her denemeyi temiz oturumda başlatır (en fazla 3) | Aynı oturumu sürdürmek ucuz olurdu; temiz oturum bağlam sorununu kökten çözdüğü için seçildi |
+| İletilerin yazımı | Türkçe ama Türkçeye özgü harfler olmadan | Okunması biraz zorlaşıyor; Windows konsolunda bozuk harf görünmesini önlemek için böyle |
+
+**Kullanıcıya açık soru:** git kurulu olmayan kullanıcı için "yok" kipi (yalnız defter) yeterli mi, yoksa git'siz bir yedekleme mi isteniyor?
 
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 

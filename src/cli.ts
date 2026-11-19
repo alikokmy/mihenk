@@ -57,7 +57,7 @@ async function surKomutu(): Promise<number> {
   const ajan = secenek('--ajan') ?? liste.ajan ?? bulunan[0];
   console.log(`Proje: ${kok}`);
   console.log(`Is listesi: ${listeYolu} (${liste.isler.length} is)`);
-  console.log(`Bu bilgisayarda bulunan araclar: ${bulunan.length > 0 ? bulunan.join(', ') : 'yok'}; kullanilacak: ${ajan ?? 'yok'}`);
+  console.log(`Bu bilgisayarda bulunan araclar: ${bulunan.length > 0 ? bulunan.join(', ') : 'yok'}; varsayilan: ${ajan ?? 'yok'} (iste ayrica "ajan" yazilmissa o kullanilir)`);
   if (!ajan && liste.isler.some((i) => !i.ajan)) {
     throw new Error('Kullanilabilecek bir ajan araci bulunamadi. Codex, OpenCode ya da Claude Code kurun, ya da --ajan ile secin.');
   }
