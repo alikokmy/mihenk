@@ -63,6 +63,10 @@ test('KABUL 3: iki farkli istemci ayni deftere baglanir, ikisi de is acar, birbi
     assert.match(ayrinti.is.istemci, /birinci-arac/);
     const ayrintiB = JSON.parse((await cagir(a, 'rapor', { is_id: isB.is_id })).metin);
     assert.match(ayrintiB.is.istemci, /ikinci-arac/);
+    // Baglanti olayi loga girer: hangi aracin deftere ulastigi arac cagrisi olmadan da gorulur.
+    const baglananlar = readFileSync(join(kok, '.mihenk', 'log.jsonl'), 'utf8').trim().split('\n')
+      .map((s) => JSON.parse(s)).filter((l) => l.islem === 'baglanti').map((l) => l.girdi.istemci).sort();
+    assert.deepEqual(baglananlar, ['birinci-arac 1.0.0', 'ikinci-arac 1.0.0']);
   } finally {
     await a.close();
     await b.close();

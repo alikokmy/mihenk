@@ -103,7 +103,7 @@ Her aşamanın kabul ölçütü işe başlamadan yazılıdır; aşama, ölçüt 
 | Aşama | İş | Kabul ölçütü |
 |---|---|---|
 | 0 | Depo, araştırma, bu plan | **tamam** (gizli depo, push edildi) |
-| 1 | Defter çekirdeği: MCP sunucusu, durum makinesi, doğrulamayı sunucunun koşması, sınırlı çıktı | kayıtsız başlatma ve kanıtsız kapatma testte reddediliyor; doğrulama komutu kalan iş kapanmıyor; iki farklı araç aynı deftere bağlanıyor |
+| 1 | Defter çekirdeği: MCP sunucusu, durum makinesi, doğrulamayı sunucunun koşması, sınırlı çıktı | **tamam, bir açık kalemle** (2026-11-19; `npm test`: 49 test geçti). Ölçüt 1 ve 2 gösterildi. Ölçüt 3 iki bağımsız MCP istemcisiyle gösterildi; gerçek bir ajan aracıyla gösterim açık (bkz. "Aşama 1 sonucu") |
 | 2 | Yöntem paketi: 6-8 skill + AGENTS.md; her kuralın denetimiyle birlikte; Claude Code, Codex, Gemini CLI | üç araçta skill'ler listeleniyor; aynı küçük görevde üçü de defteri kullanıyor |
 | 3 | Sürücü: iş listesi döngüsü, taze oturum, devir notu, bağlam bütçesi, zaman aşımı, isteğe bağlı uyanık tutma; önce iki araç | on küçük işlik liste kullanıcı girişi olmadan bitiyor; yapay büyük çıktılı işte oturum devri çalışıyor; takılan iş listeyi durdurmuyor; uyku açıkken sürücü uyarıyor, uyanık tutma seçeneği açıkken sistem uykuya geçmiyor |
 | 4 | Uyum testleri: senaryolar ve tuzak görevler; araç başına uyum oranı raporu | her desteklenen araç için rapor üretiliyor; kasıtlı bozuk ajan taklidi yakalanıyor |
@@ -114,6 +114,32 @@ Her aşamanın kabul ölçütü işe başlamadan yazılıdır; aşama, ölçüt 
 
 Sıra gerekçesi: zorlama (1) metinden (2) önce gelir, çünkü metin tek başına yetmiyor. Sürücü (3) hem kesintisiz çalışmanın hem ajanlar arası
 iş dağıtımının taşıyıcısıdır. Maliyet ve öneri (5, 6) asıl ayırt edici parçadır ama 1-4'ün ürettiği veriye muhtaçtır.
+
+## Aşama 1 sonucu (2026-11-19)
+
+Kanıt: `npm test` (49 test, 49 geçti). Her ret kuralının karşısında en az bir test var; adında "KABUL" geçen testler ölçütlerin kendisidir.
+
+**Açık kalem (ölçüt 3):** makinede CLI olarak kurulu ajan aracı yok (Codex, Gemini CLI, Qwen Code, OpenCode yok). Claude Code yalnız masaüstü
+uygulamasının içinde; paketli ikilisi başsız kipte "Not logged in" dedi, yani ona iş açtırılamadı. Ölçüt, farklı kimlikli iki bağımsız MCP
+istemci süreciyle gösterildi (`test/mcp.test.ts`). Gerçek araçla kapatmak için: araç deftere bir iş açtıktan sonra
+`node dist/test/ikinci_istemci.js --kok <proje>` koşulur; defterde iki farklı istemci görürse "GECTI" yazar. Aşama 2'nin ölçütü bunu zaten ister.
+
+**Alınan kararlar (öneri uygulandı; veto edilebilir):**
+
+| Karar | Seçilen | En güçlü karşı görüş |
+|---|---|---|
+| Doğrulama komutunun güvenliği (açık karar 3) | Kabuk yok (`&&`, boru, yönlendirme reddedilir); program izin listesinden (test ve derleme araçları; `curl`, `npx`, kabuklar yok); çalışma dizini proje kökü; zaman aşımı; liste `mihenk.json` ile değişir ve sunucu başlarken bir kez okunur | Bu bir kum havuzu değil: `node x.js` her şeyi koşar ve test dosyasını ajan yazar. Liste yalnız defterin "izin sormadan komut koşturma" kapısına dönüşmesini zorlaştırır. Gerçek yalıtım kap ister; komut başına kullanıcı onayı ise İlke 2 ile çelişir |
+| MCP kitaplığı | v2 paketleri (`@modelcontextprotocol/server` 2.4.0; istemci yalnız testte) | v1 (`@modelcontextprotocol/sdk`) daha yaygın ve örneği bol; v2 yeni. v2 seçildi çünkü bağımlılığı az ve eski istemcilere de yanıt veriyor |
+| SQLite | Node'un gömülü `node:sqlite` modülü | Hâlâ "deneysel" etiketli, arayüzü değişebilir. `better-sqlite3` olgun ama yerel derleme ister, `npx` ile kurulumsuz çalışmayı zorlaştırır |
+| Hüküm kuralı | Doğrulama kalırsa iş açık kalır (yeniden denenir). "kaldı" ve "belirsiz" gerekçe ister ve yine doğrulama koşulur; doğrulama geçerken "kaldı" verilemez | Ajan vazgeçtiği işi doğrulama koşmadan kapatmak isteyebilir; uzun doğrulamada bu süre kaybıdır. Her kapanışta ölçülmüş bir sonuç olsun diye böyle |
+| Araç adları ve açıklamaları | Türkçe (ASCII) | İngilizce açıklamayı modeller daha tutarlı izleyebilir; açık karar 1 ile birlikte ölçülerek karara bağlanır |
+
+**Bilinen sınırlar:**
+- Defter doğrulamanın kalitesini ölçemez: her zaman 0 dönen bir komut kayda yazılırsa iş "geçti" olur. Bunu bağımsız doğrulayıcı ve tuzak
+  görevler (Aşama 4) yakalar.
+- Defter dosyası ajanın erişebildiği yerde durur; SQLite dosyasını doğrudan değiştiren bir ajanı tetikleyiciler durdurur ama tetikleyiciyi
+  silen bir ajanı durdurmaz. Kurcalamaya karşı iz (ör. özet zinciri) yok.
+- Doğrulama komutu kullanıcının haklarıyla koşar.
 
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 
@@ -131,5 +157,5 @@ Yanlışlama: gerçek kullanımda öneriye uyulan işlerin doğrulanmış başar
 
 1. Skill'lerin dili: Türkçe mi, İngilizce mi? Araçlar ve modeller İngilizce skill metnini daha tutarlı izler; belgeler Türkçe kalabilir.
 2. Depo hep gizli mi kalacak, yoksa olgunlaşınca açılacak mı? Lisans buna göre seçilir.
-3. Doğrulama komutunu sunucunun çalıştırması, iş kaydına yazılan komutun bu makinede koşması demektir. Yerelde kabul edilebilir; izin listesi
-   gerekip gerekmediği Aşama 1'de kararlaştırılır.
+3. ~~Doğrulama komutunu sunucunun çalıştırması~~: Aşama 1'de karara bağlandı (kabuksuz çalıştırma ve izin listesi; bkz. "Aşama 1 sonucu").
+   Kullanıcı veto edebilir.

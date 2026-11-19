@@ -44,6 +44,11 @@ export class Log {
     else this.yaz({ ...ortak, sonuc: 'hata', mesaj: kirp(hata instanceof Error ? hata.message : String(hata)) });
   }
 
+  /** Baslangici ve bitisi olmayan tek satirlik olay (or. bir istemcinin baglanmasi). */
+  olay(islem: string, girdi: unknown): void {
+    this.yaz({ islem, asama: 'olay', no: `${process.pid}-${++this.sayac}`, girdi: kirp(girdi) });
+  }
+
   /** Es zamanli islemi basla / bitti satirlariyla sarar. `ozetle` donusun loga girecek kisa halini verir. */
   sar<T>(islem: string, girdi: unknown, f: () => T, ozetle?: (sonuc: T) => unknown): T {
     const b = this.basla(islem, girdi);

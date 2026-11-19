@@ -239,6 +239,11 @@ export class Defter {
     this.db.close();
   }
 
+  /** Bir MCP istemcisinin baglandigini loga yazar: hangi aracin deftere ulastigi logdan okunur. */
+  baglantiKaydet(istemci: string | undefined): void {
+    this.log.olay('baglanti', { istemci: istemci ?? 'bilinmiyor' });
+  }
+
   // ---- islemler ----
 
   isAc(g: IsGirdisi): IsKaydi {

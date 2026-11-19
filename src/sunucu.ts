@@ -50,6 +50,8 @@ export function sunucuKur(defter: Defter): McpServer {
     return k ? `${k.name} ${k.version}` : undefined;
   };
 
+  sunucu.server.oninitialized = () => defter.baglantiKaydet(istemci());
+
   sunucu.registerTool(
     'is_ac',
     {
