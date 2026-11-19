@@ -5,8 +5,8 @@ import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export type Arac = 'claude' | 'codex' | 'gemini' | 'antigravity';
-export const ARACLAR: readonly Arac[] = ['claude', 'codex', 'gemini', 'antigravity'];
+export type Arac = 'claude' | 'codex' | 'gemini' | 'antigravity' | 'opencode';
+export const ARACLAR: readonly Arac[] = ['claude', 'codex', 'gemini', 'antigravity', 'opencode'];
 
 export interface KurSecenekleri {
   araclar?: readonly Arac[];
@@ -96,7 +96,7 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
   // Her oturuma giren kisa blok: Codex ve Antigravity AGENTS.md'yi dogrudan okur.
   blokGuncelle('AGENTS.md', '<!-- mihenk:basla -->', '<!-- mihenk:bitti -->', readFileSync(join(paket, 'AGENTS.md'), 'utf8'));
 
-  // Codex, Gemini CLI ve Antigravity ortak .agents/skills dizinini okur.
+  // Codex, Gemini CLI ve Antigravity ortak .agents/skills dizinini okur (OpenCode icin belgeden dogrulanmadi; denemede bakilacak).
   if (araclar.some((a) => a !== 'claude')) skilleriKur('.agents/skills');
 
   if (araclar.includes('claude')) {
@@ -143,6 +143,14 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
     });
     jsonGuncelle('.agents/plugins/mihenk/mcp_config.json', (n) => {
       n.mcpServers = { ...(n.mcpServers ?? {}), mihenk: mcpKaydi };
+    });
+  }
+
+  if (araclar.includes('opencode')) {
+    // OpenCode 2.3.2: bicim aracin kendi "opencode mcp add" komutunun yazdigi dosyadan okundu (mcp.servers.<ad>, type local, command dizisi).
+    jsonGuncelle('opencode.json', (n) => {
+      const mcp = (n.mcp ??= {}) as Record<string, any>;
+      mcp.servers = { ...(mcp.servers ?? {}), mihenk: { type: 'local', command: [mcpKaydi.command, ...mcpKaydi.args] } };
     });
   }
 

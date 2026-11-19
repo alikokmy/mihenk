@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // mihenk komut satiri. Simdilik tek komut: kur.
-//   mihenk kur [--hedef <proje dizini>] [--arac claude,codex,gemini,antigravity]
+//   mihenk kur [--hedef <proje dizini>] [--arac claude,codex,gemini,antigravity,opencode]
 import { ARACLAR, kur, type Arac } from './kur.js';
 
 const [komut, ...gerisi] = process.argv.slice(2);
@@ -10,7 +10,7 @@ const secenek = (ad: string): string | undefined => {
 };
 
 if (komut !== 'kur') {
-  console.error('kullanim: mihenk kur [--hedef <proje dizini>] [--arac claude,codex,gemini,antigravity]');
+  console.error('kullanim: mihenk kur [--hedef <proje dizini>] [--arac claude,codex,gemini,antigravity,opencode]');
   console.error('Defter sunucusu ayri calisir: mihenk-defter [--kok <proje dizini>]');
   process.exit(komut === undefined || komut === '--help' ? 0 : 2);
 }

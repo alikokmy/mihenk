@@ -122,8 +122,8 @@ Her aşamanın kabul ölçütü işe başlamadan yazılıdır; aşama, ölçüt 
 |---|---|---|
 | 0 | Depo, araştırma, bu plan | **tamam** (gizli depo, push edildi) |
 | 1 | Defter çekirdeği: MCP sunucusu, durum makinesi, doğrulamayı sunucunun koşması, sınırlı çıktı | **tamam** (2026-11-20). Ölçüt 1 ve 2 testle gösterildi. Ölçüt 3 gerçek araçla gösterildi: Claude Code 2.1.326 ve bağımsız test istemcisi aynı deftere iş açtı (bkz. "Aşama 1 sonucu") |
-| 2 | Yöntem paketi: 6-8 skill + AGENTS.md; her kuralın denetimiyle birlikte; Claude Code, Codex, Gemini CLI | **sürüyor** (2026-11-19): paket, kural tablosu, kurulum komutu ve kabul betiği hazır (`npm test`: 65 test geçti). Claude Code denemesi geçti (4/4), Antigravity ile ilk deneme 4 ölçütten 3'ünü sağladı; üçüncü araç kurulu değil, skill listesine elle bakılmadı (bkz. "Aşama 2"). Ölçüt: üç araçta skill'ler listeleniyor; aynı küçük görevde üçü de defteri kullanıyor |
-| 3 | Sürücü: iş listesi döngüsü, taze oturum, devir notu, bağlam bütçesi, zaman aşımı, isteğe bağlı uyanık tutma, saklama kipi (yok / yerel / yerel + gönder); önce iki araç | on küçük işlik liste kullanıcı girişi olmadan bitiyor; yapay büyük çıktılı işte oturum devri çalışıyor; takılan iş listeyi durdurmuyor; uyku açıkken sürücü uyarıyor, uyanık tutma seçeneği açıkken sistem uykuya geçmiyor; kurulum ve sürücü tek adımda (çift tıklama ya da tek komut) başlıyor, yönetici izni istemiyor; uzak deposu olmayan bir projede liste "yerel" kipte bitiyor ve hiçbir kipte kullanıcı açmadan push yapılmıyor |
+| 2 | Yöntem paketi: 6-8 skill + AGENTS.md; her kuralın denetimiyle birlikte; Claude Code, Codex, Gemini CLI | **tamam, bir notla** (2026-11-20). Aynı küçük görevde Claude Code, Codex CLI ve OpenCode defteri kullandı (üçünde betik hükmü GEÇTİ); Antigravity 4 ölçütten 3'ünü sağladı. Not: skill listesi Claude Code'da tam, Codex ve OpenCode'da dolaylı gösterildi (bkz. "Aşama 2"). Gemini CLI yerine OpenCode denendi: Gemini CLI ücretsiz katmanda kaldırılmış |
+| 3 | Sürücü: iş listesi döngüsü, taze oturum, devir notu, bağlam bütçesi, zaman aşımı, isteğe bağlı uyanık tutma, saklama kipi (yok / yerel / yerel + gönder); önce iki araç | on küçük işlik liste kullanıcı girişi olmadan bitiyor; yapay büyük çıktılı işte oturum devri çalışıyor; takılan iş listeyi durdurmuyor; uyku açıkken sürücü uyarıyor, uyanık tutma seçeneği açıkken sistem uykuya geçmiyor; kurulum ve sürücü tek adımda (çift tıklama ya da tek komut) başlıyor, yönetici izni istemiyor; uzak deposu olmayan bir projede liste "yerel" kipte bitiyor ve hiçbir kipte kullanıcı açmadan push yapılmıyor; ajan yalnız kendisine verilen proje dizininde çalışıyor (başka dizinde değişiklik yaparsa iş geçersiz sayılıyor) |
 | 4 | Uyum testleri: senaryolar ve tuzak görevler; araç başına uyum oranı raporu | her desteklenen araç için rapor üretiliyor; kasıtlı bozuk ajan taklidi yakalanıyor |
 | 5 | Maliyet ve süre: kullanım verisini işe bağlama | kapanan her işte süre ve maliyet dolu; elle hesapla örneklemde uyuşuyor |
 | 6 | Öneri: iş türü × ajan / model başına doğrulanmış başarı, uyum, süre, maliyet; belirsizlikle birlikte | sentetik defterde bilinen en iyi seçeneği buluyor; az veride "veri yetersiz" diyor |
@@ -163,7 +163,7 @@ istemci süreciyle gösterildi (`test/mcp.test.ts`). Gerçek araçla kapatmak i�
   silen bir ajanı durdurmaz. Kurcalamaya karşı iz (ör. özet zinciri) yok.
 - Doğrulama komutu kullanıcının haklarıyla koşar.
 
-## Aşama 2: yöntem paketi (sürüyor)
+## Aşama 2: yöntem paketi (tamam, bir notla)
 
 Paket `paket/` altındadır: yedi skill (`paket/skills/*/SKILL.md`), her oturuma giren kısa blok (`paket/AGENTS.md`) ve madde tablosu
 (`paket/kurallar.json`). Tablonun kaynağı JSON dosyasıdır; `test/paket.test.ts` denetimi olmayan maddenin "kural" etiketi taşımasını,
@@ -178,6 +178,7 @@ skill metniyle tablonun ayrışmasını ve bu tablonun eksik kalmasını reddede
 | Codex CLI | `.agents/skills/` | `.codex/config.toml` (`[mcp_servers.mihenk]`) | `AGENTS.md` | learn.chatgpt.com/docs/build-skills, /extend/mcp |
 | Gemini CLI | `.agents/skills/` | `.gemini/settings.json` (`mcpServers`) | `context.fileName` ile `AGENTS.md` | geminicli.com/docs/cli/skills, /tools/mcp-server |
 | Antigravity | `.agents/skills/` | `.agents/plugins/mihenk/` (`plugin.json` + `mcp_config.json`) | `AGENTS.md` | kurulu sürümün (44.9.1) kendi belgesi: `agy-customizations` skill'i |
+| OpenCode | `.agents/skills/` (denemede görüldü) | `opencode.json` (`mcp.servers.mihenk`) | `AGENTS.md` | kurulu sürümün (2.3.2) kendi `mcp add` çıktısı |
 
 Antigravity notu (2026-11-20): makinede yalnız masaüstü uygulaması var, komut satırı aracı (`agy`) yok; başsız koşulamıyor. Web belgesi
 proje düzeyinde `.agents/mcp_config.json` diyordu; kurulu sürümün kendi belgesi MCP sunucusunun yalnız küresel ayarda ya da bir eklentinin
@@ -205,16 +206,39 @@ yazılmadı: araçlar kurulu olmadığından komutları denenemedi, denenmemiş 
 Claude Code 2.1.326 deftere bağlandı, önce açık işlere baktı, kayıt açtı (`npm test`), `hukum_ver` çağırdı; sunucu komutu koştu, iş
 "geçti" diye kapandı; test bağımsız koşuda da geçiyor. 10 tur, 0,25 USD. Bakılmadı: skill'lerin araç içinde listelendiği.
 
-**Aşama 2'de durum:** üç araçtan ikisi (Claude Code, Antigravity) aynı küçük görevde defteri kullandı. Açık: Antigravity'de kimlik
-düzeltmesinin yeniden denenmesi, iki araçta skill listesine elle bakılması, üçüncü araç (kurulu değil).
+**Codex CLI ve OpenCode ile deneme (2026-11-20; kullanıcı ikisini de kurdu):**
+
+| Araç | Betiğin hükmü | Defter kullanımı | Skill izi | Not |
+|---|---|---|---|---|
+| Claude Code 2.1.326 | GEÇTİ (4/4) | iş açtı, "geçti" diye kapandı | açılış kaydında yedi skill ve `mihenk` sunucusu "connected" | 10 tur, 0,25 USD |
+| Codex CLI 0.170.0 | GEÇTİ (4/4) | iş açtı, kök nedeni not etti, "geçti" diye kapandı | koşuda beş skill dosyasını okudu | ücretsiz ChatGPT hesabıyla çalıştı |
+| OpenCode 2.3.2 | GEÇTİ (4/4) | iş açtı, "geçti" diye kapandı | `mihenk-is-kaydi` skill'ini yükledi | ücretsiz model (`opencode/big-pickle`), giriş yok |
+| Antigravity 44.9.1 | KALDI (3/4) | iş açtı, "geçti" diye kapandı | bakılmadı | eksik: istemci kimliği; düzeltildi, yeniden denenmedi |
+
+Denemelerin öğrettikleri (Aşama 3'te sürücü bunları bilmek zorunda):
+- **Codex:** projedeki MCP kaydı yalnız güvenilen projede okunur (`codex exec --trust`; güven Codex'in kendi kullanıcı ayarına yazılır).
+  Başsız kipte araç çağrısı onay ister ve onay politikası "never" olduğu için reddedilir; `--approve-for-me` gerekir. İkisi olmadan
+  Codex defteri kullanamadı ve bunu dürüstçe bildirdi (olumsuz sonuç).
+- **OpenCode:** MCP biçimi `opencode.json` içinde `mcp.servers.<ad>` (aracın kendi `mcp add` komutunun çıktısından okundu; ezberdeki
+  biçim yanlış çıkardı). Skill'leri `.agents/skills` altından buldu.
+- **Olay: ajan yanlış dizinde çalıştı.** `opencode run` çalışma dizinini sürecin gerçek dizininden değil, miras kalan `PWD` ortam
+  değişkeninden alıyor. Kabul betiği depo dizininden başlatılınca OpenCode örnek proje yerine mihenk deposunda çalıştı ve otomatik
+  onayla üç dosyayı değiştirdi. Değişiklikler commit edilmeden fark edildi, yama olarak saklandı (`deneme/opencode-yanlis-dizin.patch`,
+  git dışı) ve geri alındı. Kök neden deneyle doğrulandı (PWD silinince doğru dizinde çalıştı). Önlem: betik çocuk sürece `PWD`'yi
+  açıkça verir ve koşudan önce / sonra deponun durumunu karşılaştırır; değişmişse sonucu "GECERSIZ" sayar. **Sürücü de ajanı başlatırken
+  aynı iki önlemi alacak** (Aşama 3 ölçütüne eklendi).
+- O yanlış koşuda OpenCode gerçek olabilecek bir zayıflık bildirdi: doğrulama komutu 0 ile çıkıp arkasında borusu açık bir torun süreç
+  bırakırsa `hukum_ver` zaman aşımına kadar bekler ve işi "kaldı" sayar. Henüz doğrulanmadı; ayrı bir iş olarak ele alınacak.
+
+**Aşama 2'de durum:** ölçütün ikinci yarısı (aynı küçük görevde üç araç defteri kullanıyor) Claude Code, Codex ve OpenCode ile
+gösterildi. Birinci yarı (skill'ler listeleniyor) Claude Code'da tam, Codex ve OpenCode'da dolaylı gösterildi: skill'leri bulup
+kullandılar, ama araç içi skill listesine bakılmadı. Açık: Antigravity'de kimlik düzeltmesinin yeniden denenmesi.
 
 Başsız kipi olmayan araç için betik iki adımdır: `--asama hazirla` deneme projesini `deneme/<araç>/` altına (git dışı) kurar ve
 kullanıcıya üç satırlık yönerge yazar; kullanıcı görevi araçta verir; `--asama denetle` sonucu defterden okur.
 
-**Aşamayı kapatmak için kullanıcıdan gereken:** (1) Antigravity: kimlik düzeltmesini doğrulamak için denemeyi bir kez daha yapmak ve
-araç içinde skill listesine bakmak. (2) Claude Code: araç içinde `/skills` ile skill listesine bakmak. (3) Üçüncü araç (Codex CLI)
-kurulu değil; kurmak küresel yazılım kurmaktır, ajan bunu kendiliğinden yapmaz. Ölçütün "üç araç" yerine "kurulu iki araç" diye
-daraltılması da kullanıcının kararıdır.
+**Kalan, isteğe bağlı:** Antigravity'de denemeyi bir kez daha yapmak (kimlik düzeltmesini doğrular) ve Codex ile OpenCode'da araç içi
+skill listesine bakmak. İkisi de kullanıcının elle yapacağı kısa adımlardır; aşamanın kapanmasını beklemez.
 
 | Kod | Madde | Skill | Durum |
 |---|---|---|---|

@@ -40,6 +40,12 @@ test('kur: her aracin MCP ayari kendi dosyasina, kendi biciminde yazilir', () =>
   }
   const toml = oku(h, '.codex/config.toml');
   assert.match(toml, /\[mcp_servers\.mihenk\]\ncommand = "node"\nargs = \[".*bin\.js", "--kok", ".*"\]/);
+  // OpenCode 2.3.2: mcp.servers.<ad>, komut ve argumanlar tek dizide (aracin kendi "mcp add" ciktisindaki bicim).
+  const oc = JSON.parse(oku(h, 'opencode.json')).mcp.servers.mihenk;
+  assert.equal(oc.type, 'local');
+  assert.equal(oc.command[0], 'node');
+  assert.match(oc.command[1], /bin\.js$/);
+  assert.equal(oc.command[2], '--kok');
 });
 
 test('kur: AGENTS.md blogu yazilir; Claude Code ve Gemini CLI AGENTS.md okuyacak sekilde ayarlanir', () => {
@@ -92,6 +98,7 @@ test('kur: yalniz secilen araca kurar', () => {
   assert.ok(!existsSync(join(h, '.agents')));
   assert.ok(!existsSync(join(h, '.codex')));
   assert.ok(!existsSync(join(h, '.gemini')));
+  assert.ok(!existsSync(join(h, 'opencode.json')));
 });
 
 test('kur: yalniz hedef projenin icine yazar (kuresel ayar, yonetici izni gerektiren yer yok)', () => {

@@ -18,18 +18,27 @@ import { Defter } from '../src/defter.js';
 import { ARACLAR, kur, type Arac } from '../src/kur.js';
 
 const DEPO = fileURLToPath(new URL('../../', import.meta.url));
-const GOREV = 'Bu projede "npm test" kaliyor. Hatayi bul ve duzelt. Projenin AGENTS.md dosyasindaki calisma yontemine uy.';
+// Gorev metninde tirnak ve kabuk karakteri yok: Windows'ta .cmd sarmalayicili araclara kabuk uzerinden guvenle gecer.
+const GOREV = 'Bu projede npm test kaliyor. Hatayi bul ve duzelt. Projenin AGENTS.md dosyasindaki calisma yontemine uy.';
 const DEFTER_ARACLARI = ['is_ac', 'hukum_ver', 'kanit_ekle', 'karar_yaz', 'rapor'].map((a) => `mcp__mihenk__${a}`);
 /** Bu deponun kendi test istemcileri: bir ajan araci sayilmazlar. */
 const TEST_ISTEMCISI = /bagimsiz-test-istemcisi|kurulum-denetimi|birinci-arac|ikinci-arac/;
 
-/** Arac basina bassiz komut. Bayraklar aracin kendi --help ciktisindan dogrulandi (Claude Code 2.1.326). */
-const BASSIZ: Partial<Record<Arac, { komut: string; argumanlar: string[] }>> = {
+/**
+ * Arac basina bassiz komut. Bayraklar her aracin kendi --help ciktisindan dogrulandi ve bu makinede denendi
+ * (2026-11-20: Claude Code 2.1.326, Codex CLI 0.170.0, OpenCode 2.3.2).
+ * sabit: proje gecici dizin yerine deneme/<arac> altinda kurulur (Codex proje basina guven kaydi tutar; her kosuda yeni kayit birikmesin).
+ */
+const BASSIZ: Partial<Record<Arac, { komut: string; argumanlar: string[]; sabit?: boolean }>> = {
   claude: {
     komut: 'claude',
     argumanlar: ['-p', GOREV, '--output-format', 'json', '--permission-mode', 'acceptEdits', '--no-session-persistence',
       '--max-budget-usd', '1', '--allowedTools', ...DEFTER_ARACLARI, 'Read', 'Edit', 'Glob', 'Grep'],
   },
+  // --trust olmadan Codex projedeki MCP kaydini okumaz; --approve-for-me olmadan bassiz kipte arac cagrisi onay bekleyip reddedilir.
+  codex: { komut: 'codex', argumanlar: ['exec', '--trust', '--approve-for-me', '--json', GOREV], sabit: true },
+  // OpenCode'da komut satiri araci masaustu uygulamasinin icindedir (resources/opencode-cli.exe); PATH'te yoksa --komut ile verilir.
+  opencode: { komut: 'opencode', argumanlar: ['run', '--standalone', '--auto', '--format', 'json', GOREV] },
 };
 
 const secenek = (ad: string): string | undefined => {
@@ -111,11 +120,36 @@ if (!tanim) {
   console.error(`"${arac}" icin dogrulanmis bassiz komut yok. Elle deneme icin: --asama hazirla, sonra --asama denetle.`);
   process.exit(2);
 }
-const proje = mkdtempSync(join(tmpdir(), `mihenk-kabul2-${arac}-`));
+let proje: string;
+if (tanim.sabit) {
+  proje = sabitDizin;
+  rmSync(proje, { recursive: true, force: true });
+  mkdirSync(proje, { recursive: true });
+} else {
+  proje = mkdtempSync(join(tmpdir(), `mihenk-kabul2-${arac}-`));
+}
 hazirla(proje);
-const kosu = spawnSync(secenek('--komut') ?? tanim.komut, tanim.argumanlar, {
-  cwd: proje, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15 * 60 * 1000,
-});
+const komut = secenek('--komut') ?? tanim.komut;
+// Windows'ta npm ile kurulan araclar (codex) .cmd sarmalayicisidir ve ancak kabukla kosar; .exe dogrudan kosar.
+const kabukla = process.platform === 'win32' && !/\.exe$/i.test(komut);
+// OLAY (2026-11-20): bu betik depo dizininden baslatildi; OpenCode calisma dizinini surecin gercek dizininden degil miras kalan
+// PWD ortam degiskeninden aldi ve ornek proje yerine mihenk deposunun kendisinde calisip dosya degistirdi. Bu yuzden:
+//   1) cocuk surece PWD acikca proje dizini olarak verilir (cwd tek basina yetmez);
+//   2) kosudan once ve sonra deponun durumu karsilastirilir; degismisse sonuc gecersiz sayilir.
+const ortam = { ...process.env, PWD: proje };
+delete (ortam as Record<string, string | undefined>).OLDPWD;
+delete (ortam as Record<string, string | undefined>).INIT_CWD;
+const depoDurumu = (): string =>
+  ['status', 'diff'].map((alt) => spawnSync('git', alt === 'status' ? ['status', '--porcelain'] : ['diff'], { cwd: DEPO, encoding: 'utf8' }).stdout).join('\n---\n');
+const depoOnce = depoDurumu();
+const ortak = { cwd: proje, env: ortam, encoding: 'utf8' as const, stdio: ['ignore', 'pipe', 'pipe'] as ['ignore', 'pipe', 'pipe'], timeout: 15 * 60 * 1000, maxBuffer: 64 * 1024 * 1024 };
+const kosu = kabukla
+  ? spawnSync([komut, ...tanim.argumanlar].map((a) => (/\s/.test(a) ? `"${a}"` : a)).join(' '), { ...ortak, shell: true })
+  : spawnSync(komut, tanim.argumanlar, ortak);
+if (depoDurumu() !== depoOnce) {
+  console.error('GECERSIZ: arac ornek proje yerine mihenk deposunda dosya degistirdi. "git status" ile bakin; bu kosunun sonucu sayilmaz.');
+  process.exit(3);
+}
 if (kosu.error) {
   console.error(`ATLANDI: arac baslatilamadi (${kosu.error.message}). Kurulu degilse --komut ile yolunu verin.`);
   process.exit(2);
@@ -126,7 +160,18 @@ try {
   beyan = String(j.result ?? '');
   console.log(`arac: ${j.num_turns ?? '?'} tur, maliyet ${j.total_cost_usd ?? '?'} USD`);
 } catch {
-  // JSON degilse ham metin kalir.
+  // Tek JSON degilse satir satir JSON olabilir (Codex, OpenCode): son metin iletisi beyandir.
+  const metinler: string[] = [];
+  for (const satir of beyan.split(String.fromCharCode(10))) {
+    try {
+      const o = JSON.parse(satir) as { item?: { type?: string; text?: string }; part?: { type?: string; text?: string } };
+      if (o.item?.type === 'agent_message' && o.item.text) metinler.push(o.item.text);
+      else if (o.part?.type === 'text' && o.part.text) metinler.push(o.part.text);
+    } catch {
+      // JSON olmayan satir atlanir.
+    }
+  }
+  if (metinler.length > 0) beyan = metinler[metinler.length - 1] as string;
 }
 console.log(`aracin beyani (kanit sayilmaz): ${beyan.slice(0, 300).replace(/\s+/g, ' ')}`);
 if (/not logged in/i.test(beyan)) {
