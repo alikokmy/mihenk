@@ -1,0 +1,171 @@
+// MCP yuzeyi: bes arac. Kurallar burada degil defter.ts'tedir; bu dosya yalniz cevirir ve donusu sinirlar.
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { McpServer, type CallToolResult } from '@modelcontextprotocol/server';
+import { z } from 'zod';
+import type { Defter } from './defter.js';
+import { Ret } from './hata.js';
+import { kisalt } from './sinir.js';
+
+export const SURUM = '0.1.0';
+/** Her arac donusunun ust siniri (karakter). Fazlasi dosyaya yazilir, donuste ozet ve yol kalir (Ilke 2). */
+export const DONUS_SINIRI = 4000;
+
+const KULLANIM = [
+  'mihenk defteri: yapilan isin kaydi ve kaniti burada tutulur.',
+  'Sira: (1) ise baslamadan once is_ac ile kayit ac; (2) calis, gerekirse kanit_ekle ve karar_yaz; (3) bitince hukum_ver cagir.',
+  'hukum_ver dogrulama komutunu SUNUCUDA kosar: is ancak komut 0 ile cikarsa "gecti" diye kapanir. "Testler gecti" demek isi kapatmaz.',
+  'Dogrulama kalirsa is acik kalir: duzelt ve hukum_ver\'i yeniden cagir.',
+].join('\n');
+
+export function sunucuKur(defter: Defter): McpServer {
+  const sunucu = new McpServer({ name: 'mihenk-defter', version: SURUM }, { instructions: KULLANIM });
+
+  const donus = (arac: string, veri: unknown, hata = false): CallToolResult => {
+    let metin = typeof veri === 'string' ? veri : JSON.stringify(veri, null, 1);
+    if (metin.length > DONUS_SINIRI) {
+      const goreli = `.mihenk/ciktilar/donus-${arac}-${Date.now()}-${process.pid}.txt`;
+      let not = `[mihenk: donus ${metin.length} karakterdi, kisaltildi. Tam metin: ${goreli}]`;
+      try {
+        writeFileSync(join(defter.kok, goreli), metin);
+      } catch {
+        not = `[mihenk: donus ${metin.length} karakterdi, kisaltildi; tam metin dosyaya yazilamadi]`;
+      }
+      metin = `${kisalt(metin, DONUS_SINIRI - not.length - 1).metin}\n${not}`;
+    }
+    return { content: [{ type: 'text', text: metin }], ...(hata ? { isError: true } : {}) };
+  };
+
+  const calistir = async (arac: string, f: () => unknown): Promise<CallToolResult> => {
+    try {
+      return donus(arac, await f());
+    } catch (e) {
+      if (e instanceof Ret) return donus(arac, `RET [${e.kod}]: ${e.message}`, true);
+      return donus(arac, `HATA: ${e instanceof Error ? e.message : String(e)}`, true);
+    }
+  };
+
+  const istemci = (): string | undefined => {
+    const k = sunucu.server.getClientVersion();
+    return k ? `${k.name} ${k.version}` : undefined;
+  };
+
+  sunucu.registerTool(
+    'is_ac',
+    {
+      title: 'Is kaydi ac',
+      description:
+        'Ise BASLAMADAN once cagrilir; kayit acilmadan is baslamaz. Kisa bir kayit acar: ne soruluyor, ne bekleniyor, yanlissa ne gorulur ve ' +
+        'isin bittigini hangi komut gosterir. Donen is_id oteki araclarda kullanilir. Kayit sonradan degistirilemez.',
+      inputSchema: z.object({
+        tur: z.string().describe('Is turu, kisa etiket: hata_duzeltme, ozellik, yeniden_duzenleme, test, belge, arastirma, yapilandirma gibi'),
+        soru: z.string().describe('Yapilacak is ya da yanitlanacak soru (en fazla 1000 karakter)'),
+        beklenti: z.string().describe('Is dogru yapilinca ne gorulecek'),
+        yanlissa: z.string().describe('Yaklasim yanlissa ne gorulur (yanlislama olcutu)'),
+        dogrulama_komutu: z
+          .string()
+          .describe(
+            'Isin bittigini gosteren tek komut, or. "npm test" ya da "pytest -q tests/test_x.py". Proje kokunde, kabuksuz kosar: ' +
+              '&&, |, >, $ gibi kabuk karakterleri ve izin listesi disindaki programlar reddedilir.',
+          ),
+        ajan: z.string().describe('Isi yuruten ajan araci, or. claude-code, codex, gemini-cli'),
+        model: z.string().describe('Kullanilan model kimligi'),
+        zaman_asimi_sn: z.number().int().optional().describe('Dogrulama komutunun zaman asimi, saniye (varsayilan 120)'),
+      }),
+    },
+    (g) =>
+      calistir('is_ac', () => {
+        const kimlik = istemci();
+        const is = defter.isAc({ ...g, ...(kimlik ? { istemci: kimlik } : {}) });
+        return {
+          is_id: is.id, durum: is.durum, dogrulama_komutu: is.dogrulama_komutu, zaman_asimi_sn: is.zaman_asimi_sn,
+          mesaj: `Kayit acildi. Is bitince hukum_ver(is_id=${is.id}) cagirin; dogrulamayi sunucu kosar.`,
+        };
+      }),
+  );
+
+  sunucu.registerTool(
+    'kanit_ekle',
+    {
+      title: 'Kanit / not ekle',
+      description:
+        'Acik bir ise ajanin notunu ekler (gozlem, olcum, ara sonuc). Bu bir BEYANDIR: kayda "ajan" kaynagiyla girer ve hukmu etkilemez. ' +
+        'Isi kapatan tek sey hukum_ver\'in kostugu dogrulamadir.',
+      inputSchema: z.object({
+        is_id: z.number().int().describe('is_ac\'in dondurdugu numara'),
+        icerik: z.string().describe('Not (en fazla 4000 karakter)'),
+      }),
+    },
+    (g) => calistir('kanit_ekle', () => defter.kanitEkle(g)),
+  );
+
+  sunucu.registerTool(
+    'karar_yaz',
+    {
+      title: 'Karar notu yaz',
+      description:
+        'Karar gereken yerde durmak yerine onerilen secenegi uygula ve karari buraya yaz: secenekler, secilen ve en guclu karsi gorus. ' +
+        'Kullanici sonradan okuyup veto edebilir.',
+      inputSchema: z.object({
+        is_id: z.number().int().describe('is_ac\'in dondurdugu numara'),
+        konu: z.string().describe('Neye karar verildi'),
+        secenekler: z.array(z.string()).describe('Degerlendirilen secenekler (en az iki)'),
+        secilen: z.string().describe('Uygulanan secenek'),
+        karsi_gorus: z.string().describe('Secilene karsi en guclu gorus'),
+      }),
+    },
+    (g) => calistir('karar_yaz', () => defter.kararYaz(g)),
+  );
+
+  sunucu.registerTool(
+    'hukum_ver',
+    {
+      title: 'Hukum ver (dogrulamayi sunucu kosar)',
+      description:
+        'Is bittiginde cagrilir. Kayittaki dogrulama komutunu sunucu kosar; cikis kodu, sure ve cikti ozeti deftere yazilir. ' +
+        'Komut 0 ile cikarsa is "gecti" diye kapanir; cikmazsa is ACIK KALIR, duzeltip yeniden cagirin. ' +
+        'Vazgecilen is icin hukum="kaldi", dogrulamanin isi olcmedigi durumda hukum="belirsiz" verin; ikisi de gerekce ister.',
+      inputSchema: z.object({
+        is_id: z.number().int().describe('is_ac\'in dondurdugu numara'),
+        hukum: z.string().optional().describe('gecti (varsayilan), kaldi ya da belirsiz'),
+        gerekce: z.string().optional().describe('kaldi ve belirsiz icin zorunlu: neden'),
+      }),
+    },
+    (g) =>
+      calistir('hukum_ver', async () => {
+        const h = await defter.hukumVer({
+          is_id: g.is_id,
+          ...(g.hukum === undefined ? {} : { hukum: g.hukum as never }),
+          ...(g.gerekce === undefined ? {} : { gerekce: g.gerekce }),
+        });
+        // mesaj basta: donus kesilirse bile ajan once sonucu okur.
+        const { mesaj, ...gerisi } = h;
+        return { mesaj, ...gerisi };
+      }),
+  );
+
+  sunucu.registerTool(
+    'rapor',
+    {
+      title: 'Defter raporu',
+      description:
+        'Defterin durumunu doner. is_id verilirse o isin kaydi, kanitlari ve kararlari; verilmezse durum sayilari ve son isler listesi. ' +
+        'Oturum basinda acik isleri gormek icin durum="acik" ile cagirin.',
+      inputSchema: z.object({
+        is_id: z.number().int().optional().describe('Tek isin ayrintisi icin'),
+        durum: z.string().optional().describe('Liste suzgeci: acik, gecti, kaldi, belirsiz'),
+        sinir: z.number().int().optional().describe('Listelenecek en fazla is (varsayilan 20, en fazla 100)'),
+      }),
+    },
+    (g) =>
+      calistir('rapor', () =>
+        defter.rapor({
+          ...(g.is_id === undefined ? {} : { is_id: g.is_id }),
+          ...(g.durum === undefined ? {} : { durum: g.durum as never }),
+          ...(g.sinir === undefined ? {} : { sinir: g.sinir }),
+        }),
+      ),
+  );
+
+  return sunucu;
+}

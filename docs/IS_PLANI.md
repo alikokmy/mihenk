@@ -59,6 +59,10 @@ Ajanın bağlamı dolunca durması, işin durumu bağlamın içinde tutulduğu i
 - **Durmadan devam:** karar gereken yerde ajan önerdiği seçeneği uygular ve karar notunu (seçenekler, seçilen, en güçlü karşı görüş) deftere
   yazar; kullanıcı sonradan veto edebilir. Yalnız şu durumlarda durur: geri alınamaz ya da dışa dönük işlem, güvenlik, kullanıcının varlığını
   isteyen adım, bütçe tavanı.
+- **Uyanık tutma (kullanıcı isteği, 2026-11-19):** uzun liste koşarken bilgisayar uyursa iş durur. Sürücü isteğe bağlı bir "bilgisayarı
+  uyanık tut" seçeneği sunar (varsayılan kapalı; yalnız sürücü çalışırken geçerli, bitince bırakılır). Seçenek kapalıysa ve işletim
+  sisteminde uyku açıksa sürücü başlarken kullanıcıyı uyarır; README'de de yazar. İşletim sistemi yolu (Windows, macOS, Linux) kurulurken
+  o sistemin kendi belgesinden doğrulanır.
 - **Takılma:** oturum çökerse ya da zaman aşımına uğrarsa sürücü aynı işi son devir notundan yeniden başlatır; sınırlı sayıda denemeden sonra
   işi "takıldı" diye işaretler ve sıradakine geçer. Liste tek bir iş yüzünden durmaz.
 
@@ -101,7 +105,7 @@ Her aşamanın kabul ölçütü işe başlamadan yazılıdır; aşama, ölçüt 
 | 0 | Depo, araştırma, bu plan | **tamam** (gizli depo, push edildi) |
 | 1 | Defter çekirdeği: MCP sunucusu, durum makinesi, doğrulamayı sunucunun koşması, sınırlı çıktı | kayıtsız başlatma ve kanıtsız kapatma testte reddediliyor; doğrulama komutu kalan iş kapanmıyor; iki farklı araç aynı deftere bağlanıyor |
 | 2 | Yöntem paketi: 6-8 skill + AGENTS.md; her kuralın denetimiyle birlikte; Claude Code, Codex, Gemini CLI | üç araçta skill'ler listeleniyor; aynı küçük görevde üçü de defteri kullanıyor |
-| 3 | Sürücü: iş listesi döngüsü, taze oturum, devir notu, bağlam bütçesi, zaman aşımı; önce iki araç | on küçük işlik liste kullanıcı girişi olmadan bitiyor; yapay büyük çıktılı işte oturum devri çalışıyor; takılan iş listeyi durdurmuyor |
+| 3 | Sürücü: iş listesi döngüsü, taze oturum, devir notu, bağlam bütçesi, zaman aşımı, isteğe bağlı uyanık tutma; önce iki araç | on küçük işlik liste kullanıcı girişi olmadan bitiyor; yapay büyük çıktılı işte oturum devri çalışıyor; takılan iş listeyi durdurmuyor; uyku açıkken sürücü uyarıyor, uyanık tutma seçeneği açıkken sistem uykuya geçmiyor |
 | 4 | Uyum testleri: senaryolar ve tuzak görevler; araç başına uyum oranı raporu | her desteklenen araç için rapor üretiliyor; kasıtlı bozuk ajan taklidi yakalanıyor |
 | 5 | Maliyet ve süre: kullanım verisini işe bağlama | kapanan her işte süre ve maliyet dolu; elle hesapla örneklemde uyuşuyor |
 | 6 | Öneri: iş türü × ajan / model başına doğrulanmış başarı, uyum, süre, maliyet; belirsizlikle birlikte | sentetik defterde bilinen en iyi seçeneği buluyor; az veride "veri yetersiz" diyor |
