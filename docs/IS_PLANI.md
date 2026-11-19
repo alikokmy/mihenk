@@ -79,6 +79,13 @@ Kullanıcının sözü: "program kodlamayı bilmeyen birisi için de kolayca kul
   satırı komutudur; çift tıklanır kurulum ve sürücünün tek adımda başlaması Aşama 3'ün ölçütüne yazıldı.
 - **Düz dil:** programın kullanıcıya yazdığı her ileti kısa ve Türkçedir; ne olduğunu ve sıradaki adımı söyler.
 - Sınır: ajan araçlarının kendisini (Claude Code, Codex, Antigravity) kurmak ve onlarda oturum açmak kullanıcının işidir.
+- **Yalnız yerelde çalışma (kullanıcı isteği, 2026-11-20):** "bir kullanıcı sadece yerelde çalışacaksa commit olayında yerel bir yöntem
+  de olabilmeli." mihenk uzak depo (GitHub vb.) varsaymaz. İşin kaydı zaten yereldedir (defter). Değişikliklerin saklanması üç kipten
+  biriyle olur ve kullanıcı seçer: **yok** (yalnız defter), **yerel** (yalnız bu bilgisayarda commit; uzak depo gerekmez),
+  **yerel + gönder** (commit ve push). Varsayılan "yerel"dir; hiçbir kip kullanıcı açmadan push yapmaz. Bugün kodda commit yapan bir
+  parça yok (skill'ler ve defter commit istemez); kipleri sürücü uygular, bu yüzden Aşama 3'ün kapsamına ve ölçütüne yazıldı.
+  Yorum notu: "yerel yöntem"i "uzak depo olmadan, bu bilgisayarda saklama" diye anladım; git hiç kurulu olmayan kullanıcı için "yok"
+  kipi yeter mi, yoksa git'siz bir yedekleme mi isteniyor, sürücü yazılırken kullanıcıya sorulacak.
 
 ## Yöntemden ne alıyoruz, ne almıyoruz
 
@@ -116,7 +123,7 @@ Her aşamanın kabul ölçütü işe başlamadan yazılıdır; aşama, ölçüt 
 | 0 | Depo, araştırma, bu plan | **tamam** (gizli depo, push edildi) |
 | 1 | Defter çekirdeği: MCP sunucusu, durum makinesi, doğrulamayı sunucunun koşması, sınırlı çıktı | **tamam** (2026-11-20). Ölçüt 1 ve 2 testle gösterildi. Ölçüt 3 gerçek araçla gösterildi: Claude Code 2.1.326 ve bağımsız test istemcisi aynı deftere iş açtı (bkz. "Aşama 1 sonucu") |
 | 2 | Yöntem paketi: 6-8 skill + AGENTS.md; her kuralın denetimiyle birlikte; Claude Code, Codex, Gemini CLI | **sürüyor** (2026-11-19): paket, kural tablosu, kurulum komutu ve kabul betiği hazır (`npm test`: 65 test geçti). Claude Code denemesi geçti (4/4), Antigravity ile ilk deneme 4 ölçütten 3'ünü sağladı; üçüncü araç kurulu değil, skill listesine elle bakılmadı (bkz. "Aşama 2"). Ölçüt: üç araçta skill'ler listeleniyor; aynı küçük görevde üçü de defteri kullanıyor |
-| 3 | Sürücü: iş listesi döngüsü, taze oturum, devir notu, bağlam bütçesi, zaman aşımı, isteğe bağlı uyanık tutma; önce iki araç | on küçük işlik liste kullanıcı girişi olmadan bitiyor; yapay büyük çıktılı işte oturum devri çalışıyor; takılan iş listeyi durdurmuyor; uyku açıkken sürücü uyarıyor, uyanık tutma seçeneği açıkken sistem uykuya geçmiyor; kurulum ve sürücü tek adımda (çift tıklama ya da tek komut) başlıyor, yönetici izni istemiyor |
+| 3 | Sürücü: iş listesi döngüsü, taze oturum, devir notu, bağlam bütçesi, zaman aşımı, isteğe bağlı uyanık tutma, saklama kipi (yok / yerel / yerel + gönder); önce iki araç | on küçük işlik liste kullanıcı girişi olmadan bitiyor; yapay büyük çıktılı işte oturum devri çalışıyor; takılan iş listeyi durdurmuyor; uyku açıkken sürücü uyarıyor, uyanık tutma seçeneği açıkken sistem uykuya geçmiyor; kurulum ve sürücü tek adımda (çift tıklama ya da tek komut) başlıyor, yönetici izni istemiyor; uzak deposu olmayan bir projede liste "yerel" kipte bitiyor ve hiçbir kipte kullanıcı açmadan push yapılmıyor |
 | 4 | Uyum testleri: senaryolar ve tuzak görevler; araç başına uyum oranı raporu | her desteklenen araç için rapor üretiliyor; kasıtlı bozuk ajan taklidi yakalanıyor |
 | 5 | Maliyet ve süre: kullanım verisini işe bağlama | kapanan her işte süre ve maliyet dolu; elle hesapla örneklemde uyuşuyor |
 | 6 | Öneri: iş türü × ajan / model başına doğrulanmış başarı, uyum, süre, maliyet; belirsizlikle birlikte | sentetik defterde bilinen en iyi seçeneği buluyor; az veride "veri yetersiz" diyor |
