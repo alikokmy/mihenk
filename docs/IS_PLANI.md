@@ -114,8 +114,8 @@ Her aşamanın kabul ölçütü işe başlamadan yazılıdır; aşama, ölçüt 
 | Aşama | İş | Kabul ölçütü |
 |---|---|---|
 | 0 | Depo, araştırma, bu plan | **tamam** (gizli depo, push edildi) |
-| 1 | Defter çekirdeği: MCP sunucusu, durum makinesi, doğrulamayı sunucunun koşması, sınırlı çıktı | **tamam, bir açık kalemle** (2026-11-19; `npm test`: 49 test geçti). Ölçüt 1 ve 2 gösterildi. Ölçüt 3 iki bağımsız MCP istemcisiyle gösterildi; gerçek bir ajan aracıyla gösterim açık (bkz. "Aşama 1 sonucu") |
-| 2 | Yöntem paketi: 6-8 skill + AGENTS.md; her kuralın denetimiyle birlikte; Claude Code, Codex, Gemini CLI | **sürüyor** (2026-11-19): paket, kural tablosu, kurulum komutu ve kabul betiği hazır (`npm test`: 65 test geçti). Antigravity ile ilk deneme 4 ölçütten 3'ünü sağladı; Claude Code ve üçüncü araç denenemedi (bkz. "Aşama 2"). Ölçüt: üç araçta skill'ler listeleniyor; aynı küçük görevde üçü de defteri kullanıyor |
+| 1 | Defter çekirdeği: MCP sunucusu, durum makinesi, doğrulamayı sunucunun koşması, sınırlı çıktı | **tamam** (2026-11-20). Ölçüt 1 ve 2 testle gösterildi. Ölçüt 3 gerçek araçla gösterildi: Claude Code 2.1.326 ve bağımsız test istemcisi aynı deftere iş açtı (bkz. "Aşama 1 sonucu") |
+| 2 | Yöntem paketi: 6-8 skill + AGENTS.md; her kuralın denetimiyle birlikte; Claude Code, Codex, Gemini CLI | **sürüyor** (2026-11-19): paket, kural tablosu, kurulum komutu ve kabul betiği hazır (`npm test`: 65 test geçti). Claude Code denemesi geçti (4/4), Antigravity ile ilk deneme 4 ölçütten 3'ünü sağladı; üçüncü araç kurulu değil, skill listesine elle bakılmadı (bkz. "Aşama 2"). Ölçüt: üç araçta skill'ler listeleniyor; aynı küçük görevde üçü de defteri kullanıyor |
 | 3 | Sürücü: iş listesi döngüsü, taze oturum, devir notu, bağlam bütçesi, zaman aşımı, isteğe bağlı uyanık tutma; önce iki araç | on küçük işlik liste kullanıcı girişi olmadan bitiyor; yapay büyük çıktılı işte oturum devri çalışıyor; takılan iş listeyi durdurmuyor; uyku açıkken sürücü uyarıyor, uyanık tutma seçeneği açıkken sistem uykuya geçmiyor; kurulum ve sürücü tek adımda (çift tıklama ya da tek komut) başlıyor, yönetici izni istemiyor |
 | 4 | Uyum testleri: senaryolar ve tuzak görevler; araç başına uyum oranı raporu | her desteklenen araç için rapor üretiliyor; kasıtlı bozuk ajan taklidi yakalanıyor |
 | 5 | Maliyet ve süre: kullanım verisini işe bağlama | kapanan her işte süre ve maliyet dolu; elle hesapla örneklemde uyuşuyor |
@@ -134,6 +134,10 @@ Kanıt: `npm test` (49 test, 49 geçti). Her ret kuralının karşısında en az
 uygulamasının içinde; paketli ikilisi başsız kipte "Not logged in" dedi, yani ona iş açtırılamadı. Ölçüt, farklı kimlikli iki bağımsız MCP
 istemci süreciyle gösterildi (`test/mcp.test.ts`). Gerçek araçla kapatmak için: araç deftere bir iş açtıktan sonra
 `node dist/test/ikinci_istemci.js --kok <proje>` koşulur; defterde iki farklı istemci görürse "GECTI" yazar. Aşama 2'nin ölçütü bunu zaten ister.
+
+**Açık kalem kapandı (2026-11-20):** kullanıcı Claude Code'da oturum açtı. Claude Code başsız kipte deftere iş 1'i açıp kapattı; ardından
+`ikinci_istemci.js` aynı deftere iş 2'yi açtı. Çıktı: "defterde is acan farkli istemci sayisi: 2 / GECTI". İstemci kimliklerini
+(`claude-code 2.1.326`, `bagimsiz-test-istemcisi 1.0.0`) sunucu bağlantıdan okudu.
 
 **Alınan kararlar (öneri uygulandı; veto edilebilir):**
 
@@ -190,13 +194,20 @@ yazılmadı: araçlar kurulu olmadığından komutları denenemedi, denenmemiş 
   sınandı (`test/mcp.test.ts` "yeni cag istemcisi"). Düzeltme Antigravity'nin kendisiyle henüz yeniden denenmedi.
 - Bakılmadı: skill'lerin Antigravity içinde listelendiği.
 
+**Claude Code ile deneme (2026-11-20, başsız kip, kullanıcı oturum açtıktan sonra):** betiğin hükmü "GECTI" (4 ölçütün 4'ü).
+Claude Code 2.1.326 deftere bağlandı, önce açık işlere baktı, kayıt açtı (`npm test`), `hukum_ver` çağırdı; sunucu komutu koştu, iş
+"geçti" diye kapandı; test bağımsız koşuda da geçiyor. 10 tur, 0,25 USD. Bakılmadı: skill'lerin araç içinde listelendiği.
+
+**Aşama 2'de durum:** üç araçtan ikisi (Claude Code, Antigravity) aynı küçük görevde defteri kullandı. Açık: Antigravity'de kimlik
+düzeltmesinin yeniden denenmesi, iki araçta skill listesine elle bakılması, üçüncü araç (kurulu değil).
+
 Başsız kipi olmayan araç için betik iki adımdır: `--asama hazirla` deneme projesini `deneme/<araç>/` altına (git dışı) kurar ve
 kullanıcıya üç satırlık yönerge yazar; kullanıcı görevi araçta verir; `--asama denetle` sonucu defterden okur.
 
 **Aşamayı kapatmak için kullanıcıdan gereken:** (1) Antigravity: kimlik düzeltmesini doğrulamak için denemeyi bir kez daha yapmak ve
-araç içinde skill listesine bakmak.
-(2) Claude Code: komut satırı oturumu (`claude` çalıştırıp `/login`). (3) Üçüncü araç (Codex CLI) kurulu değil; kurmak küresel yazılım
-kurmaktır, ajan bunu kendiliğinden yapmaz.
+araç içinde skill listesine bakmak. (2) Claude Code: araç içinde `/skills` ile skill listesine bakmak. (3) Üçüncü araç (Codex CLI)
+kurulu değil; kurmak küresel yazılım kurmaktır, ajan bunu kendiliğinden yapmaz. Ölçütün "üç araç" yerine "kurulu iki araç" diye
+daraltılması da kullanıcının kararıdır.
 
 | Kod | Madde | Skill | Durum |
 |---|---|---|---|

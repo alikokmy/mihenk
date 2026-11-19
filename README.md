@@ -6,8 +6,8 @@ Kodlama ajanlarının bağlandığı, işi kayda alan, kanıtı kendisi denetley
 Ad: mihenk taşı, altının ayarını sınamak için kullanılan taştır. Proje iki şeyi sınar: yapılan işin doğruluğunu ve işi yapan ajanın o iş türündeki
 değerini (doğruluk, süre, maliyet).
 
-**Durum:** Aşama 1 (defter çekirdeği) yazıldı. Aşama 2 (yöntem paketi ve kurulum) yazıldı ama gerçek ajan araçlarında henüz denenemedi
-(makinede açık oturumlu araç yok). Sürücü ve öneri henüz yok.
+**Durum:** Aşama 1 (defter çekirdeği) tamam. Aşama 2 (yöntem paketi ve kurulum) yazıldı; Claude Code ve Antigravity gerçek bir küçük görevde
+defteri kullandı, üçüncü araç denenmedi. Sürücü ve öneri henüz yok.
 
 - [docs/ARASTIRMA.md](docs/ARASTIRMA.md): benzer açık kaynak projelerin taraması ve hüküm.
 - [docs/IS_PLANI.md](docs/IS_PLANI.md): onaylı iş planı, iki bağlayıcı ilke, aşama sonuçları ve açık kararlar.
