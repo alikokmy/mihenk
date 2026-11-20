@@ -171,7 +171,31 @@ Sıra ölçütü: önce işin doğruluğu, sonra kullanıcı deneyiminin basitli
 Tauri) daha tanıdık görünür; ama yükleme gerektirir, boyutu büyüktür ve imzasız uygulama Windows'ta uyarı verir. Tarayıcı sayfası Node
 dışında hiçbir şey istemez. Tepsi uygulaması (0.3 adayı) bu pencereyle büyük ölçüde karşılandığı için listeden çıkarıldı.
 
-Sonraya bırakılanlar (0.3 adayları): ajanın yazdığı testlere mutasyon denetimi (değerli ama dile bağlı ve büyük); yalnız not yazan
+## Sürüm 0.3 (taslak, 2026-11-20)
+
+Kaynak: superpowers ve CodeBurn depolarının README, sürüm notları, belgeleri ve en çok tepki alan issue'ları ([ARASTIRMA.md](ARASTIRMA.md)
+"Sürüm 0.3 için tarama"). Sıra ölçütü yine: doğruluk, kolaylık, maliyet.
+
+| Aşama | İş | Kabul ölçütü |
+|---|---|---|
+| 17 | **Kurulum sağlamlığı:** kanca komutu `node`'u mutlak yolla çağırır (proje köküne konan sahte `node.cmd` çalışmaz; superpowers'ta benzer bir açık çıktı); her `SKILL.md` boyut sınırının altında (Claude Code sıkıştırmada uzun skill'i kesiyor) | proje köküne konan `node.cmd` / `node.bat` kanca koşunca çalışmıyor (işaret dosyası oluşmuyor); `PATH`'te node yokken kanca yine çalışıyor; 20.000 baytı aşan skill testi kaldırıyor; kaldırma sonrası bayt bayt eşitlik korunuyor |
+| 18 | **Geri almada önizleme ve onay** (pencerede bugün tek tık): önce hangi dosyaların geri alınacağı gösterilir, sonra onaylanır | onaysız `/api/geri-al` 400 veriyor ve dosya değişmiyor; önizleme listesi `--deneme` çıktısıyla aynı; tarayıcıda denendi |
+| 19 | **Doktor ve hata paketi:** `mihenk doktor` ve pencerede "Durum": Node sürümü, bulunan araçlar, MCP kaydı okunuyor mu, kancanın son çalışması, Codex kanca onayı, uyku; her satırda TAMAM ya da SORUN ve ne yapılacağı. Kişisel yol ve anahtarları temizlenmiş tek dosyalık hata paketi | kasıtlı bozulan dört kurulum (MCP kaydı silinmiş, kanca silinmiş, ajan yok, eski Node) doğru satırda SORUN veriyor; temiz kurulumda hepsi TAMAM; komut dosya yazmıyor; pakette ev dizini yolu ve gizli anahtar deseni yok |
+| 20 | **Başlatmadan önce liste denetimi ("yapıcı denetimi"):** her işte eksik alan, izinsiz program, projede tanımlı olmayan betik (ör. `npm test` yok) için anlaşılır uyarı; pencerede ve komut satırında | tanımsız betik ve izinsiz program içeren liste başlamadan iş başına uyarı veriyor; temiz liste uyarısız |
+| 21 | **Öneride geri alma sinyali:** sonradan geri alınan "geçti" işi öneri hesabında başarı sayılmaz; rapor onu "geri alındı" gösterir | sentetik defterde geri alınan işin seçeneğinin başarı oranı düşüyor, öteki işler etkilenmiyor |
+| 22 | **Elle açılan oturumda döngü bekçisi (Claude Code, Codex):** aynı araç çağrısı ya da aynı başarısız komut tekrarlanınca önce uyarır, sonra durdurur; tek oturumluk izin | taklit kanca girdisiyle eşikte uyarı, sonra ret; farklı çağrı sayacı sıfırlıyor; anahtar kapalıyken etkisiz; bekçi kendisi bozulursa geçit verip kaydediyor |
+| 23 | **Elle açılan oturumların maliyeti** (Aşama 5'ten açık): CodeBurn ya da ccusage çıktısı zaman aralığıyla işe bağlanır; README'ye kullanıcı sorularıyla "Sorular" bölümü | kayıtlı CodeBurn çıktısı örneğinde iş aralığına düşen maliyet elle hesapla uyuşuyor; araç yoksa "bilinmiyor"; her soru bir komuta ya da sekmeye bağlı |
+
+**Açık karar (kullanıcının):** superpowers bulgusu: görev tek test dosyası adlandırınca ajanlar 12 koşunun 11'inde yalnız o dosyayı
+koşmuş ve yandaki bozuk testi görmemiş. mihenk'in bugünkü varsayılanında (`gerileme: gonderirken`, `saklama: yerel`) bütün test
+takımı hiç koşmuyor. Öneri: varsayılanı `liste_sonunda` yapmak (listede yalnız iki tam koşu). Karşı görüş: kullanıcı açıkça hızı
+seçti; karar onundur.
+
+**Bilerek dışarıda:** telemetri; tepsi uygulaması (pencere karşılıyor); canlı kota okuma (aracın kimlik bilgisini okumak gerekir);
+kullanıcının küresel ayarını değiştiren otomatik "iyileştirme"; ayrıntılı soru-cevap akışları (superpowers'ın en çok şikâyet aldığı
+yer); otomatik düzeltmeye bağlı inceleyici; araç sayısını büyütmek (önce Cline ve Qwen gerçek araçla denenmeli); eklenti pazarı (depo gizli).
+
+Sonraya bırakılanlar (0.3 adayları, ilk taslak): ajanın yazdığı testlere mutasyon denetimi (değerli ama dile bağlı ve büyük); yalnız not yazan
 bağımsız inceleyici ajan (incelemeyi otomatik düzeltmeye bağlamanın doğru kodu bozabildiğine dair kanıt var; hükmü etkilememeli);
 iş listesinde bağımlılık ve büyük işin bölünmesi (doğrudan kullanıcı
 talebi bulunamadı); elle açılan oturumların maliyetinin ölçülmesi (CodeBurn / ccusage bağlantısı; Aşama 5'ten açık).

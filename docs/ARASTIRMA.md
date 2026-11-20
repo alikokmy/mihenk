@@ -139,5 +139,26 @@ Soru: benzer araçlarda ya da kullanıcı şikâyetlerinde görülen, mihenk'te 
 | Bağımsız inceleyici | diff başka araca okutulur, not deftere | superpowers, ECC, OpenHands; karşı kanıt: inceleme-düzeltme döngüsü doğru kodu bozabiliyor ([imbue](https://imbue.com/blog/2026-04-29-how-ai-code-review-can-make-correct-code-worse)) | superpowers, ECC, OpenHands | orta |
 | Tepsi uygulaması | durum ve harcama görünür, başlat / durdur | CodeBurn tepsi uygulaması, opcode | CodeBurn, opcode | büyük |
 
+## 7. Sürüm 0.3 için tarama: superpowers ve CodeBurn (2026-11-20)
+
+Okunan: iki deponun README'si, superpowers RELEASE-NOTES (v5.1-v7.0.2), CodeBurn CHANGELOG, `docs/guard.md`, `docs/cli.md`; iki depoda en
+çok tepki alan yirmişer issue başlığı, on birinin gövdesi. Sayılar depoların kendi beyanıdır.
+
+**Kullanıcı dostu fikirler:** hesapsız ve ayarsız ilk deneme; boş açılış yok (bugün boşsa son 7 gün); belge kullanıcının gerçek
+sorularıyla düzenlenmiş; uygulamadan önce önizleme ve yedek, sonra "vaat edilen ile olan" raporu; bekçi önce uyarır sonra durdurur, tek
+oturumluk izin, kendisi bozulursa kilitlemez; her sayının kaynağı gösterilir (`doctor`, `audit`); aynı bildirim tekrarlanmaz;
+"bir şey ters gidince" bölümü ve temizlenmiş hata paketi; karar gereken yerde seçenek ve öneri.
+
+**Dersler:** (1) her oturuma eklenen metin en sık şikâyet ([superpowers#743](https://github.com/obra/superpowers/issues/743),
+[#1152](https://github.com/obra/superpowers/issues/1152)); uzun skill sıkıştırmada kesiliyor. (2) Fazla soru sinir bozuyor
+([#2530](https://github.com/obra/superpowers/issues/2530)); yalnız sonucu değiştiren soru. (3) Kullanılmayan komut silinmeli. (4) Yıkıcı
+seçenek olağanın yanında durmamalı. (5) Windows kancaları en çok bozulan yer; depo köküne konan `.cmd` kancada çalışıyordu (güvenlik).
+(6) Yalnız hedefli test yetmiyor: ajan yandaki bozuk testi görmüyor. (7) Sessiz sıfır güveni bitiriyor
+([codeburn#874](https://github.com/getagentseal/codeburn/issues/874)): "$0" ile "bilinmiyor" ayrılmalı (mihenk ayırıyor). (8) Abonelikte dolar
+anlamsız (mihenk uydurmuyor). (9) Varsayılan açık telemetri tartışma çıkardı.
+
+Hüküm: yedi iş sürüm 0.3 taslağına alındı (IS_PLANI "Sürüm 0.3"). Zayıf noktalar: kanca yolu açığı mihenk'te denenmedi; döngü bekçisi
+eşikleri CodeBurn varsayılanı, mihenk için ölçülmedi.
+
 Hüküm: ilk on aday sürüm 0.2'ye alındı (IS_PLANI "Sürüm 0.2"); mutasyon, inceleyici, tepsi uygulaması ve iş bağımlılığı 0.3 adayı.
 Kanıtı zayıf noktalar: kaldırma ve iş bağımlılığı için doğrudan kullanıcı şikâyeti bulunamadı; tek kaynaklı maliyet olay anlatıları sayılmadı.
