@@ -178,7 +178,7 @@ Kaynak: superpowers ve CodeBurn depolarının README, sürüm notları, belgeler
 
 | Aşama | İş | Kabul ölçütü |
 |---|---|---|
-| 17 | **Kurulum sağlamlığı:** kanca komutu `node`'u mutlak yolla çağırır (proje köküne konan sahte `node.cmd` çalışmaz; superpowers'ta benzer bir açık çıktı); her `SKILL.md` boyut sınırının altında (Claude Code sıkıştırmada uzun skill'i kesiyor) | proje köküne konan `node.cmd` / `node.bat` kanca koşunca çalışmıyor (işaret dosyası oluşmuyor); `PATH`'te node yokken kanca yine çalışıyor; 20.000 baytı aşan skill testi kaldırıyor; kaldırma sonrası bayt bayt eşitlik korunuyor |
+| 17 | **tamam** (2026-11-20; `npm test`: 198 test geçti; bkz. "Aşama 17 sonucu"). **Kurulum sağlamlığı:** kanca komutu `node`'u mutlak yolla çağırır (proje köküne konan sahte `node.cmd` çalışmaz; superpowers'ta benzer bir açık çıktı); her `SKILL.md` boyut sınırının altında (Claude Code sıkıştırmada uzun skill'i kesiyor) | proje köküne konan `node.cmd` / `node.bat` kanca koşunca çalışmıyor (işaret dosyası oluşmuyor); `PATH`'te node yokken kanca yine çalışıyor; 20.000 baytı aşan skill testi kaldırıyor; kaldırma sonrası bayt bayt eşitlik korunuyor |
 | 18 | **Geri almada önizleme ve onay** (pencerede bugün tek tık): önce hangi dosyaların geri alınacağı gösterilir, sonra onaylanır | onaysız `/api/geri-al` 400 veriyor ve dosya değişmiyor; önizleme listesi `--deneme` çıktısıyla aynı; tarayıcıda denendi |
 | 19 | **Doktor ve hata paketi:** `mihenk doktor` ve pencerede "Durum": Node sürümü, bulunan araçlar, MCP kaydı okunuyor mu, kancanın son çalışması, Codex kanca onayı, uyku; her satırda TAMAM ya da SORUN ve ne yapılacağı. Kişisel yol ve anahtarları temizlenmiş tek dosyalık hata paketi | kasıtlı bozulan dört kurulum (MCP kaydı silinmiş, kanca silinmiş, ajan yok, eski Node) doğru satırda SORUN veriyor; temiz kurulumda hepsi TAMAM; komut dosya yazmıyor; pakette ev dizini yolu ve gizli anahtar deseni yok |
 | 20 | **Başlatmadan önce liste denetimi ("yapıcı denetimi"):** her işte eksik alan, izinsiz program, projede tanımlı olmayan betik (ör. `npm test` yok) için anlaşılır uyarı; pencerede ve komut satırında | tanımsız betik ve izinsiz program içeren liste başlamadan iş başına uyarı veriyor; temiz liste uyarısız |
@@ -797,6 +797,19 @@ komut satırı uyumu için Türkçe harfsiz yazılmıştır ve pencerede de öyl
 
 **Sürüm 0.2:** Aşama 9-16 kapandı; `v0.2.0` etiketi konuldu. Açık kalemler: Cline ve Qwen Code'un gerçek araçla denenmesi, Antigravity
 2.0, gerileme denetiminin test bazına inmesi, iş listesinin form ile düzenlenmesi, 0.3 adayları.
+
+## Aşama 17 sonucu (2026-11-20)
+
+Kurulum `node`'u her yerde mutlak yolla yazar: MCP kayıtları, Claude Code (kabuksuz), Codex ve Qwen (kabukta koşan dizge) kancaları ve
+çift tıklanan `.cmd` dosyaları. Node başka yere taşınırsa `mihenk kur` yeniden koşulur (Aşama 19'daki doktor bunu söyleyecek).
+
+**Kanıt:** `test/saglamlik.test.ts` (5 test). Önce saldırının gerçek olduğu gösterildi: proje köküne konan `node.cmd`, yalnız adıyla
+`node` çağıran kabuk komutunda çalıştı. Mihenk'in Codex kancası aynı klasörde çalıştırılınca sahte dosya çalışmadı, gerçek kanca
+çalıştı; `PATH`'te node yokken de kanca çalıştı; Claude Code kancası, MCP kaydı ve `.cmd` dosyaları mutlak yol kullanıyor; her
+`SKILL.md` 20.000 baytın altında. Codex kancası eski haline (yalnız `node`) döndürülünce iki test kaldı.
+
+**Bulgu:** bu oturumun ortamında `NoDefaultCurrentDirectoryInExePath=1` tanımlı ve cmd'nin çalışılan klasörde aramasını kapatıyordu;
+saldırı testi ilk seferde bu yüzden kaldı. Kullanıcının çift tıkladığı normal ortamda bu değişken yoktur; testler onu kaldırarak koşar.
 
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 

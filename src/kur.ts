@@ -45,7 +45,10 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
   const paket = secenek.paketDizini ?? resolve(BURASI, '..', '..', 'paket');
   const sunucu = secenek.sunucuYolu ?? join(BURASI, 'bin.js');
   const sonuc: KurSonucu = { yazilan: [], degismeyen: [], uyarilar: [] };
-  const mcpKaydi = { command: 'node', args: [egik(sunucu), '--kok', egik(hedef)] };
+  // node her yerde mutlak yolla cagrilir: proje kokune konmus sahte bir node.cmd / node.exe calismasin (superpowers'ta benzer acik cikti)
+  // ve PATH'te node olmasa da calissin. Node yeri degisirse 'mihenk kur' yeniden kosulur (mihenk doktor bunu soyler).
+  const NODE = egik(process.execPath);
+  const mcpKaydi = { command: NODE, args: [egik(sunucu), '--kok', egik(hedef)] };
 
   // Kurulum kaydi: temiz kaldirma icin her dosyanin kurulumdan onceki hali ve kurulumun yazdigi icerigin ozeti (kaldir.ts).
   const kayit = kayitOku(hedef);
@@ -178,7 +181,7 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
   };
   if (araclar.includes('claude')) {
     // Claude Code: kabuksuz (exec) bicim; node.exe dogrudan calisir, tirnak sorunu olmaz.
-    const k = (olay: string) => ({ type: 'command', command: 'node', args: ['--disable-warning=ExperimentalWarning', kapiBin, 'claude', olay, '--kok', egik(hedef)], timeout: 30 });
+    const k = (olay: string) => ({ type: 'command', command: NODE, args: ['--disable-warning=ExperimentalWarning', kapiBin, 'claude', olay, '--kok', egik(hedef)], timeout: 30 });
     jsonGuncelle('.claude/settings.json', (n) => {
       kancaEkle(n, 'SessionStart', { hooks: [k('oturum')] });
       kancaEkle(n, 'Stop', { hooks: [k('bitir')] });
@@ -188,7 +191,7 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
   if (araclar.includes('codex')) {
     // Codex: komut kabukta (Windows'ta PowerShell ya da cmd) kosar; yalniz cift tirnakli yollar her ikisinde de calisir.
     const k = (olay: string) => {
-      const komut = `node --disable-warning=ExperimentalWarning "${kapiBin}" codex ${olay} --kok "${egik(hedef)}"`;
+      const komut = `"${NODE}" --disable-warning=ExperimentalWarning "${kapiBin}" codex ${olay} --kok "${egik(hedef)}"`;
       return { type: 'command', command: komut, commandWindows: komut, timeout: 30 };
     };
     jsonGuncelle('.codex/hooks.json', (n) => {
@@ -250,7 +253,7 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
   if (araclar.includes('qwen')) {
     // Qwen Code 0.28.0 (qwenlm.github.io/qwen-code-docs: mcp, hooks). DENENMEDI: ucretsiz katman kapali, bu bilgisayarda calistirilamadi.
     // Proje ayari .qwen/settings.json; MCP ve kanca bicimi Claude Code'unkiyle ayni; kabuk araci adi "run_shell_command".
-    const k = (olay: string) => ({ type: 'command', command: `node --disable-warning=ExperimentalWarning "${kapiBin}" qwen ${olay} --kok "${egik(hedef)}"`, timeout: 30 });
+    const k = (olay: string) => ({ type: 'command', command: `"${NODE}" --disable-warning=ExperimentalWarning "${kapiBin}" qwen ${olay} --kok "${egik(hedef)}"`, timeout: 30 });
     jsonGuncelle('.qwen/settings.json', (n) => {
       n.mcpServers = { ...(n.mcpServers ?? {}), mihenk: mcpKaydi };
       kancaEkle(n, 'SessionStart', { hooks: [k('oturum')] });
@@ -270,17 +273,17 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
   // Tek adimda baslatma (Ilke 3): Windows'ta cift tiklanir dosya. Baska sistemde denenmedigi icin yazilmaz.
   if (process.platform === 'win32') {
     const cli = egik(join(BURASI, 'cli.js'));
-    yaz('mihenk-baslat.cmd', ['@echo off', 'rem mihenk: is listesini (mihenk-isler.json) yurutur. Cift tiklayin.', `node --disable-warning=ExperimentalWarning "${cli}" sur --hedef "%~dp0."`, 'echo.', 'pause', ''].join('\r\n'));
+    yaz('mihenk-baslat.cmd', ['@echo off', 'rem mihenk: is listesini (mihenk-isler.json) yurutur. Cift tiklayin.', `"${process.execPath}" --disable-warning=ExperimentalWarning "${cli}" sur --hedef "%~dp0."`, 'echo.', 'pause', ''].join('\r\n'));
     yaz('mihenk-pencere.cmd', ['@echo off', 'rem mihenk: projeyi yoneteceginiz pencereyi tarayicida acar. Cift tiklayin; isiniz bitince bu siyah pencereyi kapatin.',
-      `node --disable-warning=ExperimentalWarning "${cli}" pencere --hedef "%~dp0."`, ''].join('\r\n'));
+      `"${process.execPath}" --disable-warning=ExperimentalWarning "${cli}" pencere --hedef "%~dp0."`, ''].join('\r\n'));
     yaz('mihenk-rapor.cmd', ['@echo off', 'rem mihenk: ne yapildigini duz dilde gosteren raporu acar. Cift tiklayin.',
-      `node --disable-warning=ExperimentalWarning "${cli}" rapor --hedef "%~dp0." --ac`, ''].join('\r\n'));
+      `"${process.execPath}" --disable-warning=ExperimentalWarning "${cli}" rapor --hedef "%~dp0." --ac`, ''].join('\r\n'));
     yaz('mihenk-ayarlar.cmd', ['@echo off', 'rem mihenk: ozellikleri acip kapatir (numara yazin, Enter). Cift tiklayin.',
-      `node --disable-warning=ExperimentalWarning "${cli}" ayar --hedef "%~dp0." --menu`, 'echo.', 'pause', ''].join('\r\n'));
+      `"${process.execPath}" --disable-warning=ExperimentalWarning "${cli}" ayar --hedef "%~dp0." --menu`, 'echo.', 'pause', ''].join('\r\n'));
     // Bu dosya en sonda kendini siler: "(goto) 2>nul & del" kalibi cmd'nin "batch file cannot be found" uyarisini onler.
     // Kaldirma (--cmd-den) bu dosyaya dokunmaz; icerik kurulumun yazdigi gibi degilse cmd de silmez.
     yaz('mihenk-kaldir.cmd', ['@echo off', 'rem mihenk: mihenk\'in bu projeye ekledigi her seyi geri alir; sizin dosyalariniza dokunmaz. Cift tiklayin.',
-      `node --disable-warning=ExperimentalWarning "${cli}" kaldir --hedef "%~dp0." --cmd-den`, 'echo.', 'pause', '(goto) 2>nul & del "%~f0"', ''].join('\r\n'));
+      `"${process.execPath}" --disable-warning=ExperimentalWarning "${cli}" kaldir --hedef "%~dp0." --cmd-den`, 'echo.', 'pause', '(goto) 2>nul & del "%~f0"', ''].join('\r\n'));
   }
 
   // Esitleme: kayitta olup bu kosuda istenmeyen dosyalar (kapatilan ozellik ya da arac) geri alinir. mihenk.json ayarlarin kendisidir.

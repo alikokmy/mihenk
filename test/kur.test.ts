@@ -15,6 +15,8 @@ function hedef(): string {
 }
 
 const oku = (...yol: string[]): string => readFileSync(join(...yol), 'utf8');
+// Kurulum node'u mutlak yolla yazar (Asama 17).
+const NODE = process.execPath.replace(/\\/g, '/');
 
 test('kur: skiller iki dizine kurulur ve resmi denetleyiciden gecer', async () => {
   const h = hedef();
@@ -41,7 +43,7 @@ test('kur: kapi kancalari Claude Code ve Codex icin yazilir; baska kancalar koru
   assert.equal(claude.hooks.PreToolUse.length, 2);
   for (const olay of ['SessionStart', 'Stop']) assert.equal(claude.hooks[olay].length, 1);
   const stop = claude.hooks.Stop[0].hooks[0];
-  assert.equal(stop.command, 'node');
+  assert.equal(stop.command, NODE);
   assert.deepEqual(stop.args.slice(2, 4), ['claude', 'bitir']);
   const codex = JSON.parse(oku(h, '.codex', 'hooks.json'));
   assert.match(codex.hooks.Stop[0].hooks[0].command, /kapi-bin\.js" codex bitir --kok "/);
@@ -54,7 +56,7 @@ test('kur: Kilo Code kaydi proje icindeki kilo.json\'a, aracin kendi bicimiyle (
   kur(h, { araclar: ['kilo'] });
   const n = JSON.parse(oku(h, 'kilo.json'));
   assert.equal(n.mcp.mihenk.type, 'local');
-  assert.equal(n.mcp.mihenk.command[0], 'node');
+  assert.equal(n.mcp.mihenk.command[0], NODE);
   assert.match(n.mcp.mihenk.command[1], /bin\.js$/);
   assert.ok(existsSync(join(h, '.agents', 'skills', 'mihenk-is-kaydi', 'SKILL.md')));
 });
@@ -65,7 +67,7 @@ test('kur: Cline (skill .cline/skills, MCP proje icinde) ve Qwen Code (.qwen/set
   assert.ok(existsSync(join(h, '.cline', 'skills', 'mihenk-is-kaydi', 'SKILL.md')));
   assert.match(JSON.parse(oku(h, '.cline', 'mcp_settings.json')).mcpServers.mihenk.args[0], /bin\.js$/);
   const q = JSON.parse(oku(h, '.qwen', 'settings.json'));
-  assert.equal(q.mcpServers.mihenk.command, 'node');
+  assert.equal(q.mcpServers.mihenk.command, NODE);
   assert.match(q.hooks.Stop[0].hooks[0].command, /kapi-bin\.js" qwen bitir/);
   assert.equal(q.hooks.PreToolUse[0].matcher, 'run_shell_command');
   const { kaldir } = await import('../src/kaldir.js');
@@ -80,7 +82,7 @@ test('kur: her aracin MCP ayari kendi dosyasina, kendi biciminde yazilir', () =>
   assert.equal(JSON.parse(oku(h, '.agents/plugins/mihenk/plugin.json')).name, 'mihenk');
   for (const dosya of ['.mcp.json', '.gemini/settings.json', '.agents/plugins/mihenk/mcp_config.json']) {
     const sunucu = JSON.parse(oku(h, dosya)).mcpServers.mihenk;
-    assert.equal(sunucu.command, 'node', dosya);
+    assert.equal(sunucu.command, NODE, dosya);
     assert.match(sunucu.args[0], /bin\.js$/, dosya);
     assert.deepEqual(sunucu.args.slice(1, 2), ['--kok'], dosya);
   }
@@ -89,7 +91,7 @@ test('kur: her aracin MCP ayari kendi dosyasina, kendi biciminde yazilir', () =>
   // OpenCode 2.3.2: mcp.servers.<ad>, komut ve argumanlar tek dizide (aracin kendi "mcp add" ciktisindaki bicim).
   const oc = JSON.parse(oku(h, 'opencode.json')).mcp.servers.mihenk;
   assert.equal(oc.type, 'local');
-  assert.equal(oc.command[0], 'node');
+  assert.equal(oc.command[0], NODE);
   assert.match(oc.command[1], /bin\.js$/);
   assert.equal(oc.command[2], '--kok');
 });
@@ -114,7 +116,7 @@ test('kur: var olan icerik korunur (baska MCP sunuculari, AGENTS.md metni, ayarl
   kur(h);
   const mcp = JSON.parse(oku(h, '.mcp.json')).mcpServers;
   assert.equal(mcp.baska.command, 'x');
-  assert.equal(mcp.mihenk.command, 'node');
+  assert.equal(mcp.mihenk.command, NODE);
   assert.match(oku(h, 'AGENTS.md'), /^# Benim kurallarim\n\n- Turkce yaz\.\n[\s\S]*mihenk:basla/);
   assert.match(oku(h, 'CLAUDE.md'), /^# Proje notlari\n[\s\S]*@AGENTS\.md/);
   const gemini = JSON.parse(oku(h, '.gemini', 'settings.json'));
@@ -168,7 +170,7 @@ test('kur: defter klasorunu .gitignore\'a ekler (var olani koruyarak), ornek is 
   assert.equal(ornek.saklama, 'yerel');
   if (process.platform === 'win32') {
     const baslat = oku(h, 'mihenk-baslat.cmd');
-    assert.match(baslat, /node --disable-warning=ExperimentalWarning ".*cli\.js" sur --hedef "%~dp0\."/);
+    assert.match(baslat, /^".*node(\.exe)?" --disable-warning=ExperimentalWarning ".*cli\.js" sur --hedef "%~dp0\."/m);
     assert.match(baslat, /pause/);
   }
   assert.deepEqual(kur(h, { araclar: ['codex'] }).yazilan, [], 'ikinci kosuda degisiklik olmamali');
