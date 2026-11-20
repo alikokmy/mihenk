@@ -184,7 +184,7 @@ Kaynak: superpowers ve CodeBurn depolarının README, sürüm notları, belgeler
 | 20 | **tamam** (2026-11-20; `npm test`: 208 test geçti; bkz. "Aşama 20 sonucu"). **Başlatmadan önce liste denetimi ("yapıcı denetimi"):** her işte eksik alan, izinsiz program, projede tanımlı olmayan betik (ör. `npm test` yok) için anlaşılır uyarı; pencerede ve komut satırında | tanımsız betik ve izinsiz program içeren liste başlamadan iş başına uyarı veriyor; temiz liste uyarısız |
 | 21 | **tamam** (2026-11-20; `npm test`: 210 test geçti; bkz. "Aşama 21 sonucu"). **Öneride geri alma sinyali:** sonradan geri alınan "geçti" işi öneri hesabında başarı sayılmaz; rapor onu "geri alındı" gösterir | sentetik defterde geri alınan işin seçeneğinin başarı oranı düşüyor, öteki işler etkilenmiyor |
 | 22 | **tamam, bir notla** (2026-11-20; `npm test`: 214 test geçti; bkz. "Aşama 22 sonucu"). **Elle açılan oturumda döngü bekçisi (Claude Code, Codex):** aynı araç çağrısı ya da aynı başarısız komut tekrarlanınca önce uyarır, sonra durdurur; tek oturumluk izin | taklit kanca girdisiyle eşikte uyarı, sonra ret; farklı çağrı sayacı sıfırlıyor; anahtar kapalıyken etkisiz; bekçi kendisi bozulursa geçit verip kaydediyor |
-| 23 | **Elle açılan oturumların maliyeti** (Aşama 5'ten açık): CodeBurn ya da ccusage çıktısı zaman aralığıyla işe bağlanır; README'ye kullanıcı sorularıyla "Sorular" bölümü | kayıtlı CodeBurn çıktısı örneğinde iş aralığına düşen maliyet elle hesapla uyuşuyor; araç yoksa "bilinmiyor"; her soru bir komuta ya da sekmeye bağlı |
+| 23 | **tamam, plandan sapmayla** (2026-11-20; `npm test`: 217 test geçti; bkz. "Aşama 23 sonucu"). **Elle açılan oturumların maliyeti** (Aşama 5'ten açık): CodeBurn ya da ccusage çıktısı zaman aralığıyla işe bağlanır; README'ye kullanıcı sorularıyla "Sorular" bölümü | kayıtlı CodeBurn çıktısı örneğinde iş aralığına düşen maliyet elle hesapla uyuşuyor; araç yoksa "bilinmiyor"; her soru bir komuta ya da sekmeye bağlı |
 
 **Karar (kullanıcı, 2026-11-20):** `gerileme` varsayılanı `liste_sonunda` oldu (superpowers bulgusu: görev tek test dosyası
 adlandırınca ajanlar yandaki bozuk testi görmüyor). Kullanıcının ek isteği uygulandı: sürücü bütün testlere harcanan süreyi ölçer; bu
@@ -877,6 +877,27 @@ farklı çağrı ve farklı oturum sıfırlıyor; anahtar kapalıyken hiç ret y
 her araç çağrısında bir Node süreci başlatır; bu her çağrıya kısa bir gecikme ekler (anahtar kapatılsa da kanca çalışır, yalnız karar
 vermez). Eşikler CodeBurn'ün varsayılanıdır, mihenk için ölçülmedi. "Aynı başarısız komut" ayrı izlenmez; arka arkaya aynı çağrı yeterli
 sayıldı.
+
+## Aşama 23 sonucu (2026-11-20)
+
+`mihenk maliyet-topla` (pencerede Öneri ve maliyet sekmesinde düğme): elle açılmış (sürücünün açmadığı), kapanmış ve kullanımı olmayan her
+işe, başlangıç-bitiş aralığına düşen Claude Code yanıtlarının token kullanımı bağlanır. Tekrar çalıştırmak bir şey değiştirmez.
+
+**Plandan sapma (gerekçeli):** plan CodeBurn ya da ccusage çıktısı diyordu. CodeBurn bu bilgisayarda kurulu değil ve oturum başına zaman
+damgalı JSON biçimi belgelerinde açık değil; biçim uydurulmadı. Bunun yerine Claude Code'un kendi oturum kayıtları okunur
+(`~/.claude/projects/<proje>/*.jsonl`, yalnız okuma); biçim bu bilgisayardaki gerçek kayıtlardan doğrulandı (klasör adı, yanıt satırı
+alanları, aynı yanıtın birden çok satıra bölünmesi). Claude Code dolar maliyeti yazmaz: maliyet yalnız `mihenk.json` fiyat tablosu varsa
+hesaplanır, yoksa "bilinmiyor". Codex kayıtları bu aşamada okunmuyor. Karşı görüş: CodeBurn kırk araç tanır ve fiyatları kendisi tutar;
+kurulursa ona bağlanmak daha geniş olur.
+
+**Kanıt:** `test/el-oturumu.test.ts`: klasör adı biçimi bu bilgisayardakiyle aynı; gerçek biçimde sahte kayıtta aralığa düşen iki yanıt
+(biri iki satıra bölünmüş) elle hesapla uyuştu (30 / 100 / 3000 / 12 token), aralık dışındaki yanıt ve sürücü işi sayılmadı, fiyat yokken
+maliyet boş, fiyat tablosuyla elle hesapla aynı dolar, ikinci çalıştırma değiştirmedi; README "Sorular" bölümündeki her soru var olan bir
+komuta ya da sekmeye bağlı. Bu projenin gerçek kaydından 632 ayrı yanıt okundu. Aynı yanıtın tek sayılması kasıtlı kaldırılınca test kaldı.
+
+**Sürüm 0.3:** Aşama 17-23 kapandı; `v0.3.0` etiketi konuldu. Açık kalemler: Cline ve Qwen Code'un gerçek araçla denenmesi, Antigravity
+2.0, gerileme denetiminin test bazına inmesi, oturum döngü bekçisinin gerçek oturumda denenmesi, Codex oturum kayıtlarının okunması,
+ayar notlarının Türkçe harfle yazılması (pencere için).
 
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 

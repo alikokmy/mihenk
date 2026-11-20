@@ -6,7 +6,7 @@ Kodlama ajanlarının bağlandığı, işi kayda alan, kanıtı kendisi denetley
 Ad: mihenk taşı, altının ayarını sınamak için kullanılan taştır. Proje iki şeyi sınar: yapılan işin doğruluğunu ve işi yapan ajanın o iş türündeki
 değerini (doğruluk, süre, maliyet).
 
-**Durum: sürüm 0.2.** Defter, yöntem paketi, sürücü, uyum testleri, süre ve maliyet, öneri, kanıtsız "bitti"ye kapı ve temiz kaldırma
+**Durum: sürüm 0.3.** Defter, yöntem paketi, sürücü, uyum testleri, süre ve maliyet, öneri, kanıtsız "bitti"ye kapı ve temiz kaldırma
 yazıldı ve denendi. Açık kalemler ve sürüm 0.2 taslağı [docs/IS_PLANI.md](docs/IS_PLANI.md) içinde.
 
 | Araç | Kurulum | Gerçek denemede | Kapı (kanca) |
@@ -58,6 +58,22 @@ Bu komut yedi skill'i (`.claude/skills` ve `.agents/skills`), her oturuma giren 
 
 Kurulum ayrıca proje klasörüne örnek bir iş listesi (`mihenk-isler.ornek.json`) ve Windows'ta çift tıklanır bir başlatma dosyası
 (`mihenk-baslat.cmd`) bırakır.
+
+## Sorular
+
+- **Yapay zekâ "bitti" dedi ama gerçekten bitti mi?** Pencerede **Defter** sekmesine bakın ya da `mihenk rapor --ac`. "Başarıyla bitti" yalnız
+  işin denetimi mihenk tarafından çalıştırılıp geçtiyse yazar.
+- **mihenk bu projede çalışıyor mu?** `mihenk doktor` ya da pencerede **Proje** sekmesindeki "Durum": her satırda TAMAM ya da SORUN ve ne yapılacağı.
+- **Yapay zekânın yaptığı bir işi geri almak istiyorum.** Pencerede **Defter** sekmesinde "Değişikliklerini geri al" (önce ne olacağını
+  gösterir) ya da `mihenk geri-al <iş numarası>`.
+- **Gece boyu bir iş listesi çalıştırmak istiyorum.** Pencerede **İş listesi** sekmesinde işleri yazıp "Listeyi başlat" ya da `mihenk sur`.
+  Uyku açıksa **Ayarlar** sekmesinde "Liste sürerken bilgisayarı uyanık tut".
+- **Hangi yapay zekâ aracı hangi işte daha iyi?** Pencerede **Öneri ve maliyet** sekmesi ya da `mihenk oneri`.
+- **Kendi açtığım Claude Code oturumları ne kadar harcadı?** `mihenk maliyet-topla` (ya da **Öneri ve maliyet** sekmesindeki düğme).
+- **Bir özelliği kapatmak istiyorum.** Pencerede **Ayarlar** sekmesi ya da `mihenk ayar <ad> kapa`.
+- **Bir sorun var, nasıl bildiririm?** `mihenk hata-paketi` (ya da **Proje** sekmesinde "Hata raporu oluştur"): kişisel yolları ve
+  anahtarları temizlenmiş tek dosya üretir.
+- **mihenk'i kaldırmak istiyorum.** `mihenk-kaldir.cmd` dosyasına çift tıklayın ya da `mihenk kaldir`.
 
 ## Pencere: her şeyi tek yerden yönetmek
 

@@ -18,6 +18,7 @@ import { geriAl } from './geri.js';
 import { raporYaz } from './rapor.js';
 import { pencereAc, VARSAYILAN_PORT } from './pencere.js';
 import { doktor, doktorMetni, hataPaketi } from './doktor.js';
+import { elOturumlariniTopla } from './el-oturumu.js';
 import { listeDenetimi, listeDenetimMetni } from './liste-denetim.js';
 import { spawnSync } from 'node:child_process';
 import { ayarKomutu } from './ayar-cli.js';
@@ -45,7 +46,7 @@ const sayi = (ad: string): number | undefined => {
 };
 
 function kullanim(): void {
-  for (const k of ['kullanim', 'kullanim_kur', 'kullanim_sur', 'kullanim_uyum', 'kullanim_ayar', 'kullanim_rapor', 'kullanim_geri', 'kullanim_kaldir', 'kullanim_oneri', 'kullanim_pencere', 'kullanim_doktor', 'kullanim_hata_paketi', 'kullanim_defter'] as const) {
+  for (const k of ['kullanim', 'kullanim_kur', 'kullanim_sur', 'kullanim_uyum', 'kullanim_ayar', 'kullanim_rapor', 'kullanim_geri', 'kullanim_kaldir', 'kullanim_oneri', 'kullanim_pencere', 'kullanim_doktor', 'kullanim_hata_paketi', 'kullanim_maliyet', 'kullanim_defter'] as const) {
     console.error(t(k));
   }
 }
@@ -248,6 +249,10 @@ try {
     const satirlar = doktor(resolve(secenek('--hedef') ?? process.cwd()));
     console.log(doktorMetni(satirlar));
     process.exitCode = satirlar.some((x) => x.durum === 'sorun') ? 1 : 0;
+  }
+  else if (komut === 'maliyet-topla') {
+    console.log(t('mt_sonuc', { ...elOturumlariniTopla(resolve(secenek('--hedef') ?? process.cwd())) }));
+    console.log(t('mt_fiyat'));
   }
   else if (komut === 'hata-paketi') console.log(t('hp_yazildi', { yol: hataPaketi(resolve(secenek('--hedef') ?? process.cwd())) }));
   else if (komut === 'pencere') {

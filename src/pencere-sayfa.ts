@@ -188,6 +188,8 @@ function ayarlarCiz() {
 async function oneriCiz() {
   const s = $('oneri'); const o = await api('/api/oneri');
   const k = o.kullanim; const kartlar = [el('div', { class: 'kart' }, el('p', { class: 'soluk', metin: m('p_oneri_aciklama') }), k ? el('p', { metin: m('p_toplam_maliyet', { sure: k.ajan_sure_sn, maliyet: k.maliyet_usd === null ? m('p_bilinmiyor') : k.maliyet_usd + ' USD' }) }) : null)];
+  const ms = el('div', { class: 'ileti' });
+  kartlar[0].append(el('button', { class: 'dugme ikincil kucuk', 'data-eylem': 'maliyet-topla', metin: m('p_maliyet_topla'), onclick: async () => { try { const r = await api('/api/maliyet-topla', {}); ileti(ms, r.eklenen + ' / ' + r.bos + ' / ' + r.zaten + ' · ' + r.mesaj); } catch (e) { ileti(ms, m('p_hata', { hata: e.message }), true); } } }), ms);
   if (!o.turler.length) kartlar.push(el('div', { class: 'kart' }, el('p', { metin: m('p_oneri_yok_veri') })));
   for (const t of o.turler) {
     const kart = el('div', { class: 'kart' }, el('b', { metin: m('p_oneri_tur', { tur: t.tur, sayi: t.is_sayisi }) }),

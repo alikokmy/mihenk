@@ -24,6 +24,7 @@ import { AJANLAR } from './ajanlar.js';
 import { PENCERE_SAYFASI } from './pencere-sayfa.js';
 import { doktor, hataPaketi } from './doktor.js';
 import { listeDenetimi } from './liste-denetim.js';
+import { elOturumlariniTopla } from './el-oturumu.js';
 
 const CLI = join(dirname(fileURLToPath(import.meta.url)), 'cli.js');
 
@@ -58,6 +59,7 @@ export const PENCERE_ESLEME: Record<string, { sekme: string; api: string } | { y
   oneri: { sekme: 'oneri', api: 'GET /api/oneri' },
   doktor: { sekme: 'proje', api: 'GET /api/doktor' },
   'hata-paketi': { sekme: 'proje', api: 'POST /api/hata-paketi' },
+  'maliyet-topla': { sekme: 'oneri', api: 'POST /api/maliyet-topla' },
   uyum: { yok: 'gelistirici araci: araclarin yonteme uyumunu olcer; uzun surer ve sonucu dosyaya yazar' },
   pencere: { yok: 'pencerenin kendisi' },
 };
@@ -161,6 +163,7 @@ export function pencereAc(hedef: string, o: { port?: number; dosyaAcici?: (yol: 
       if (yol === 'GET /api/durum') return json(res, 200, durum(kok));
       if (yol === 'GET /api/isler') return json(res, 200, isler(kok));
       if (yol === 'GET /api/doktor') return json(res, 200, doktor(kok));
+      if (yol === 'POST /api/maliyet-topla') return json(res, 200, existsSync(join(kok, '.mihenk', 'defter.db')) ? { ...elOturumlariniTopla(kok), mesaj: METINLER.mt_fiyat[hangiDil()] } : { eklenen: 0, bos: 0, zaten: 0, mesaj: METINLER.p_defter_bos[hangiDil()] });
       if (yol === 'POST /api/hata-paketi') {
         const p = hataPaketi(kok);
         (o.dosyaAcici ?? isletimSistemiyleAc)(p);
