@@ -7,6 +7,7 @@
 // Belgeye gore: durum cagiran is parcacigina aittir; yonetici izni istemez; kullanicinin bilgisayari elle uyutmasini
 // (kapak, guc dugmesi) ENGELLEMEZ. Bu yuzden cagriyi yapan kucuk bir yardimci surec surucu boyunca ayakta tutulur.
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
+import { t } from './dil.js';
 
 export interface UykuAyari {
   /** Prizdeyken bosta kalinca uykuya gecme suresi (saniye); 0 = hic uyumaz. */
@@ -36,10 +37,9 @@ export function uykuAyariniOku(): UykuAyari | null {
 /** Kullaniciya gosterilecek uyari; uyku kapaliysa ya da ayar okunamadiysa null. */
 export function uykuUyarisi(ayar: UykuAyari | null): string | null {
   if (!ayar || (ayar.priz_sn === 0 && ayar.pil_sn === 0)) return null;
-  const dk = (sn: number): string => (sn === 0 ? 'hic' : `${Math.round(sn / 60)} dakika`);
+  const dk = (sn: number): string => (sn === 0 ? t('u_hic') : t('u_dakika', { dk: Math.round(sn / 60) }));
   return (
-    `UYARI: bu bilgisayar bosta kalinca uykuya geciyor (prizde: ${dk(ayar.priz_sn)}, pilde: ${dk(ayar.pil_sn)}). ` +
-    'Uyursa is listesi durur. Liste bitene dek uyanik tutmak icin "uyanik_tut" secenegini acin (yonetici izni istemez).'
+    t('u_uyari', { priz: dk(ayar.priz_sn), pil: dk(ayar.pil_sn) })
   );
 }
 
@@ -56,7 +56,7 @@ const ES_CONTINUOUS_VE_SYSTEM_REQUIRED = '0x80000001'; // ES_CONTINUOUS (0x80000
 export function uyanikTut(sahipPid: number = process.pid): Promise<{ tamam: boolean; not: string; tutucu: UyanikTutucu }> {
   const bos: UyanikTutucu = { durdur: () => undefined };
   if (process.platform !== 'win32') {
-    return Promise.resolve({ tamam: false, not: 'uyanik tutma bu isletim sisteminde henuz desteklenmiyor', tutucu: bos });
+    return Promise.resolve({ tamam: false, not: t('u_desteklenmiyor'), tutucu: bos });
   }
   const betik = [
     "$imza = '[DllImport(\"kernel32.dll\")] public static extern uint SetThreadExecutionState(uint esFlags);'",
@@ -70,7 +70,7 @@ export function uyanikTut(sahipPid: number = process.pid): Promise<{ tamam: bool
   try {
     cocuk = spawn('powershell', ['-NoProfile', '-NonInteractive', '-Command', betik], { stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true });
   } catch (e) {
-    return Promise.resolve({ tamam: false, not: `uyanik tutma baslatilamadi: ${e instanceof Error ? e.message : String(e)}`, tutucu: bos });
+    return Promise.resolve({ tamam: false, not: t('u_baslatilamadi', { hata: e instanceof Error ? e.message : String(e) }), tutucu: bos });
   }
   const tutucu: UyanikTutucu = { durdur: () => void cocuk.kill() };
   return new Promise((coz) => {

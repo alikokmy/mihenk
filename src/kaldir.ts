@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
+import { t } from './dil.js';
 
 export interface DosyaKaydi {
   once_vardi: boolean;
@@ -141,7 +142,7 @@ export function dosyayiGeriAl(kok: string, g: string, k: DosyaKaydi, sonuc: Pick
   }
   const yeni = cerrahiCikar(g, mevcut.toString('utf8'));
   if (yeni === null) {
-    sonuc.birakilan.push(`${g} (kurulumdan sonra degistirilmis; mihenk'in parcasi ayiklanamiyor, dokunulmadi)`);
+    sonuc.birakilan.push(t('k_degismis', { yol: g }));
     return;
   }
   if (!k.once_vardi && bosMu(yeni)) { unlinkSync(yol); sonuc.silinen.push(g); return; }
@@ -207,14 +208,14 @@ export function kaldir(hedefDizin: string, secenek: KaldirSecenekleri = {}): Kal
     const iz = (g: string): boolean => existsSync(join(kok, g)) && /mihenk:basla|kapi-bin\.js|"mihenk"\s*:/.test(readFileSync(join(kok, g), 'utf8'));
     const izVar = BILINEN_DUZENLENENLER.some(iz) || BILINEN_OLUSTURULANLAR.some((g) => existsSync(join(kok, g)));
     if (!izVar) {
-      sonuc.defter = existsSync(join(kok, '.mihenk')) ? 'defter yerinde (mihenk kurulu degil; dokunulmadi)' : 'defter yoktu';
+      sonuc.defter = existsSync(join(kok, '.mihenk')) ? t('k_defter_yerinde') : t('k_defter_yoktu');
       return sonuc;
     }
     // Eski surumun kurulumu: bilinen dosyalarda yalniz mihenk'in parcasi cikarilir; birebir geri donus garanti degildir.
     // CLAUDE.md'deki "@AGENTS.md" satirinin kullanicinin mi mihenk'in mi oldugu bilinemez: dokunulmaz.
     for (const g of BILINEN_OLUSTURULANLAR) kayit.dosyalar[g] = { once_vardi: false, yedek: false, ozet: '?' };
     for (const g of BILINEN_DUZENLENENLER.filter((x) => x !== 'CLAUDE.md')) kayit.dosyalar[g] = { once_vardi: true, yedek: false, ozet: '?' };
-    sonuc.birakilan.push('(kurulum kaydi yok: eski surumle kurulmus; yalniz mihenk\'in bilinen parcalari cikarildi; CLAUDE.md\'ye dokunulmadi)');
+    sonuc.birakilan.push(t('k_kayitsiz'));
   }
 
   for (const [g, k] of Object.entries(kayit.dosyalar).sort(([a], [b]) => b.localeCompare(a))) {
@@ -248,20 +249,20 @@ export function kaldir(hedefDizin: string, secenek: KaldirSecenekleri = {}): Kal
     const kalan = readdirSync(mihenkDizini);
     if (kalan.length === 0) {
       rmdirSync(mihenkDizini);
-      sonuc.defter = 'defter yoktu';
+      sonuc.defter = t('k_defter_yoktu');
     } else if (secenek.defterDahil) {
       rmSync(mihenkDizini, { recursive: true, force: true });
-      sonuc.defter = 'defter silindi';
+      sonuc.defter = t('k_defter_silindi');
     } else {
       const zaman = new Date().toISOString().replace(/[:.]/g, '-');
       const arsiv = join(secenek.arsivDizini ?? varsayilanArsiv(), `${basename(kok)}-${zaman}`);
       mkdirSync(dirname(arsiv), { recursive: true });
       cpSync(mihenkDizini, arsiv, { recursive: true });
       rmSync(mihenkDizini, { recursive: true, force: true });
-      sonuc.defter = `defter proje disina tasindi: ${arsiv}`;
+      sonuc.defter = t('k_defter_tasindi', { yol: arsiv });
     }
   } else {
-    sonuc.defter = 'defter yoktu';
+    sonuc.defter = t('k_defter_yoktu');
   }
   return sonuc;
 }

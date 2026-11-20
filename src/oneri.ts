@@ -4,6 +4,7 @@
 // (basarisiz islerin ve yeniden denemelerin maliyeti dahil); esitlikte sure. Az veride oneri verilmez: "veri yetersiz".
 // Kullanici her zaman kendi secimini yapar; bu hesap yalniz gosterir.
 import type { IsOlcumu } from './defter.js';
+import { t as ileti } from './dil.js';
 
 export interface UyumOlcumu {
   gecen: number;
@@ -108,9 +109,8 @@ export function oneriHesapla(olcumler: IsOlcumu[], ayarlar: Partial<OneriAyarlar
     if (adaylar.length === 0) {
       const enCok = Math.max(...secenekler.map((s) => s.is_sayisi));
       const not = secenekler.every((s) => s.durum === 'veri_yetersiz')
-        ? `veri yetersiz: secenek basina en cok ${enCok} kapanmis is var, en az ${a.enAz} gerekir`
-        : `esigi gecen secenek yok: yeterli verisi olanlarin hicbirinde basari oraninin alt siniri %${Math.round(a.esik * 100)}'u gecmiyor` +
-          (secenekler.some((s) => s.durum === 'uyum_dusuk') ? ' ya da uyum orani dusuk' : '');
+        ? ileti('o_veri_yetersiz', { en_cok: enCok, en_az: a.enAz })
+        : ileti('o_esik_yok', { esik: Math.round(a.esik * 100), uyum: secenekler.some((s) => s.durum === 'uyum_dusuk') ? ileti('o_esik_uyum') : '' });
       return { tur, is_sayisi: kendi.length, secenekler, oneri: null, not };
     }
 
@@ -120,48 +120,45 @@ export function oneriHesapla(olcumler: IsOlcumu[], ayarlar: Partial<OneriAyarlar
     let gerekce: string;
     if (bilinen.length > 0) {
       secilen = [...bilinen].sort((x, y) => x.basari_basina_maliyet! - y.basari_basina_maliyet! || sureyeGore(x, y))[0]!;
-      gerekce = `esigi gecenler arasinda basari basina beklenen maliyeti en dusuk (${secilen.basari_basina_maliyet} USD)`;
+      gerekce = ileti('o_gerekce_maliyet', { usd: secilen.basari_basina_maliyet! });
     } else {
       secilen = [...adaylar].sort(sureyeGore)[0]!;
-      gerekce = 'esigi gecenlerin hicbirinin maliyeti bilinmiyor; basari basina beklenen suresi en kisa olan';
+      gerekce = ileti('o_gerekce_sure');
     }
-    gerekce += `; ${secilen.gecen}/${secilen.is_sayisi} is gecti, basari %${Math.round(secilen.aralik[0] * 100)}-%${Math.round(secilen.aralik[1] * 100)}`;
+    gerekce += ileti('o_gerekce_ek', { gecen: secilen.gecen, toplam: secilen.is_sayisi, alt: Math.round(secilen.aralik[0] * 100), ust: Math.round(secilen.aralik[1] * 100) });
     const karsilastirilamayan = adaylar.filter((s) => s.basari_basina_maliyet === null && s !== secilen).map(ad);
     const not = karsilastirilamayan.length > 0 && bilinen.length > 0
-      ? `maliyeti bilinmedigi icin maliyetle karsilastirilamadi: ${karsilastirilamayan.join(', ')}`
+      ? ileti('o_karsilastirilamadi', { liste: karsilastirilamayan.join(', ') })
       : '';
     return { tur, is_sayisi: kendi.length, secenekler, oneri: { ajan: secilen.ajan, model: secilen.model, gerekce }, not };
   });
 }
 
-const DURUM_METNI: Record<SecenekDurumu, string> = {
-  aday: 'aday', veri_yetersiz: 'veri yetersiz', esik_alti: 'esik alti', uyum_dusuk: 'uyum dusuk',
-};
+const DURUM_ANAHTARI = { aday: 'o_durum_aday', veri_yetersiz: 'o_durum_veri_yetersiz', esik_alti: 'o_durum_esik_alti', uyum_dusuk: 'o_durum_uyum_dusuk' } as const;
 
 /** Konsol icin duz metin (Turkce'ye ozgu harf yok). */
 export function oneriMetni(turler: TurOnerisi[], ayarlar: Partial<OneriAyarlari> = {}): string {
   const a: OneriAyarlari = { ...VARSAYILAN_ONERI_AYARLARI, ...ayarlar };
   if (turler.length === 0) {
-    return 'Defterde kapanmis is yok; oneri verilemez. Ajani kendiniz secin (mihenk sur --ajan ...).';
+    return ileti('o_bos');
   }
   const satirlar = [
-    `Esik: basari oraninin %95 alt siniri en az %${Math.round(a.esik * 100)}; secenek basina en az ${a.enAz} kapanmis is.`,
-    'Basari yalniz dogrulanmis "gecti"dir. Maliyet ve sure basari basinadir (basarisiz islerin harcamasi dahil).',
+    ileti('o_esik', { esik: Math.round(a.esik * 100), en_az: a.enAz }),
+    ileti('o_basari'),
   ];
   for (const t of turler) {
-    satirlar.push('', `Is turu: ${t.tur} (${t.is_sayisi} kapanmis is)`);
-    satirlar.push(t.oneri ? `  ONERI: ${t.oneri.ajan} / ${t.oneri.model} - ${t.oneri.gerekce}` : `  ONERI YOK: ${t.not}`);
-    if (t.oneri && t.not) satirlar.push(`  Not: ${t.not}`);
+    satirlar.push('', ileti('o_tur', { tur: t.tur, sayi: t.is_sayisi }));
+    satirlar.push(t.oneri ? ileti('o_oneri', { ajan: t.oneri.ajan, model: t.oneri.model, gerekce: t.oneri.gerekce }) : ileti('o_oneri_yok', { not: t.not }));
+    if (t.oneri && t.not) satirlar.push(ileti('o_not', { not: t.not }));
     for (const s of t.secenekler) {
       const maliyet = s.basari_basina_maliyet !== null
-        ? `${s.basari_basina_maliyet} USD/basari` + (s.maliyet_araligi ? ` (is basina ${s.maliyet_araligi[0]}-${s.maliyet_araligi[1]})` : '')
-        : s.maliyeti_bilinmeyen_is > 0 ? `maliyet bilinmiyor (${s.maliyeti_bilinmeyen_is} iste)` : 'maliyet yok (gecen is yok)';
-      const sure = s.basari_basina_sure_sn !== null ? `${s.basari_basina_sure_sn} sn/basari` : 'sure yok';
-      const uyum = s.uyum ? `, uyum ${s.uyum.gecen}/${s.uyum.toplam}` : '';
-      satirlar.push(`  - ${s.ajan} / ${s.model}: ${s.gecen}/${s.is_sayisi} gecti (%${Math.round(s.aralik[0] * 100)}-%${Math.round(s.aralik[1] * 100)}), ` +
-        `${maliyet}, ${sure}${uyum} [${DURUM_METNI[s.durum]}]`);
+        ? ileti('o_maliyet', { usd: s.basari_basina_maliyet }) + (s.maliyet_araligi ? ileti('o_maliyet_araligi', { alt: s.maliyet_araligi[0], ust: s.maliyet_araligi[1] }) : '')
+        : s.maliyeti_bilinmeyen_is > 0 ? ileti('o_maliyet_bilinmiyor', { sayi: s.maliyeti_bilinmeyen_is }) : ileti('o_maliyet_yok');
+      const sure = s.basari_basina_sure_sn !== null ? ileti('o_sure', { sn: s.basari_basina_sure_sn }) : ileti('o_sure_yok');
+      const uyum = s.uyum ? ileti('o_uyum', { gecen: s.uyum.gecen, toplam: s.uyum.toplam }) : '';
+      satirlar.push(ileti('o_secenek', { ajan: s.ajan, model: s.model, gecen: s.gecen, sayi: s.is_sayisi, alt: Math.round(s.aralik[0] * 100), ust: Math.round(s.aralik[1] * 100), maliyet, sure, uyum, durum: ileti(DURUM_ANAHTARI[s.durum]) }));
     }
   }
-  satirlar.push('', 'Oneri yalniz gosterir; ajani her zaman kendiniz secebilirsiniz.');
+  satirlar.push('', ileti('o_kapanis'));
   return satirlar.join('\n');
 }

@@ -132,9 +132,9 @@ test('kullanicinin kendi mihenk.json\'u: ayar ac-kapa sonrasi kendi bicimiyle ba
 
 test('menu (mihenk-ayarlar.cmd\'nin actigi): numara anahtari degistirir, Enter cikar; duz node sureci, yonetici izni yok', () => {
   const kok = kurulu();
-  const r = spawnSync(process.execPath, ['--disable-warning=ExperimentalWarning', CLI, 'ayar', '--hedef', kok, '--menu'], { input: '3\nabc\n\n', encoding: 'utf8' });
+  const r = spawnSync(process.execPath, ['--disable-warning=ExperimentalWarning', CLI, 'ayar', '--hedef', kok, '--menu'], { input: `${AYARLAR.findIndex((x) => x.ad === 'skiller') + 1}\nabc\n\n`, encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, / 3\. \[ACIK  \] skiller/);
+  assert.match(r.stdout, new RegExp(` ${AYARLAR.findIndex((x) => x.ad === 'skiller') + 1}\\. \\[ACIK  \\] skiller`));
   assert.match(r.stdout, /skiller: KAPALI \(kurulum guncellendi/);
   assert.match(r.stdout, /"abc" bir numara degil/);
   assert.match(r.stdout, /Ayarlar kaydedildi/);
@@ -162,7 +162,9 @@ test('baglam yuku: defter araclarinin tanim boyutu gercek sunucudan olculenle %1
 
 test('bilgi notlari: her ayarin amaci, sonucu ve varsayilan aciklamasi var; listede gorunur, anahtarla gizlenir', () => {
   for (const t of AYARLAR) {
-    for (const alan of ['amac', 'sonuc', 'varsayilan_aciklama', 'aciklama'] as const) assert.ok(t[alan].length > 10, `${t.ad}.${alan}`);
+    for (const alan of ['amac', 'sonuc', 'varsayilan_aciklama', 'aciklama'] as const) {
+      for (const d of ['tr', 'en'] as const) assert.ok(t[alan][d].length > 10, `${t.ad}.${alan}.${d}`);
+    }
   }
   const kok = kurulu();
   const kos = (...a: string[]) => spawnSync(process.execPath, ['--disable-warning=ExperimentalWarning', CLI, 'ayar', '--hedef', kok, ...a], { encoding: 'utf8' });

@@ -15,6 +15,7 @@ import { agaciOldur, gectiMi, komutuCalistir, komutuCoz } from './dogrulama.js';
 import { Ret } from './hata.js';
 import { depoDurumu, sakla, SAKLAMA_KIPLERI, type SaklamaKipi } from './saklama.js';
 import { ayarlariOku } from './ayar.js';
+import { t } from './dil.js';
 import { bildir } from './bildirim.js';
 import { raporYaz } from './rapor.js';
 import { kisalt } from './sinir.js';
@@ -99,17 +100,17 @@ const MIHENK_DEPOSU = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..
 
 /** Is listesi dosyasini okur; hata iletileri kodlama bilmeyen kullanici icin yazilmistir. */
 export function listeOku(dosya: string): IsListesi {
-  if (!existsSync(dosya)) throw new Error(`Is listesi bulunamadi: ${dosya}`);
+  if (!existsSync(dosya)) throw new Error(t('liste_bulunamadi', { yol: dosya }));
   let ham: unknown;
   try {
-    ham = JSON.parse(readFileSync(dosya, 'utf8').replace(/^﻿/, ''));
+    ham = JSON.parse(readFileSync(dosya, 'utf8').replace(/^\uFEFF/, ''));
   } catch (e) {
-    throw new Error(`Is listesi okunamadi (${dosya}): dosya gecerli JSON degil. ${e instanceof Error ? e.message : ''}`);
+    throw new Error(t('liste_json_degil', { yol: dosya, hata: e instanceof Error ? e.message : '' }));
   }
   const liste = (Array.isArray(ham) ? { isler: ham } : ham) as IsListesi;
-  if (!liste || !Array.isArray(liste.isler)) throw new Error(`Is listesi (${dosya}) "isler" adli bir liste icermeli.`);
+  if (!liste || !Array.isArray(liste.isler)) throw new Error(t('liste_isler_yok', { yol: dosya }));
   if (liste.saklama !== undefined && !SAKLAMA_KIPLERI.includes(liste.saklama)) {
-    throw new Error(`Is listesinde "saklama" su degerlerden biri olmali: ${SAKLAMA_KIPLERI.join(', ')}.`);
+    throw new Error(t('liste_saklama', { gecerli: SAKLAMA_KIPLERI.join(', ') }));
   }
   return liste;
 }
@@ -298,14 +299,14 @@ async function gerilemeTabani(kok: string, liste: IsListesi, defter: Defter, yaz
     }
   }
   if (!komut) {
-    yaz('Gerileme denetimi yok: listede "gerileme_komutu" yazili degil ve projede test betigi bulunamadi.');
+    yaz(t('gerileme_yok_komut'));
     return null;
   }
   let parcalar: ReturnType<typeof komutuCoz>;
   try {
     parcalar = komutuCoz(komut, defter.ayarlar.izinli_programlar);
   } catch (e) {
-    yaz(`Gerileme denetimi yok: "${komut}" calistirilamaz (${e instanceof Error ? e.message : String(e)}).`);
+    yaz(t('gerileme_yok_izin', { komut, hata: e instanceof Error ? e.message : String(e) }));
     return null;
   }
   const zamanAsimiMs = (liste.gerileme_zaman_asimi_sn ?? 600) * 1000;
@@ -322,11 +323,11 @@ async function gerilemeTabani(kok: string, liste: IsListesi, defter: Defter, yaz
   };
   const taban = await kos('taban');
   if (!taban.gecti) {
-    yaz(`Gerileme denetimi yok: "${komut}" liste baslamadan da kaliyor (${taban.dosya}); onceden kalan testler varken gerileme ayirt edilemez.`);
+    yaz(t('gerileme_yok_taban', { komut, dosya: taban.dosya }));
     return null;
   }
-  const ne = kipi === 'her_iste' ? 'her iste' : kipi === 'liste_sonunda' ? 'listenin sonunda' : 'uzak depoya gondermeden once';
-  yaz(`Gerileme tabani: "${komut}" liste baslamadan geciyor; ${ne} yeniden kosulacak.`);
+  const ne = t(kipi === 'her_iste' ? 'gerileme_ne_her_iste' : kipi === 'liste_sonunda' ? 'gerileme_ne_liste_sonunda' : 'gerileme_ne_gonderirken');
+  yaz(t('gerileme_taban', { komut, ne }));
   return { komut, kos, kip: kipi as 'her_iste' | 'liste_sonunda' | 'gonderirken' };
 }
 
@@ -393,6 +394,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
   const sonuclar: IsSonucu[] = [];
   let durdu = '';
   let gerilemeSonu = '';
+  let gerilemeKaldi = false;
   try {
     olay('liste_basla', { is_sayisi: s.liste.isler.length, saklama: kip, baglam_esigi: baglamEsigi });
     const gerileme = await gerilemeTabani(kok, s.liste, defter, yaz);
@@ -402,7 +404,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
     const listeIsleri: number[] = [];
     const maliyet = (idler: number[]): number => idler.reduce((t, id) => t + (defter.rapor({ is_id: id }).is?.kullanim_toplami.maliyet_usd ?? 0), 0);
     if (s.liste.butce_usd !== undefined || s.liste.is_butce_usd !== undefined) {
-      yaz('Dolar tavani: yalniz maliyetini bildiren araclarin (Claude Code, OpenCode, Kilo) harcamasi sayilir; Codex aboneligi sayilamaz, onda sure tavani kullanin.');
+      yaz(t('dolar_tavani_notu'));
     }
     const listeTavaniNe = (): string =>
       s.liste.sure_tavani_dk !== undefined && Date.now() - listeBasi >= s.liste.sure_tavani_dk * 60_000
@@ -419,7 +421,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
 
       let is = defter.etiketleBul(kimlik);
       if (is && is.durum !== 'acik') {
-        yaz(`${baslik} zaten kapali (${is.durum}): ${tekSatir(listeIsi.soru, 70)}`);
+        yaz(t('is_kapali', { baslik, durum: is.durum, soru: tekSatir(listeIsi.soru, 70) }));
         sonuclar.push({ kimlik, is_id: is.id, durum: is.durum, atlandi: true, deneme: 0, devir: 0, gecersiz: false, not: 'onceki kosuda kapanmis' });
         continue;
       }
@@ -434,18 +436,18 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
         } catch (e) {
           // Kaydi acilamayan is (eksik alan, izinsiz komut) listeyi durdurmaz.
           const neden = e instanceof Error ? e.message : String(e);
-          yaz(`${baslik} KAYIT ACILAMADI: ${neden}`);
+          yaz(t('kayit_acilamadi', { baslik, neden }));
           olay('kayit_acilamadi', { kimlik, neden });
           sonuclar.push({ kimlik, is_id: 0, durum: 'kaldi', atlandi: false, deneme: 0, devir: 0, gecersiz: true, not: `kayit acilamadi: ${neden}` });
           continue;
         }
       }
       const isId = is.id;
-      yaz(`${baslik} basliyor (is ${isId}, ajan: ${ajanAdi || 'yok'}): ${tekSatir(listeIsi.soru, 70)}`);
+      yaz(t('is_basliyor', { baslik, id: isId, ajan: ajanAdi || t('yok'), soru: tekSatir(listeIsi.soru, 70) }));
       // Bos kanit bekcisi: ajan baslamadan dogrulama bir kez kosulur (yeniden baslatilan listede ikinci kez kosulmaz).
       const baslangic = await defter.baslangicDogrula(isId);
       if (baslangic.kosuldu && baslangic.gecti) {
-        yaz(`${baslik}   UYARI: dogrulama komutu is baslamadan geciyor; gecerse hukum "supheli" notu tasiyacak.`);
+        yaz(t('bos_kanit_uyarisi', { baslik }));
       }
 
       let deneme = 0;
@@ -471,7 +473,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
           butceNotu = `butce: ${listeTavani || isTavani}`;
           if (listeTavani) durdu = listeTavani;
           surucuNotu(isId, butceNotu);
-          yaz(`${baslik}   ${butceNotu}`);
+          yaz(t('satir_not', { baslik, not: butceNotu }));
           olay('tavan', { is_id: isId, neden: butceNotu, liste: Boolean(listeTavani) });
           break;
         }
@@ -515,7 +517,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
             const beklemeMs = s.kotaBeklemeMs ?? (s.liste.kota_bekleme_dk ?? 15) * 60_000;
             const m = `model saglayicisi hatasi (${tekSatir(saglayici, 120)}); ${Math.round(beklemeMs / 1000)} sn beklenip yeniden denenecek (${kotaBekleme}/${sinir})`;
             surucuNotu(isId, m);
-            yaz(`${baslik}   ${m}`);
+            yaz(t('satir_not', { baslik, not: m }));
             olay('kota_bekleme', { is_id: isId, bekleme_ms: beklemeMs, sayi: kotaBekleme, hata: saglayici });
             await new Promise((r) => setTimeout(r, beklemeMs));
             continue;
@@ -534,7 +536,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
             1500,
           ).metin;
           surucuNotu(isId, `baglam esigi (${baglamEsigi}) asildi (${kosu.baglam} token): oturum devredildi (${devir}. devir)`);
-          yaz(`${baslik}   baglam esigi asildi; oturum devrediliyor (${devir}. devir)`);
+          yaz(t('devir', { baslik, devir }));
           continue;
         }
 
@@ -546,7 +548,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
           if (!g.gecti) {
             gerilemeNotu = `gerileme: listenin basinda gecen butun test takimi (${gerileme.komut}) simdi kaliyor; is kendi dogrulamasini gecse de "gecti" sayilmaz`;
             surucuNotu(isId, `${deneme}. deneme: ${gerilemeNotu}. Cikti: ${g.dosya}`);
-            yaz(`${baslik}   ${deneme}. deneme: ${gerilemeNotu}`);
+            yaz(t('deneme_notu', { baslik, deneme, not: gerilemeNotu }));
             devirNotu = kisalt(`Bu is daha once denendi (${deneme}. deneme). Senin degisikligin, onceden gecen testleri bozdu: ${gerileme.komut} kaliyor. ` +
               `Bozdugun yeri duzelt; testleri degistirme. Ciktinin sonu: ${g.ozet}`, 1500).metin;
             continue;
@@ -561,13 +563,13 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
             ? 'baglam esigi yine asildi, devir siniri doldu'
             : `ajan durdu (cikis kodu ${kosu.cikis_kodu}) ama dogrulama gecmedi`;
         surucuNotu(isId, `${deneme}. deneme: ${neden}`);
-        yaz(`${baslik}   ${deneme}. deneme: ${neden}`);
+        yaz(t('deneme_notu', { baslik, deneme, not: neden }));
         // Dongu kesici: dogrulama iki denemede ayni hatayi verdiyse ajan ilerlemiyor; kalan denemeler harcanmaz.
         const hata = hataImzasi(hukum.dogrulama.cikti_ozeti);
         if (bekciler.bekci_dongu !== false && oncekiHata !== null && hata === oncekiHata && deneme < denemeSiniri) {
           not = `dongu: dogrulama ${deneme - 1}. ve ${deneme}. denemede ayni hatayi verdi; kalan denemeler harcanmadi`;
           surucuNotu(isId, not);
-          yaz(`${baslik}   ${not}`);
+          yaz(t('satir_not', { baslik, not }));
           olay('dongu_kesildi', { is_id: isId, deneme });
           break;
         }
@@ -602,7 +604,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
           if (!g.gecti) {
             saklamaKipi = 'yerel';
             surucuNotu(isId, `gonderilmedi: tam test takimi (${gerileme.komut}) kaliyor; yalniz yerelde saklandi. Cikti: ${g.dosya}`);
-            yaz(`${baslik}   GONDERILMEDI: tam test takimi kaliyor (${g.dosya}); is yalniz yerelde saklandi.`);
+            yaz(t('gonderilmedi', { baslik, dosya: g.dosya }));
           }
         }
         const saklama = sakla(kok, saklamaKipi, `mihenk: is ${isId} gecti: ${tekSatir(listeIsi.soru, 60)}`);
@@ -612,9 +614,9 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
         not = son.gerekce ?? '';
       }
       if (son.supheler.length > 0) not = `SUPHELI: ${son.supheler.join('; ')}. ${not}`;
-      yaz(`${baslik} ${son.durum.toUpperCase()}${gecersiz ? ' (GECERSIZ)' : ''}: ${not}`);
+      yaz(t('is_sonucu', { baslik, durum: son.durum.toUpperCase(), gecersiz: gecersiz ? t('gecersiz_ek') : '', not }));
       if (son.durum !== 'gecti' && existsSync(join(defter.dizin, 'geri', `is-${isId}-son.json`))) {
-        yaz(`${baslik}   Bu isin yarim kalan degisikliklerini geri almak icin: mihenk geri-al ${isId}`);
+        yaz(t('geri_al_hatirlatma', { baslik, id: isId }));
       }
       olay('is_bitti', { is_id: isId, kimlik, durum: son.durum, deneme, devir, gecersiz });
       sonuclar.push({ kimlik, is_id: isId, durum: son.durum, atlandi: false, deneme, devir, gecersiz, not });
@@ -622,9 +624,8 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
     // Gerileme "liste_sonunda": butun isler bitince tam takim bir kez.
     if (gerileme?.kip === 'liste_sonunda') {
       const g = await gerileme.kos('liste-sonu');
-      gerilemeSonu = g.gecti
-        ? `Gerileme denetimi: tam test takimi (${gerileme.komut}) liste sonunda da geciyor.`
-        : `UYARI: GERILEME: tam test takimi (${gerileme.komut}) liste basinda geciyordu, simdi kaliyor (${g.dosya}). Hangi isin bozdugu ayirt edilemedi; gecen isleri "mihenk geri-al" ile tek tek geri alabilirsiniz.`;
+      gerilemeKaldi = !g.gecti;
+      gerilemeSonu = t(g.gecti ? 'gerileme_sonu_gecti' : 'gerileme_sonu_kaldi', { komut: gerileme.komut, dosya: g.dosya });
       olay('gerileme_liste_sonu', { gecti: g.gecti, dosya: g.dosya });
     }
   } finally {
@@ -637,24 +638,24 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
   if (gerilemeSonu) yaz(gerilemeSonu);
   if (durdu) {
     const kalan = s.liste.isler.length - sonuclar.length;
-    yaz(`LISTE DURDU: ${durdu}. Baslatilmayan is: ${kalan}. Yeniden baslatinca kaldigi yerden surer.`);
+    yaz(t('liste_durdu', { neden: durdu, kalan }));
     olay('liste_durdu', { neden: durdu, kalan });
   }
-  yaz(`Liste bitti: ${ozet.gecti} gecti, ${ozet.kaldi} kaldi, ${ozet.belirsiz} belirsiz (toplam ${ozet.toplam}).`);
+  yaz(t('liste_bitti', { gecti: ozet.gecti, kaldi: ozet.kaldi, belirsiz: ozet.belirsiz, toplam: ozet.toplam }));
   // Duz dilde rapor her liste sonunda yenilenir; bildirim istenirse gonderilir (Asama 14).
   try {
     const raporYolu = raporYaz(kok);
-    yaz(`Rapor: ${raporYolu} (mihenk-rapor.cmd ile acilir)`);
+    yaz(t('rapor_satiri', { yol: raporYolu }));
     if (s.bildirim && ayarlariOku(kok).bildirim !== false) {
-      const baslik = durdu ? 'mihenk: liste durdu' : 'mihenk: liste bitti';
-      const metin = `${ozet.toplam} isin ${ozet.gecti} tanesi basariyla bitti, ${ozet.kaldi} tanesi yapilamadi, ${ozet.belirsiz} tanesi belirsiz.` +
-        (durdu ? ` Neden: ${durdu}.` : '') + (gerilemeSonu.startsWith('UYARI') ? ' Gerileme uyarisi var.' : '');
+      const baslik = t(durdu ? 'bildirim_baslik_durdu' : 'bildirim_baslik_bitti');
+      const metin = t('bildirim_metin', { toplam: ozet.toplam, gecti: ozet.gecti, kaldi: ozet.kaldi, belirsiz: ozet.belirsiz }) +
+        (durdu ? t('bildirim_neden', { neden: durdu }) : '') + (gerilemeKaldi ? t('bildirim_gerileme') : '');
       const b = bildir(baslik, metin);
       olay('bildirim', { gosterildi: b.gosterildi, not: b.not });
-      if (!b.gosterildi) yaz(`(${b.not})`);
+      if (!b.gosterildi) yaz(t('parantez', { metin: b.not }));
     }
   } catch (e) {
-    yaz(`Rapor yazilamadi: ${e instanceof Error ? e.message : String(e)}`);
+    yaz(t('rapor_yazilamadi', { hata: e instanceof Error ? e.message : String(e) }));
   }
   return { ...(durdu ? { durdu } : {}), isler: sonuclar, ozet };
 }

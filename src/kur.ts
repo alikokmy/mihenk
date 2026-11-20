@@ -5,6 +5,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ayarlariOku } from './ayar.js';
+import { t } from './dil.js';
 import { bosDizinleriSil, dosyayiGeriAl, kayitOku, kayitYaz, ozet, yedegiSil, yedekYaz } from './kaldir.js';
 
 export type Arac = 'claude' | 'codex' | 'gemini' | 'antigravity' | 'opencode' | 'kilo' | 'cline' | 'qwen';
@@ -159,7 +160,7 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
     const eski = oku('.codex/config.toml') ?? '';
     const blokDisi = eski.includes(bas) ? eski.slice(0, eski.indexOf(bas)) + eski.slice(eski.indexOf(son) + son.length) : eski;
     if (/^\[mcp_servers\.mihenk\]/m.test(blokDisi)) {
-      sonuc.uyarilar.push('.codex/config.toml icinde elle yazilmis [mcp_servers.mihenk] var; dokunulmadi.');
+      sonuc.uyarilar.push(t('kur_codex_elle'));
     } else {
       const args = mcpKaydi.args.map((a) => JSON.stringify(a)).join(', ');
       blokGuncelle('.codex/config.toml', bas, son, `[mcp_servers.mihenk]\ncommand = "node"\nargs = [${args}]`);
@@ -195,7 +196,7 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
       kancaEkle(n, 'Stop', { hooks: [k('bitir')] });
       kancaEkle(n, 'PreToolUse', { matcher: '^Bash$', hooks: [k('arac')] });
     });
-    sonuc.uyarilar.push('Codex kancalari ancak siz onaylayinca calisir: Codex\'i bu klasorde acip /hooks ekraninda mihenk kancalarini onaylayin (kanca degisirse yeniden).');
+    sonuc.uyarilar.push(t('kur_codex_onay'));
   }
 
   if (araclar.includes('gemini')) {

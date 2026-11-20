@@ -18,9 +18,17 @@ import { geriAl } from './geri.js';
 import { raporYaz } from './rapor.js';
 import { spawnSync } from 'node:child_process';
 import { ayarKomutu } from './ayar-cli.js';
+import { ayarlariOku } from './ayar.js';
+import { dilAyarla, sistemDili, t } from './dil.js';
 import { oneriHesapla, oneriMetni, VARSAYILAN_ONERI_AYARLARI, type OneriAyarlari } from './oneri.js';
 
 const [komut, ...gerisi] = process.argv.slice(2);
+// Dil: projenin "dil" ayari (sistem / tr / en). Proje --hedef ile verilir, yoksa calisilan klasor.
+{
+  const i = gerisi.indexOf('--hedef');
+  const d = ayarlariOku(resolve(i >= 0 ? gerisi[i + 1]! : process.cwd())).dil;
+  dilAyarla(d === 'en' || d === 'tr' ? d : sistemDili());
+}
 const secenek = (ad: string): string | undefined => {
   const i = gerisi.indexOf(ad);
   return i >= 0 ? gerisi[i + 1] : undefined;
@@ -29,22 +37,14 @@ const sayi = (ad: string): number | undefined => {
   const d = secenek(ad);
   if (d === undefined) return undefined;
   const n = Number(d);
-  if (!Number.isInteger(n) || n < 1) throw new Error(`${ad} pozitif bir tam sayi olmali (gelen: ${d}).`);
+  if (!Number.isInteger(n) || n < 1) throw new Error(t('pozitif_tam_sayi', { ad, deger: d }));
   return n;
 };
 
 function kullanim(): void {
-  console.error('kullanim:');
-  console.error('  mihenk kur [--hedef <proje klasoru>] [--arac claude,codex,gemini,antigravity,opencode,kilo]');
-  console.error('  mihenk sur [--hedef <proje klasoru>] [--liste <dosya>] [--ajan claude|codex|opencode|kilo]');
-  console.error('             [--saklama yok|yerel|yerel_gonder] [--uyanik-tut]');
-  console.error('  mihenk uyum [--arac claude,codex,opencode,kilo] [--senaryo duzeltme,tuzak,karar] [--cikis <klasor>]');
-  console.error('  mihenk ayar [--hedef <proje klasoru>] [<ayar> ac|kapa|<deger>] [--menu]   ozellikleri acip kapatir');
-  console.error('  mihenk rapor [--hedef <proje klasoru>] [--ac]   duz dilde tek sayfa rapor');
-  console.error('  mihenk geri-al <is> [--hedef <proje klasoru>] [--deneme]   bir isin dosya degisikliklerini geri alir');
-  console.error('  mihenk kaldir [--hedef <proje klasoru>] [--defter-dahil]   kurulumun ekledigi her seyi geri alir');
-  console.error('  mihenk oneri [--hedef <proje klasoru>] [--esik 0.5] [--en-az 5] [--uyum <uyum-raporu.json>] [--json]');
-  console.error('Defter sunucusu ayri calisir: mihenk-defter [--kok <proje klasoru>]');
+  for (const k of ['kullanim', 'kullanim_kur', 'kullanim_sur', 'kullanim_uyum', 'kullanim_ayar', 'kullanim_rapor', 'kullanim_geri', 'kullanim_kaldir', 'kullanim_oneri', 'kullanim_defter'] as const) {
+    console.error(t(k));
+  }
 }
 
 /**
@@ -58,25 +58,25 @@ async function uyumKomutu(): Promise<number> {
   const sonuclar: SenaryoSonucu[] = [];
   for (const ad of istenen) {
     const tanim = AJANLAR[ad];
-    if (!tanim) throw new Error(`bilinmeyen arac: ${ad}. Gecerli: ${Object.keys(AJANLAR).join(', ')}`);
+    if (!tanim) throw new Error(t('bilinmeyen_arac', { ad, gecerli: Object.keys(AJANLAR).join(', ') }));
     if (!tanim.komutBul()) {
-      console.log(`${ad}: bu bilgisayarda bulunamadi, atlandi.`);
+      console.log(t('uyum_bulunamadi', { ad }));
       continue;
     }
     for (const s of SENARYOLAR.filter((x) => senaryoAdlari.includes(x.ad))) {
-      console.log(`${ad} / ${s.ad}: basliyor...`);
+      console.log(t('uyum_basliyor', { ad, senaryo: s.ad }));
       const r = await senaryoKostur({ tanim, kurulacakArac: ad as Arac, senaryo: s, dizin: join(cikis, ad, s.ad), zamanAsimiSn: sayi('--oturum-sn') ?? 600 });
       const kalan = r.kontroller.filter((k) => !k.gecti).map((k) => KONTROL_ACIKLAMASI[k.ad]);
-      console.log(`${ad} / ${s.ad}: ${r.gecersiz ? `GECERSIZ (${r.gecersiz})` : kalan.length === 0 ? 'butun kurallara uydu' : `uymadi: ${kalan.join('; ')}`}` +
-        ` | is ${r.basari ? 'yapildi' : 'yapilmadi'}, beyan ${r.beyan ?? 'yok'}`);
+      const durum = r.gecersiz ? t('uyum_gecersiz', { neden: r.gecersiz }) : kalan.length === 0 ? t('uyum_uydu') : t('uyum_uymadi', { kurallar: kalan.join('; ') });
+      console.log(t('uyum_satir', { ad, senaryo: s.ad, durum, yapildi: t(r.basari ? 'uyum_yapildi' : 'uyum_yapilmadi'), beyan: r.beyan ?? t('yok') }));
       sonuclar.push(r);
     }
   }
   mkdirSync(cikis, { recursive: true });
   writeFileSync(join(cikis, 'uyum-raporu.md'), raporMetni(sonuclar));
   writeFileSync(join(cikis, 'uyum-raporu.json'), JSON.stringify({ tarih: new Date().toISOString(), ozet: uyumOzeti(sonuclar), sonuclar }, null, 2) + '\n');
-  for (const u of uyumOzeti(sonuclar)) console.log(`${u.arac}: uyum ${u.gecen}/${u.toplam} (%${Math.round(u.oran * 100)}), basarili senaryo ${u.basarili_senaryo}/${u.senaryo}`);
-  console.log(`Rapor: ${join(cikis, 'uyum-raporu.md')}`);
+  for (const u of uyumOzeti(sonuclar)) console.log(t('uyum_ozet', { arac: u.arac, gecen: u.gecen, toplam: u.toplam, oran: Math.round(u.oran * 100), basarili: u.basarili_senaryo, senaryo: u.senaryo }));
+  console.log(t('rapor_yolu', { yol: join(cikis, 'uyum-raporu.md') }));
   return 0;
 }
 
@@ -87,14 +87,14 @@ async function uyumKomutu(): Promise<number> {
 function oneriKomutu(): number {
   const kok = resolve(secenek('--hedef') ?? process.cwd());
   if (!existsSync(join(kok, '.mihenk', 'defter.db'))) {
-    console.log(`Bu klasorde defter yok (${kok}). Once isleri mihenk ile yurutun; oneri olculen islerden hesaplanir.`);
+    console.log(t('defter_yok_oneri', { kok }));
     return 0;
   }
   const oran = (ad: string, varsayilan: number): number => {
     const d = secenek(ad);
     if (d === undefined) return varsayilan;
     const n = Number(d);
-    if (!(n >= 0 && n <= 1)) throw new Error(`${ad} 0 ile 1 arasinda bir sayi olmali (or. 0.5); gelen: ${d}.`);
+    if (!(n >= 0 && n <= 1)) throw new Error(t('oran_hatasi', { ad, deger: d }));
     return n;
   };
   const uyumYolu = resolve(secenek('--uyum') ?? join(kok, 'mihenk-uyum', 'uyum-raporu.json'));
@@ -112,7 +112,7 @@ function oneriKomutu(): number {
   defter.kapat();
   if (gerisi.includes('--json')) console.log(JSON.stringify(turler, null, 2));
   else {
-    if (uyum) console.log(`Uyum raporu: ${uyumYolu}`);
+    if (uyum) console.log(t('uyum_raporu', { yol: uyumYolu }));
     console.log(oneriMetni(turler, ayarlar));
   }
   return 0;
@@ -122,11 +122,11 @@ function oneriKomutu(): number {
 function raporKomutu(): number {
   const kok = resolve(secenek('--hedef') ?? process.cwd());
   if (!existsSync(join(kok, '.mihenk', 'defter.db'))) {
-    console.log(`Bu klasorde defter yok (${kok}); rapor edilecek is yok.`);
+    console.log(t('defter_yok_rapor', { kok }));
     return 0;
   }
   const yol = raporYaz(kok);
-  console.log(`Rapor: ${yol}`);
+  console.log(t('rapor_yolu', { yol }));
   if (gerisi.includes('--ac')) {
     if (process.platform === 'win32') spawnSync('cmd.exe', ['/d', '/c', 'start', '""', `"${yol}"`], { windowsHide: true, windowsVerbatimArguments: true });
     else spawnSync(process.platform === 'darwin' ? 'open' : 'xdg-open', [yol]);
@@ -138,45 +138,45 @@ function raporKomutu(): number {
 function geriAlKomutu(): number {
   const kok = resolve(secenek('--hedef') ?? process.cwd());
   const id = Number(gerisi.find((x) => /^\d+$/.test(x)));
-  if (!Number.isInteger(id) || id < 1) throw new Error('kullanim: mihenk geri-al <is numarasi> [--hedef <proje>] [--deneme]');
+  if (!Number.isInteger(id) || id < 1) throw new Error(t('geri_kullanim'));
   const s = geriAl(kok, id, { deneme: gerisi.includes('--deneme') });
-  const on = s.deneme ? '(deneme: hicbir sey degismedi) ' : '';
-  for (const d of s.geri_yuklenen) console.log(`${on}eski haline dondu   ${d}`);
-  for (const d of s.silinen) console.log(`${on}silindi (iste eklenmisti)  ${d}`);
-  for (const d of s.geri_getirilen) console.log(`${on}geri getirildi (iste silinmisti)  ${d}`);
-  for (const d of s.cakisan) console.log(`DOKUNULMADI (is bittikten sonra degismis)  ${d}`);
-  for (const d of s.atlanan) console.log(`geri alinamadi (fotografa alinmamis, cok buyuk)  ${d}`);
+  const on = s.deneme ? t('geri_deneme_onek') : '';
+  for (const d of s.geri_yuklenen) console.log(t('geri_yuklendi', { on, yol: d }));
+  for (const d of s.silinen) console.log(t('geri_silindi', { on, yol: d }));
+  for (const d of s.geri_getirilen) console.log(t('geri_getirildi', { on, yol: d }));
+  for (const d of s.cakisan) console.log(t('geri_cakisan', { yol: d }));
+  for (const d of s.atlanan) console.log(t('geri_atlanan', { yol: d }));
   const toplam = s.geri_yuklenen.length + s.silinen.length + s.geri_getirilen.length;
-  console.log(toplam === 0 && s.cakisan.length === 0 ? `is ${id}: geri alinacak degisiklik yok.` : `is ${id}: ${toplam} dosya ${s.deneme ? 'geri alinacak' : 'geri alindi'}${s.cakisan.length ? `, ${s.cakisan.length} dosyaya dokunulmadi` : ''}.`);
-  if (!s.deneme && toplam > 0) console.log('Git kullaniyorsaniz bu bir calisma degisikligidir; isterseniz commit edin.');
+  console.log(toplam === 0 && s.cakisan.length === 0 ? t('geri_bos', { id }) : t('geri_ozet', { id, sayi: toplam, ne: t(s.deneme ? 'geri_alinacak' : 'geri_alindi'), cakisma: s.cakisan.length ? t('geri_cakisma_ek', { sayi: s.cakisan.length }) : '' }));
+  if (!s.deneme && toplam > 0) console.log(t('geri_git_notu'));
   return s.cakisan.length > 0 ? 1 : 0;
 }
 
 function kaldirKomutu(): number {
   const kok = resolve(secenek('--hedef') ?? process.cwd());
-  console.log(`mihenk bu projeden kaldiriliyor: ${kok}`);
+  console.log(t('kaldir_basliyor', { kok }));
   const s = kaldir(kok, { defterDahil: gerisi.includes('--defter-dahil'), cmdDen: gerisi.includes('--cmd-den') });
-  for (const d of s.silinen) console.log(`silindi            ${d}`);
-  for (const d of s.geri_yuklenen) console.log(`eski haline dondu  ${d}`);
-  for (const d of s.ayiklanan) console.log(`mihenk kismi cikarildi (sizin degisiklikleriniz duruyor)  ${d}`);
-  for (const d of s.birakilan) console.log(`dokunulmadi        ${d}`);
+  for (const d of s.silinen) console.log(t('kaldir_silindi', { yol: d }));
+  for (const d of s.geri_yuklenen) console.log(t('kaldir_geri', { yol: d }));
+  for (const d of s.ayiklanan) console.log(t('kaldir_ayiklandi', { yol: d }));
+  for (const d of s.birakilan) console.log(t('kaldir_dokunulmadi', { yol: d }));
   console.log(s.defter.charAt(0).toUpperCase() + s.defter.slice(1) + '.');
-  console.log('Tamam. Yeniden kurmak isterseniz: mihenk kur');
+  console.log(t('kaldir_bitti'));
   return 0;
 }
 
 function kurKomutu(): number {
   const istenen = (secenek('--arac') ?? ARACLAR.join(',')).split(',').map((a) => a.trim()).filter(Boolean);
   const bilinmeyen = istenen.filter((a) => !ARACLAR.includes(a as Arac));
-  if (bilinmeyen.length > 0) throw new Error(`bilinmeyen arac: ${bilinmeyen.join(', ')}. Gecerli: ${ARACLAR.join(', ')}`);
+  if (bilinmeyen.length > 0) throw new Error(t('bilinmeyen_arac', { ad: bilinmeyen.join(', '), gecerli: ARACLAR.join(', ') }));
   // --arac verilmezse kurulum ayarlara (mihenk.json) esitlenir: kapatilmis ozelliklerin dosyalari geri alinir.
   const sonuc = secenek('--arac') === undefined
     ? kur(secenek('--hedef') ?? process.cwd(), { esitle: true })
     : kur(secenek('--hedef') ?? process.cwd(), { araclar: istenen as Arac[] });
-  for (const d of sonuc.geri_alinan ?? []) console.log(`geri alindi ${d}`);
-  for (const d of sonuc.yazilan) console.log(`yazildi    ${d}`);
-  for (const u of sonuc.uyarilar) console.log(`UYARI      ${u}`);
-  console.log(`${sonuc.yazilan.length} dosya yazildi, ${sonuc.degismeyen.length} dosya zaten gunceldi.`);
+  for (const d of sonuc.geri_alinan ?? []) console.log(t('kur_geri_alindi', { yol: d }));
+  for (const d of sonuc.yazilan) console.log(t('kur_yazildi', { yol: d }));
+  for (const u of sonuc.uyarilar) console.log(t('kur_uyari', { metin: u }));
+  console.log(t('kur_ozet', { yazilan: sonuc.yazilan.length, degismeyen: sonuc.degismeyen.length }));
   return 0;
 }
 
@@ -186,24 +186,24 @@ async function surKomutu(): Promise<number> {
   const liste = listeOku(listeYolu);
   const saklama = secenek('--saklama') as SaklamaKipi | undefined;
   if (saklama !== undefined && !SAKLAMA_KIPLERI.includes(saklama)) {
-    throw new Error(`--saklama su degerlerden biri olmali: ${SAKLAMA_KIPLERI.join(', ')}.`);
+    throw new Error(t('saklama_hatasi', { gecerli: SAKLAMA_KIPLERI.join(', ') }));
   }
 
   // Ajan secimi: kullanici her zaman elle secebilir; secmediyse kurulu olan ilk arac (once ucretsiz calisabilenler).
   const bulunan = ['codex', 'opencode', 'kilo', 'claude'].filter((ad) => AJANLAR[ad]?.komutBul() != null);
   const ajan = secenek('--ajan') ?? liste.ajan ?? bulunan[0];
-  console.log(`Proje: ${kok}`);
-  console.log(`Is listesi: ${listeYolu} (${liste.isler.length} is)`);
-  console.log(`Bu bilgisayarda bulunan araclar: ${bulunan.length > 0 ? bulunan.join(', ') : 'yok'}; varsayilan: ${ajan ?? 'yok'} (iste ayrica "ajan" yazilmissa o kullanilir)`);
+  console.log(t('sur_proje', { kok }));
+  console.log(t('sur_liste', { yol: listeYolu, sayi: liste.isler.length }));
+  console.log(t('sur_araclar', { bulunan: bulunan.length > 0 ? bulunan.join(', ') : t('yok'), varsayilan: ajan ?? t('yok') }));
   if (!ajan && liste.isler.some((i) => !i.ajan)) {
-    throw new Error('Kullanilabilecek bir ajan araci bulunamadi. Codex, OpenCode ya da Claude Code kurun, ya da --ajan ile secin.');
+    throw new Error(t('sur_ajan_yok'));
   }
 
   const uyanikIstendi = uyanikIstendiMi({ bayrak: gerisi.includes('--uyanik-tut'), liste, kok });
   let durdur = (): void => undefined;
   if (uyanikIstendi) {
     const u = await uyanikTut();
-    console.log(u.tamam ? `Uyanik tutma: ${u.not}.` : `UYARI: ${u.not}.`);
+    console.log(t(u.tamam ? 'sur_uyanik' : 'sur_uyari', { not: u.not }));
     durdur = () => u.tutucu.durdur();
   } else {
     const uyari = uykuUyarisi(uykuAyariniOku());
@@ -223,7 +223,7 @@ async function surKomutu(): Promise<number> {
       ...(baglamEsigi === undefined ? {} : { baglamEsigi }),
       bildirim: true,
     });
-    console.log(`Ayrinti: ${join(kok, '.mihenk', 'defter.jsonl')}`);
+    console.log(t('sur_ayrinti', { yol: join(kok, '.mihenk', 'defter.jsonl') }));
     return rapor.ozet.gecti === rapor.ozet.toplam ? 0 : 1;
   } finally {
     durdur();
@@ -244,6 +244,6 @@ try {
     process.exitCode = komut === undefined || komut === '--help' ? 0 : 2;
   }
 } catch (e) {
-  console.error(`mihenk ${komut ?? ''}: ${e instanceof Error ? e.message : String(e)}`);
+  console.error(t('hata', { komut: komut ?? '', mesaj: e instanceof Error ? e.message : String(e) }));
   process.exitCode = 1;
 }

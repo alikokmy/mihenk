@@ -7,6 +7,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { AYARLAR, ayarlariOku, ayarTanimi, ayarYaz, degerCoz, type AyarDegeri } from './ayar.js';
+import { sec, t } from './dil.js';
 import { kur } from './kur.js';
 
 /**
@@ -48,38 +49,37 @@ export function baglamYuku(kok: string): BaglamYuku {
   return { yontem_metni: yontemMetni, skill, mcp, toplam_token: Math.round((yontemMetni + skill + mcp) / 4) };
 }
 
-const goster = (d: AyarDegeri): string => (d === true ? 'ACIK  ' : d === false ? 'KAPALI' : String(d).padEnd(6));
-const deger = (d: AyarDegeri): string => (d === true ? 'acik' : d === false ? 'kapali' : String(d));
+const goster = (d: AyarDegeri): string => (d === true ? t('ayar_acik') : d === false ? t('ayar_kapali') : String(d)).padEnd(6);
+const deger = (d: AyarDegeri): string => (d === true ? t('ayar_acik') : d === false ? t('ayar_kapali') : String(d)).toLowerCase();
 
 function listeMetni(kok: string): string {
   const a = ayarlariOku(kok);
   const notlar = a.bilgi_notlari !== false;
-  const satirlar = AYARLAR.flatMap((t, i) => {
-    const s = [`${String(i + 1).padStart(2)}. [${goster(a[t.ad]!)}] ${t.ad.padEnd(20)} ${t.aciklama}`];
+  const satirlar = AYARLAR.flatMap((x, i) => {
+    const s = [`${String(i + 1).padStart(2)}. [${goster(a[x.ad]!)}] ${x.ad.padEnd(20)} ${sec(x.aciklama)}`];
     if (notlar) {
-      s.push(`      Amac: ${t.amac}`, `      Sonuc: ${t.sonuc}`, `      Varsayilan (${deger(t.varsayilan)}): ${t.varsayilan_aciklama}`);
-      if (t.secenekler) s.push(`      Secenekler: ${t.secenekler.join(', ')}`);
-      if (t.sayi) s.push(`      Deger: ${t.sayi.en_az} ile ${t.sayi.en_cok} arasi tam sayi`);
+      s.push(`      ${t('ayar_amac')}: ${sec(x.amac)}`, `      ${t('ayar_sonuc')}: ${sec(x.sonuc)}`, `      ${t('ayar_varsayilan')} (${deger(x.varsayilan)}): ${sec(x.varsayilan_aciklama)}`);
+      if (x.secenekler) s.push(`      ${t('ayar_secenekler')}: ${x.secenekler.join(', ')}`);
+      if (x.sayi) s.push(`      ${t('ayar_deger_araligi', { en_az: x.sayi.en_az, en_cok: x.sayi.en_cok })}`);
     }
     return s;
   });
-  if (notlar) satirlar.push('', 'Bilgi notlarini gizlemek icin 1 numarali "bilgi_notlari" ayarini kapatin.');
+  if (notlar) satirlar.push('', t('ayar_not_gizle'));
   const y = baglamYuku(kok);
-  satirlar.push('', `Her oturuma eklenen yaklasik baglam: ${y.toplam_token} token (kurallar ${y.yontem_metni}, skill ozetleri ${y.skill}, ` +
-    `defter araclari ${y.mcp} karakter; token = karakter / 4, yaklasik).`);
+  satirlar.push('', t('ayar_baglam', { token: y.toplam_token, kurallar: y.yontem_metni, skill: y.skill, mcp: y.mcp }));
   return satirlar.join('\n');
 }
 
 /** Ayari yazar; kurulumla ilgiliyse ve proje kuruluysa kurulumu esitler. Kullaniciya gidecek kisa ozet doner. */
 export function ayarDegistir(kok: string, ad: string, deger: AyarDegeri): string {
-  const t = ayarTanimi(ad);
+  const tanim = ayarTanimi(ad);
   ayarYaz(kok, { [ad]: deger });
   let ek = '';
-  if (t.etki === 'kurulum' && existsSync(join(kok, '.mihenk', 'kurulum.json'))) {
+  if (tanim.etki === 'kurulum' && existsSync(join(kok, '.mihenk', 'kurulum.json'))) {
     const s = kur(kok, { esitle: true });
-    ek = ` (kurulum guncellendi: ${s.yazilan.length} dosya yazildi, ${s.geri_alinan?.length ?? 0} dosya geri alindi)`;
+    ek = t('ayar_kurulum_ek', { yazilan: s.yazilan.length, geri: s.geri_alinan?.length ?? 0 });
   }
-  return `${ad}: ${goster(deger).trim()}${ek}`;
+  return t('ayar_degisti', { ad, deger: goster(deger).trim(), ek });
 }
 
 async function menu(kok: string): Promise<void> {
@@ -88,7 +88,7 @@ async function menu(kok: string): Promise<void> {
     console.log('');
     console.log(listeMetni(kok));
     console.log('');
-    process.stdout.write('Degistirmek icin numara yazip Enter\'a basin; cikmak icin yalniz Enter: ');
+    process.stdout.write(t('menu_istem'));
   };
   const it = rl[Symbol.asyncIterator]();
   const sonraki = async (): Promise<string | undefined> => { const r = await it.next(); return r.done ? undefined : r.value; };
@@ -96,36 +96,36 @@ async function menu(kok: string): Promise<void> {
   for (let satir = await sonraki(); satir !== undefined; satir = await sonraki()) {
     const s = satir.trim();
     if (s === '' || s === '0' || s.toLowerCase() === 'q') break;
-    const t = AYARLAR[Number(s) - 1];
-    if (!t || !/^\d+$/.test(s)) {
-      console.log(`\n"${s}" bir numara degil.`);
+    const x = AYARLAR[Number(s) - 1];
+    if (!x || !/^\d+$/.test(s)) {
+      console.log('\n' + t('menu_numara_degil', { girdi: s }));
       sor();
       continue;
     }
-    const simdiki = ayarlariOku(kok)[t.ad]!;
+    const simdiki = ayarlariOku(kok)[x.ad]!;
     let yeni: AyarDegeri;
-    if (t.sayi) {
-      process.stdout.write(`Yeni deger (${t.sayi.en_az}-${t.sayi.en_cok}, simdiki ${simdiki}): `);
+    if (x.sayi) {
+      process.stdout.write(t('menu_yeni_deger', { en_az: x.sayi.en_az, en_cok: x.sayi.en_cok, simdiki: String(simdiki) }));
       const r = await sonraki();
       try {
-        yeni = degerCoz(t, (r ?? '').trim());
+        yeni = degerCoz(x, (r ?? '').trim());
       } catch (e) {
-        console.log(`\n${e instanceof Error ? e.message : String(e)}`);
+        console.log(`\n${e instanceof Error ? e.message : String(e)}`); // dil-disi: hata iletisi firlatildigi yerde cevrildi
         sor();
         continue;
       }
     } else {
-      yeni = t.secenekler ? t.secenekler[(t.secenekler.indexOf(String(simdiki)) + 1) % t.secenekler.length]! : !simdiki;
+      yeni = x.secenekler ? x.secenekler[(x.secenekler.indexOf(String(simdiki)) + 1) % x.secenekler.length]! : !simdiki;
     }
     try {
-      console.log('\n' + ayarDegistir(kok, t.ad, yeni));
+      console.log('\n' + ayarDegistir(kok, x.ad, yeni));
     } catch (e) {
-      console.log(`\nDegistirilemedi: ${e instanceof Error ? e.message : String(e)}`);
+      console.log('\n' + t('menu_degistirilemedi', { hata: e instanceof Error ? e.message : String(e) }));
     }
     sor();
   }
   rl.close();
-  console.log('\nAyarlar kaydedildi (mihenk.json).');
+  console.log('\n' + t('menu_kaydedildi'));
 }
 
 export async function ayarKomutu(argv = process.argv.slice(3)): Promise<number> {
@@ -138,11 +138,11 @@ export async function ayarKomutu(argv = process.argv.slice(3)): Promise<number> 
   }
   if (konum.length === 0) {
     console.log(listeMetni(kok));
-    console.log('\nDegistirmek icin: mihenk ayar <ad> ac|kapa (secimli ayarda degerin kendisi), ya da mihenk-ayarlar.cmd');
+    console.log('\n' + t('ayar_ipucu'));
     return 0;
   }
   const [ad, metin] = konum;
-  if (metin === undefined) throw new Error('kullanim: mihenk ayar <ad> ac|kapa|<deger>');
+  if (metin === undefined) throw new Error(t('ayar_kullanim'));
   console.log(ayarDegistir(kok, ad!, degerCoz(ayarTanimi(ad!), metin)));
   return 0;
 }

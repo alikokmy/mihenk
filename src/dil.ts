@@ -1,0 +1,240 @@
+// Dil destegi (Asama 15): kullaniciya gorunen iletiler Turkce ve Ingilizce. Her ileti bu katalogda bir anahtarla durur;
+// test/dil.test.ts her anahtarin iki dilde de dolu ve yer tutucularinin ayni oldugunu, ileti basan dosyalarda katalog disi duz metin
+// kalmadigini denetler. Ajana giden metinler (kapi ve defterin ret iletileri, skill'ler) bu katalogda degildir.
+// Varsayilan dil "tr"dir; komut satiri projenin "dil" ayarini okuyup dilAyarla ile degistirir ("sistem": sistemin dili Ingilizceyse en).
+
+export type Dil = 'tr' | 'en';
+let gecerli: Dil = 'tr';
+
+export function dilAyarla(d: Dil): void {
+  gecerli = d;
+}
+
+export function hangiDil(): Dil {
+  return gecerli;
+}
+
+/** "sistem" ayarini cozer: isletim sisteminin dili Ingilizceyse en, degilse tr. */
+export function sistemDili(): Dil {
+  const yer = (process.env.LANG || process.env.LC_ALL || Intl.DateTimeFormat().resolvedOptions().locale || '').toLowerCase();
+  return yer.startsWith('en') ? 'en' : 'tr';
+}
+
+export const METINLER = {
+  // komut satiri: genel
+  kullanim: { tr: 'kullanim:', en: 'usage:' },
+  kullanim_kur: { tr: '  mihenk kur [--hedef <proje klasoru>] [--arac claude,codex,gemini,antigravity,opencode,kilo,cline,qwen]', en: '  mihenk kur [--hedef <project folder>] [--arac claude,codex,gemini,antigravity,opencode,kilo,cline,qwen]' },
+  kullanim_sur: { tr: '  mihenk sur [--hedef <proje klasoru>] [--liste <dosya>] [--ajan claude|codex|opencode|kilo] [--saklama yok|yerel|yerel_gonder] [--uyanik-tut]', en: '  mihenk sur [--hedef <project folder>] [--liste <file>] [--ajan claude|codex|opencode|kilo] [--saklama yok|yerel|yerel_gonder] [--uyanik-tut]' },
+  kullanim_uyum: { tr: '  mihenk uyum [--arac claude,codex,opencode,kilo] [--senaryo duzeltme,tuzak,karar] [--cikis <klasor>]', en: '  mihenk uyum [--arac claude,codex,opencode,kilo] [--senaryo duzeltme,tuzak,karar] [--cikis <folder>]' },
+  kullanim_ayar: { tr: '  mihenk ayar [--hedef <proje klasoru>] [<ayar> ac|kapa|<deger>] [--menu]   ozellikleri acip kapatir', en: '  mihenk ayar [--hedef <project folder>] [<setting> ac|kapa|<value>] [--menu]   turns features on and off' },
+  kullanim_rapor: { tr: '  mihenk rapor [--hedef <proje klasoru>] [--ac]   duz dilde tek sayfa rapor', en: '  mihenk rapor [--hedef <project folder>] [--ac]   one-page plain-language report' },
+  kullanim_geri: { tr: '  mihenk geri-al <is> [--hedef <proje klasoru>] [--deneme]   bir isin dosya degisikliklerini geri alir', en: '  mihenk geri-al <job> [--hedef <project folder>] [--deneme]   undoes the file changes of one job' },
+  kullanim_kaldir: { tr: '  mihenk kaldir [--hedef <proje klasoru>] [--defter-dahil]   kurulumun ekledigi her seyi geri alir', en: '  mihenk kaldir [--hedef <project folder>] [--defter-dahil]   removes everything the installer added' },
+  kullanim_oneri: { tr: '  mihenk oneri [--hedef <proje klasoru>] [--esik 0.5] [--en-az 5] [--uyum <uyum-raporu.json>] [--json]', en: '  mihenk oneri [--hedef <project folder>] [--esik 0.5] [--en-az 5] [--uyum <uyum-raporu.json>] [--json]' },
+  kullanim_defter: { tr: 'Defter sunucusu ayri calisir: mihenk-defter [--kok <proje klasoru>]', en: 'The ledger server runs separately: mihenk-defter [--kok <project folder>]' },
+  hata: { tr: 'mihenk {komut}: {mesaj}', en: 'mihenk {komut}: {mesaj}' },
+  pozitif_tam_sayi: { tr: '{ad} pozitif bir tam sayi olmali (gelen: {deger}).', en: '{ad} must be a positive integer (got: {deger}).' },
+  bilinmeyen_arac: { tr: 'bilinmeyen arac: {ad}. Gecerli: {gecerli}', en: 'unknown tool: {ad}. Valid: {gecerli}' },
+  defter_yok_oneri: { tr: 'Bu klasorde defter yok ({kok}). Once isleri mihenk ile yurutun; oneri olculen islerden hesaplanir.', en: 'No ledger in this folder ({kok}). Run jobs with mihenk first; recommendations are computed from measured jobs.' },
+  oran_hatasi: { tr: '{ad} 0 ile 1 arasinda bir sayi olmali (or. 0.5); gelen: {deger}.', en: '{ad} must be a number between 0 and 1 (e.g. 0.5); got: {deger}.' },
+  uyum_raporu: { tr: 'Uyum raporu: {yol}', en: 'Compliance report: {yol}' },
+  // uyum
+  uyum_bulunamadi: { tr: '{ad}: bu bilgisayarda bulunamadi, atlandi.', en: '{ad}: not found on this computer, skipped.' },
+  uyum_basliyor: { tr: '{ad} / {senaryo}: basliyor...', en: '{ad} / {senaryo}: starting...' },
+  uyum_gecersiz: { tr: 'GECERSIZ ({neden})', en: 'INVALID ({neden})' },
+  uyum_uydu: { tr: 'butun kurallara uydu', en: 'followed every rule' },
+  uyum_uymadi: { tr: 'uymadi: {kurallar}', en: 'did not follow: {kurallar}' },
+  uyum_satir: { tr: '{ad} / {senaryo}: {durum} | is {yapildi}, beyan {beyan}', en: '{ad} / {senaryo}: {durum} | job {yapildi}, claim {beyan}' },
+  uyum_yapildi: { tr: 'yapildi', en: 'done' },
+  uyum_yapilmadi: { tr: 'yapilmadi', en: 'not done' },
+  uyum_ozet: { tr: '{arac}: uyum {gecen}/{toplam} (%{oran}), basarili senaryo {basarili}/{senaryo}', en: '{arac}: compliance {gecen}/{toplam} ({oran}%), successful scenarios {basarili}/{senaryo}' },
+  rapor_yolu: { tr: 'Rapor: {yol}', en: 'Report: {yol}' },
+  yok: { tr: 'yok', en: 'none' },
+  // rapor ve geri alma
+  defter_yok_rapor: { tr: 'Bu klasorde defter yok ({kok}); rapor edilecek is yok.', en: 'No ledger in this folder ({kok}); nothing to report.' },
+  geri_kullanim: { tr: 'kullanim: mihenk geri-al <is numarasi> [--hedef <proje>] [--deneme]', en: 'usage: mihenk geri-al <job number> [--hedef <project>] [--deneme]' },
+  geri_deneme_onek: { tr: '(deneme: hicbir sey degismedi) ', en: '(dry run: nothing changed) ' },
+  geri_yuklendi: { tr: '{on}eski haline dondu   {yol}', en: '{on}restored   {yol}' },
+  geri_silindi: { tr: '{on}silindi (iste eklenmisti)  {yol}', en: '{on}deleted (added by the job)  {yol}' },
+  geri_getirildi: { tr: '{on}geri getirildi (iste silinmisti)  {yol}', en: '{on}brought back (deleted by the job)  {yol}' },
+  geri_cakisan: { tr: 'DOKUNULMADI (is bittikten sonra degismis)  {yol}', en: 'NOT TOUCHED (changed after the job ended)  {yol}' },
+  geri_atlanan: { tr: 'geri alinamadi (fotografa alinmamis, cok buyuk)  {yol}', en: 'could not be undone (too large, not in the snapshot)  {yol}' },
+  geri_bos: { tr: 'is {id}: geri alinacak degisiklik yok.', en: 'job {id}: no changes to undo.' },
+  geri_ozet: { tr: 'is {id}: {sayi} dosya {ne}{cakisma}.', en: 'job {id}: {sayi} files {ne}{cakisma}.' },
+  geri_alinacak: { tr: 'geri alinacak', en: 'would be undone' },
+  geri_alindi: { tr: 'geri alindi', en: 'undone' },
+  geri_cakisma_ek: { tr: ', {sayi} dosyaya dokunulmadi', en: ', {sayi} files left untouched' },
+  geri_git_notu: { tr: 'Git kullaniyorsaniz bu bir calisma degisikligidir; isterseniz commit edin.', en: 'If you use git, this is a working-tree change; commit it if you want.' },
+  // kaldirma
+  kaldir_basliyor: { tr: 'mihenk bu projeden kaldiriliyor: {kok}', en: 'Removing mihenk from this project: {kok}' },
+  kaldir_silindi: { tr: 'silindi            {yol}', en: 'deleted            {yol}' },
+  kaldir_geri: { tr: 'eski haline dondu  {yol}', en: 'restored           {yol}' },
+  kaldir_ayiklandi: { tr: 'mihenk kismi cikarildi (sizin degisiklikleriniz duruyor)  {yol}', en: 'mihenk part removed (your changes are kept)  {yol}' },
+  kaldir_dokunulmadi: { tr: 'dokunulmadi        {yol}', en: 'not touched        {yol}' },
+  kaldir_bitti: { tr: 'Tamam. Yeniden kurmak isterseniz: mihenk kur', en: 'Done. To install again: mihenk kur' },
+  // kurulum
+  kur_geri_alindi: { tr: 'geri alindi {yol}', en: 'undone     {yol}' },
+  kur_yazildi: { tr: 'yazildi    {yol}', en: 'written    {yol}' },
+  kur_uyari: { tr: 'UYARI      {metin}', en: 'WARNING    {metin}' },
+  kur_ozet: { tr: '{yazilan} dosya yazildi, {degismeyen} dosya zaten gunceldi.', en: '{yazilan} files written, {degismeyen} files already up to date.' },
+  // surucu: komut satiri
+  saklama_hatasi: { tr: '--saklama su degerlerden biri olmali: {gecerli}.', en: '--saklama must be one of: {gecerli}.' },
+  sur_proje: { tr: 'Proje: {kok}', en: 'Project: {kok}' },
+  sur_liste: { tr: 'Is listesi: {yol} ({sayi} is)', en: 'Job list: {yol} ({sayi} jobs)' },
+  sur_araclar: { tr: 'Bu bilgisayarda bulunan araclar: {bulunan}; varsayilan: {varsayilan} (iste ayrica "ajan" yazilmissa o kullanilir)', en: 'Tools found on this computer: {bulunan}; default: {varsayilan} (a job\'s own "ajan" field takes precedence)' },
+  sur_ajan_yok: { tr: 'Kullanilabilecek bir ajan araci bulunamadi. Codex, OpenCode, Kilo Code ya da Claude Code kurun, ya da --ajan ile secin.', en: 'No usable agent tool found. Install Codex, OpenCode, Kilo Code or Claude Code, or choose one with --ajan.' },
+  sur_uyanik: { tr: 'Uyanik tutma: {not}.', en: 'Keep awake: {not}.' },
+  sur_uyari: { tr: 'UYARI: {not}.', en: 'WARNING: {not}.' },
+  sur_ayrinti: { tr: 'Ayrinti: {yol}', en: 'Details: {yol}' },
+  // surucu: liste akisi
+  liste_bulunamadi: { tr: 'Is listesi bulunamadi: {yol}', en: 'Job list not found: {yol}' },
+  liste_json_degil: { tr: 'Is listesi okunamadi ({yol}): dosya gecerli JSON degil. {hata}', en: 'Could not read the job list ({yol}): not valid JSON. {hata}' },
+  liste_isler_yok: { tr: 'Is listesi ({yol}) "isler" adli bir liste icermeli.', en: 'The job list ({yol}) must contain a list named "isler".' },
+  liste_saklama: { tr: 'Is listesinde "saklama" su degerlerden biri olmali: {gecerli}.', en: '"saklama" in the job list must be one of: {gecerli}.' },
+  gerileme_yok_komut: { tr: 'Gerileme denetimi yok: listede "gerileme_komutu" yazili degil ve projede test betigi bulunamadi.', en: 'No regression check: the list has no "gerileme_komutu" and the project has no test script.' },
+  gerileme_yok_izin: { tr: 'Gerileme denetimi yok: "{komut}" calistirilamaz ({hata}).', en: 'No regression check: "{komut}" cannot be run ({hata}).' },
+  gerileme_yok_taban: { tr: 'Gerileme denetimi yok: "{komut}" liste baslamadan da kaliyor ({dosya}); onceden kalan testler varken gerileme ayirt edilemez.', en: 'No regression check: "{komut}" already fails before the list starts ({dosya}); regressions cannot be told apart from earlier failures.' },
+  gerileme_taban: { tr: 'Gerileme tabani: "{komut}" liste baslamadan geciyor; {ne} yeniden kosulacak.', en: 'Regression baseline: "{komut}" passes before the list starts; it will run again {ne}.' },
+  gerileme_ne_her_iste: { tr: 'her iste', en: 'for every job' },
+  gerileme_ne_liste_sonunda: { tr: 'listenin sonunda', en: 'at the end of the list' },
+  gerileme_ne_gonderirken: { tr: 'uzak depoya gondermeden once', en: 'before pushing to the remote' },
+  dolar_tavani_notu: { tr: 'Dolar tavani: yalniz maliyetini bildiren araclarin (Claude Code, OpenCode, Kilo) harcamasi sayilir; Codex aboneligi sayilamaz, onda sure tavani kullanin.', en: 'Dollar cap: only tools that report cost (Claude Code, OpenCode, Kilo) are counted; a Codex subscription cannot be counted, use a time cap there.' },
+  is_kapali: { tr: '{baslik} zaten kapali ({durum}): {soru}', en: '{baslik} already closed ({durum}): {soru}' },
+  kayit_acilamadi: { tr: '{baslik} KAYIT ACILAMADI: {neden}', en: '{baslik} COULD NOT OPEN RECORD: {neden}' },
+  is_basliyor: { tr: '{baslik} basliyor (is {id}, ajan: {ajan}): {soru}', en: '{baslik} starting (job {id}, agent: {ajan}): {soru}' },
+  bos_kanit_uyarisi: { tr: '{baslik}   UYARI: dogrulama komutu is baslamadan geciyor; gecerse hukum "supheli" notu tasiyacak.', en: '{baslik}   WARNING: the check already passes before the job starts; a pass will be marked "suspicious".' },
+  satir_not: { tr: '{baslik}   {not}', en: '{baslik}   {not}' },
+  devir: { tr: '{baslik}   baglam esigi asildi; oturum devrediliyor ({devir}. devir)', en: '{baslik}   context threshold exceeded; handing over to a new session (handover {devir})' },
+  deneme_notu: { tr: '{baslik}   {deneme}. deneme: {not}', en: '{baslik}   attempt {deneme}: {not}' },
+  gonderilmedi: { tr: '{baslik}   GONDERILMEDI: tam test takimi kaliyor ({dosya}); is yalniz yerelde saklandi.', en: '{baslik}   NOT PUSHED: the full test suite fails ({dosya}); the job was only saved locally.' },
+  is_sonucu: { tr: '{baslik} {durum}{gecersiz}: {not}', en: '{baslik} {durum}{gecersiz}: {not}' },
+  gecersiz_ek: { tr: ' (GECERSIZ)', en: ' (INVALID)' },
+  geri_al_hatirlatma: { tr: '{baslik}   Bu isin yarim kalan degisikliklerini geri almak icin: mihenk geri-al {id}', en: '{baslik}   To undo this job\'s unfinished changes: mihenk geri-al {id}' },
+  liste_durdu: { tr: 'LISTE DURDU: {neden}. Baslatilmayan is: {kalan}. Yeniden baslatinca kaldigi yerden surer.', en: 'LIST STOPPED: {neden}. Jobs not started: {kalan}. Restart to resume where it left off.' },
+  liste_bitti: { tr: 'Liste bitti: {gecti} gecti, {kaldi} kaldi, {belirsiz} belirsiz (toplam {toplam}).', en: 'List finished: {gecti} passed, {kaldi} failed, {belirsiz} uncertain (total {toplam}).' },
+  rapor_satiri: { tr: 'Rapor: {yol} (mihenk-rapor.cmd ile acilir)', en: 'Report: {yol} (open it with mihenk-rapor.cmd)' },
+  rapor_yazilamadi: { tr: 'Rapor yazilamadi: {hata}', en: 'Report could not be written: {hata}' },
+  parantez: { tr: '({metin})', en: '({metin})' },
+  bildirim_baslik_bitti: { tr: 'mihenk: liste bitti', en: 'mihenk: list finished' },
+  bildirim_baslik_durdu: { tr: 'mihenk: liste durdu', en: 'mihenk: list stopped' },
+  bildirim_metin: { tr: '{toplam} isin {gecti} tanesi basariyla bitti, {kaldi} tanesi yapilamadi, {belirsiz} tanesi belirsiz.', en: '{gecti} of {toplam} jobs succeeded, {kaldi} failed, {belirsiz} uncertain.' },
+  bildirim_neden: { tr: ' Neden: {neden}.', en: ' Reason: {neden}.' },
+  bildirim_gerileme: { tr: ' Gerileme uyarisi var.', en: ' There is a regression warning.' },
+  gerileme_sonu_gecti: { tr: 'Gerileme denetimi: tam test takimi ({komut}) liste sonunda da geciyor.', en: 'Regression check: the full test suite ({komut}) still passes at the end of the list.' },
+  gerileme_sonu_kaldi: { tr: 'UYARI: GERILEME: tam test takimi ({komut}) liste basinda geciyordu, simdi kaliyor ({dosya}). Hangi isin bozdugu ayirt edilemedi; gecen isleri "mihenk geri-al" ile tek tek geri alabilirsiniz.', en: 'WARNING: REGRESSION: the full test suite ({komut}) passed at the start of the list and now fails ({dosya}). Which job broke it is unknown; you can undo the passed jobs one by one with "mihenk geri-al".' },
+  g_fotograf_yok: { tr: 'is {id} icin fotograf yok: geri alma kapaliydi ya da fotograf eskidigi icin silindi (ayar: geri_alma_sakla). Geri alinamaz.', en: 'job {id} has no snapshot: undo was off or the snapshot was deleted as too old (setting: geri_alma_sakla). It cannot be undone.' },
+  g_acik: { tr: 'is {id} henuz kapanmadi; geri alma kapanmis is icindir.', en: 'job {id} has not closed yet; undo is for closed jobs.' },
+  // oneri
+  o_veri_yetersiz: { tr: 'veri yetersiz: secenek basina en cok {en_cok} kapanmis is var, en az {en_az} gerekir', en: 'not enough data: at most {en_cok} closed jobs per option, at least {en_az} needed' },
+  o_esik_yok: { tr: 'esigi gecen secenek yok: yeterli verisi olanlarin hicbirinde basari oraninin alt siniri %{esik}\'u gecmiyor{uyum}', en: 'no option passes the threshold: for none with enough data does the lower bound of the success rate exceed {esik}%{uyum}' },
+  o_esik_uyum: { tr: ' ya da uyum orani dusuk', en: ' or compliance is low' },
+  o_gerekce_maliyet: { tr: 'esigi gecenler arasinda basari basina beklenen maliyeti en dusuk ({usd} USD)', en: 'lowest expected cost per success among those passing the threshold ({usd} USD)' },
+  o_gerekce_sure: { tr: 'esigi gecenlerin hicbirinin maliyeti bilinmiyor; basari basina beklenen suresi en kisa olan', en: 'no passing option has a known cost; shortest expected time per success' },
+  o_gerekce_ek: { tr: '; {gecen}/{toplam} is gecti, basari %{alt}-%{ust}', en: '; {gecen}/{toplam} jobs passed, success {alt}%-{ust}%' },
+  o_karsilastirilamadi: { tr: 'maliyeti bilinmedigi icin maliyetle karsilastirilamadi: {liste}', en: 'could not be compared on cost because the cost is unknown: {liste}' },
+  o_durum_aday: { tr: 'aday', en: 'candidate' },
+  o_durum_veri_yetersiz: { tr: 'veri yetersiz', en: 'not enough data' },
+  o_durum_esik_alti: { tr: 'esik alti', en: 'below threshold' },
+  o_durum_uyum_dusuk: { tr: 'uyum dusuk', en: 'low compliance' },
+  o_bos: { tr: 'Defterde kapanmis is yok; oneri verilemez. Ajani kendiniz secin (mihenk sur --ajan ...).', en: 'No closed jobs in the ledger; no recommendation possible. Choose the agent yourself (mihenk sur --ajan ...).' },
+  o_esik: { tr: 'Esik: basari oraninin %95 alt siniri en az %{esik}; secenek basina en az {en_az} kapanmis is.', en: 'Threshold: 95% lower bound of the success rate at least {esik}%; at least {en_az} closed jobs per option.' },
+  o_basari: { tr: 'Basari yalniz dogrulanmis "gecti"dir. Maliyet ve sure basari basinadir (basarisiz islerin harcamasi dahil).', en: 'Success means a verified pass only. Cost and time are per success (including what failed jobs spent).' },
+  o_tur: { tr: 'Is turu: {tur} ({sayi} kapanmis is)', en: 'Job type: {tur} ({sayi} closed jobs)' },
+  o_oneri: { tr: '  ONERI: {ajan} / {model} - {gerekce}', en: '  RECOMMENDATION: {ajan} / {model} - {gerekce}' },
+  o_oneri_yok: { tr: '  ONERI YOK: {not}', en: '  NO RECOMMENDATION: {not}' },
+  o_not: { tr: '  Not: {not}', en: '  Note: {not}' },
+  o_maliyet: { tr: '{usd} USD/basari', en: '{usd} USD/success' },
+  o_maliyet_araligi: { tr: ' (is basina {alt}-{ust})', en: ' (per job {alt}-{ust})' },
+  o_maliyet_bilinmiyor: { tr: 'maliyet bilinmiyor ({sayi} iste)', en: 'cost unknown ({sayi} jobs)' },
+  o_maliyet_yok: { tr: 'maliyet yok (gecen is yok)', en: 'no cost (no passed job)' },
+  o_sure: { tr: '{sn} sn/basari', en: '{sn} s/success' },
+  o_sure_yok: { tr: 'sure yok', en: 'no time' },
+  o_uyum: { tr: ', uyum {gecen}/{toplam}', en: ', compliance {gecen}/{toplam}' },
+  o_secenek: { tr: '  - {ajan} / {model}: {gecen}/{sayi} gecti (%{alt}-%{ust}), {maliyet}, {sure}{uyum} [{durum}]', en: '  - {ajan} / {model}: {gecen}/{sayi} passed ({alt}%-{ust}%), {maliyet}, {sure}{uyum} [{durum}]' },
+  o_kapanis: { tr: 'Oneri yalniz gosterir; ajani her zaman kendiniz secebilirsiniz.', en: 'The recommendation only informs; you can always choose the agent yourself.' },
+  // kaldirma, kurulum, uyku
+  k_degismis: { tr: '{yol} (kurulumdan sonra degistirilmis; mihenk\'in parcasi ayiklanamiyor, dokunulmadi)', en: '{yol} (changed after installation; the mihenk part cannot be separated, not touched)' },
+  k_defter_yerinde: { tr: 'defter yerinde (mihenk kurulu degil; dokunulmadi)', en: 'ledger left in place (mihenk is not installed; not touched)' },
+  k_defter_yoktu: { tr: 'defter yoktu', en: 'there was no ledger' },
+  k_kayitsiz: { tr: '(kurulum kaydi yok: eski surumle kurulmus; yalniz mihenk\'in bilinen parcalari cikarildi; CLAUDE.md\'ye dokunulmadi)', en: '(no installation record: installed by an older version; only the known mihenk parts were removed; CLAUDE.md was not touched)' },
+  k_defter_silindi: { tr: 'defter silindi', en: 'ledger deleted' },
+  k_defter_tasindi: { tr: 'defter proje disina tasindi: {yol}', en: 'ledger moved out of the project: {yol}' },
+  kur_codex_elle: { tr: '.codex/config.toml icinde elle yazilmis [mcp_servers.mihenk] var; dokunulmadi.', en: '.codex/config.toml has a hand-written [mcp_servers.mihenk]; not touched.' },
+  kur_codex_onay: { tr: 'Codex kancalari ancak siz onaylayinca calisir: Codex\'i bu klasorde acip /hooks ekraninda mihenk kancalarini onaylayin (kanca degisirse yeniden).', en: 'Codex hooks only run after you approve them: open Codex in this folder and approve the mihenk hooks on the /hooks screen (again if a hook changes).' },
+  u_hic: { tr: 'hic', en: 'never' },
+  u_dakika: { tr: '{dk} dakika', en: '{dk} minutes' },
+  u_uyari: { tr: 'UYARI: bu bilgisayar bosta kalinca uykuya geciyor (prizde: {priz}, pilde: {pil}). Uyursa is listesi durur. Liste bitene dek uyanik tutmak icin "uyanik_tut" secenegini acin (yonetici izni istemez).', en: 'WARNING: this computer goes to sleep when idle (plugged in: {priz}, on battery: {pil}). If it sleeps, the job list stops. Turn on "uyanik_tut" to keep it awake until the list ends (no admin rights needed).' },
+  u_desteklenmiyor: { tr: 'uyanik tutma bu isletim sisteminde henuz desteklenmiyor', en: 'keep-awake is not supported on this operating system yet' },
+  u_baslatilamadi: { tr: 'uyanik tutma baslatilamadi: {hata}', en: 'keep-awake could not start: {hata}' },
+  // rapor sayfasi (HTML; Turkce harf serbest)
+  r_baslik: { tr: 'Ne yapıldı: {proje}', en: 'What was done: {proje}' },
+  r_sayfa_basligi: { tr: 'mihenk raporu: {proje}', en: 'mihenk report: {proje}' },
+  r_tarih: { tr: 'Rapor tarihi: {tarih}', en: 'Report date: {tarih}' },
+  r_bos: { tr: 'Bu projede henüz kaydedilmiş iş yok.', en: 'No jobs have been recorded in this project yet.' },
+  r_ozet: { tr: '{toplam} işin {gecti} tanesi başarıyla bitti, {kaldi} tanesi yapılamadı, {belirsiz} tanesinde emin olunamadı{acik}.', en: '{gecti} of {toplam} jobs succeeded, {kaldi} could not be done, {belirsiz} uncertain{acik}.' },
+  r_ozet_acik: { tr: ', {acik} tanesi henüz bitmedi', en: ', {acik} not finished yet' },
+  r_toplam: { tr: 'Yapay zekânın çalıştığı toplam süre: {sure} · Toplam maliyet: {maliyet}', en: 'Total AI working time: {sure} · Total cost: {maliyet}' },
+  r_aciklama: { tr: '"Başarıyla bitti", işin kendi denetiminin mihenk tarafından çalıştırılıp geçtiği anlamına gelir; yapay zekânın "bitti" demesi sayılmaz.', en: '"Succeeded" means mihenk itself ran the job\'s check and it passed; the AI saying "done" does not count.' },
+  r_is: { tr: 'İş {id}', en: 'Job {id}' },
+  r_neden: { tr: 'Neden', en: 'Why' },
+  r_dikkat: { tr: 'Dikkat: {metin}. İşi bir de siz kontrol edin.', en: 'Attention: {metin}. Please check the job yourself too.' },
+  r_satir: { tr: 'Süre: {sure} · Maliyet: {maliyet} · Yapay zekâ aracı: {ajan} · Deneme: {deneme}', en: 'Time: {sure} · Cost: {maliyet} · AI tool: {ajan} · Attempts: {deneme}' },
+  r_geri: { tr: 'Bu işin yarım kalan değişikliklerini geri almak için:', en: 'To undo this job\'s unfinished changes:' },
+  r_sonuc_gecti: { tr: 'Başarıyla bitti', en: 'Succeeded' },
+  r_sonuc_kaldi: { tr: 'Yapılamadı', en: 'Could not be done' },
+  r_sonuc_belirsiz: { tr: 'Emin olunamadı', en: 'Uncertain' },
+  r_sonuc_acik: { tr: 'Henüz bitmedi', en: 'Not finished yet' },
+  r_devam: { tr: 'devam ediyor', en: 'in progress' },
+  r_dk_sn: { tr: '{dk} dk {sn} sn', en: '{dk} min {sn} s' },
+  r_sn: { tr: '{sn} sn', en: '{sn} s' },
+  r_maliyet_bilinmiyor: { tr: 'bilinmiyor (araç maliyet bildirmiyor)', en: 'unknown (the tool does not report cost)' },
+  r_maliyet_kismen: { tr: ' (bir kısmı bilinmiyor)', en: ' (partly unknown)' },
+  r_n_gecti: { tr: 'İşin kendi denetimi geçti; bunu yapay zekâ değil, mihenk kendisi doğruladı.', en: 'The job\'s own check passed; mihenk itself verified this, not the AI.' },
+  r_n_butce: { tr: 'Harcama ya da süre sınırına ulaşıldı ({ayrinti}).', en: 'The spending or time limit was reached ({ayrinti}).' },
+  r_n_kota: { tr: 'Yapay zekâ hizmeti bir süre isteği kabul etmedi (kullanım sınırı); iş tamamlanamadı.', en: 'The AI service refused requests for a while (usage limit); the job could not be completed.' },
+  r_n_kararsiz: { tr: 'Denetim aynı kodla bir geçti bir kaldı; sonuç güvenilir değil.', en: 'The check passed once and failed once on the same code; the result is not reliable.' },
+  r_n_gerileme: { tr: 'İş kendi denetimini geçti ama projenin daha önce çalışan başka bir yerini bozdu.', en: 'The job passed its own check but broke another part of the project that worked before.' },
+  r_n_dongu: { tr: 'Yapay zekâ aynı hatayı tekrarladı, ilerleme olmadığı için durduruldu.', en: 'The AI repeated the same error and was stopped because it made no progress.' },
+  r_n_disari: { tr: 'Yapay zekâ proje klasörünün dışında değişiklik yaptı; iş geçersiz sayıldı.', en: 'The AI changed files outside the project folder; the job was declared invalid.' },
+  r_n_takildi: { tr: 'Verilen deneme hakkında denetim geçmedi{sure}.', en: 'The check did not pass within the allowed attempts{sure}.' },
+  r_n_takildi_sure: { tr: ' (yapay zekâ süresinde bitiremedi)', en: ' (the AI did not finish in time)' },
+  // ayar menusu
+  menu_istem: { tr: 'Degistirmek icin numara yazip Enter\'a basin; cikmak icin yalniz Enter: ', en: 'Type a number and press Enter to change it; press Enter alone to quit: ' },
+  menu_numara_degil: { tr: '"{girdi}" bir numara degil.', en: '"{girdi}" is not a number.' },
+  menu_yeni_deger: { tr: 'Yeni deger ({en_az}-{en_cok}, simdiki {simdiki}): ', en: 'New value ({en_az}-{en_cok}, current {simdiki}): ' },
+  menu_degistirilemedi: { tr: 'Degistirilemedi: {hata}', en: 'Could not change it: {hata}' },
+  menu_kaydedildi: { tr: 'Ayarlar kaydedildi (mihenk.json).', en: 'Settings saved (mihenk.json).' },
+  ayar_ipucu: { tr: 'Degistirmek icin: mihenk ayar <ad> ac|kapa (secimli ayarda degerin kendisi), ya da mihenk-ayarlar.cmd', en: 'To change: mihenk ayar <name> ac|kapa (or the value itself for choice settings), or mihenk-ayarlar.cmd' },
+  ayar_kullanim: { tr: 'kullanim: mihenk ayar <ad> ac|kapa|<deger>', en: 'usage: mihenk ayar <name> ac|kapa|<value>' },
+  ayar_degisti: { tr: '{ad}: {deger}{ek}', en: '{ad}: {deger}{ek}' },
+  ayar_kurulum_ek: { tr: ' (kurulum guncellendi: {yazilan} dosya yazildi, {geri} dosya geri alindi)', en: ' (installation updated: {yazilan} files written, {geri} files undone)' },
+  ayar_acik: { tr: 'ACIK', en: 'ON' },
+  ayar_kapali: { tr: 'KAPALI', en: 'OFF' },
+  ayar_amac: { tr: 'Amac', en: 'Purpose' },
+  ayar_sonuc: { tr: 'Sonuc', en: 'Effect' },
+  ayar_varsayilan: { tr: 'Varsayilan', en: 'Default' },
+  ayar_secenekler: { tr: 'Secenekler', en: 'Choices' },
+  ayar_deger_araligi: { tr: 'Deger: {en_az} ile {en_cok} arasi tam sayi', en: 'Value: an integer from {en_az} to {en_cok}' },
+  ayar_not_gizle: { tr: 'Bilgi notlarini gizlemek icin 1 numarali "bilgi_notlari" ayarini kapatin.', en: 'To hide these notes, turn off setting 1, "bilgi_notlari".' },
+  ayar_baglam: { tr: 'Her oturuma eklenen yaklasik baglam: {token} token (kurallar {kurallar}, skill ozetleri {skill}, defter araclari {mcp} karakter; token = karakter / 4, yaklasik).', en: 'Approximate context added to every session: {token} tokens (rules {kurallar}, skill summaries {skill}, ledger tools {mcp} characters; token = characters / 4, approximate).' },
+  ayar_json_bozuk: { tr: '{dosya} gecerli JSON degil; ayarlar okunamadi. Dosyayi duzeltin ya da silin.', en: '{dosya} is not valid JSON; settings could not be read. Fix or delete the file.' },
+  ayar_bilinmeyen: { tr: 'bilinmeyen ayar: {ad}. Gecerli: {gecerli}', en: 'unknown setting: {ad}. Valid: {gecerli}' },
+  ayar_secim_hatasi: { tr: '{ad} su degerlerden biri olmali: {gecerli}.', en: '{ad} must be one of: {gecerli}.' },
+  ayar_sayi_hatasi: { tr: '{ad} {en_az} ile {en_cok} arasinda bir tam sayi olmali.', en: '{ad} must be an integer from {en_az} to {en_cok}.' },
+  ayar_ackapa_hatasi: { tr: '{ad} icin "ac" ya da "kapa" yazin.', en: 'Type "ac" (on) or "kapa" (off) for {ad}.' },
+} as const satisfies Record<string, { tr: string; en: string }>;
+
+export type MetinAnahtari = keyof typeof METINLER;
+
+/** Katalogdan iletiyi gecerli dilde, {ad} yer tutuculari doldurulmus olarak doner. */
+export function t(anahtar: MetinAnahtari, degerler: Record<string, string | number> = {}): string {
+  return METINLER[anahtar][gecerli].replace(/\{([a-z_]+)\}/g, (_, ad: string) => (ad in degerler ? String(degerler[ad]) : `{${ad}}`));
+}
+
+/** Iki dilli metin (ayar notlari gibi veriler icin). */
+export interface IkiDilli {
+  tr: string;
+  en: string;
+}
+
+export const sec = (m: IkiDilli | string): string => (typeof m === 'string' ? m : m[gecerli]);

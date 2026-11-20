@@ -3,39 +3,40 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { Defter, type IsGorunumu } from './defter.js';
+import { hangiDil, t } from './dil.js';
 
 const kacis = (s: string): string => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
 function sure(sn: number | null): string {
-  if (sn === null) return 'devam ediyor';
+  if (sn === null) return t('r_devam');
   const d = Math.floor(sn / 60);
   const s = Math.round(sn % 60);
-  return d > 0 ? `${d} dk ${s} sn` : `${s} sn`;
+  return d > 0 ? t('r_dk_sn', { dk: d, sn: s }) : t('r_sn', { sn: s });
 }
 
 function para(usd: number | null, bilinmeyen: number): string {
-  if (usd === null) return bilinmeyen > 0 ? 'bilinmiyor (araç maliyet bildirmiyor)' : '-';
-  return `${usd.toFixed(usd < 1 ? 4 : 2)} USD${bilinmeyen > 0 ? ' (bir kısmı bilinmiyor)' : ''}`;
+  if (usd === null) return bilinmeyen > 0 ? t('r_maliyet_bilinmiyor') : '-';
+  return `${usd.toFixed(usd < 1 ? 4 : 2)} USD${bilinmeyen > 0 ? t('r_maliyet_kismen') : ''}`;
 }
 
-const SONUC: Record<string, { metin: string; sinif: string }> = {
-  gecti: { metin: 'Başarıyla bitti', sinif: 'iyi' },
-  kaldi: { metin: 'Yapılamadı', sinif: 'kotu' },
-  belirsiz: { metin: 'Emin olunamadı', sinif: 'orta' },
-  acik: { metin: 'Henüz bitmedi', sinif: 'orta' },
+const SONUC: Record<string, { anahtar: 'r_sonuc_gecti' | 'r_sonuc_kaldi' | 'r_sonuc_belirsiz' | 'r_sonuc_acik'; sinif: string }> = {
+  gecti: { anahtar: 'r_sonuc_gecti', sinif: 'iyi' },
+  kaldi: { anahtar: 'r_sonuc_kaldi', sinif: 'kotu' },
+  belirsiz: { anahtar: 'r_sonuc_belirsiz', sinif: 'orta' },
+  acik: { anahtar: 'r_sonuc_acik', sinif: 'orta' },
 };
 
 /** Gerekceyi teknik onekinden arindirip duz cumleye cevirir. */
 function neden(is: IsGorunumu): string {
   const g = is.gerekce ?? '';
-  if (is.durum === 'gecti') return 'İşin kendi denetimi geçti; bunu yapay zekâ değil, mihenk kendisi doğruladı.';
-  if (g.startsWith('butce:')) return `Harcama ya da süre sınırına ulaşıldı (${g.slice(7).trim()}).`;
-  if (g.startsWith('kota:')) return 'Yapay zekâ hizmeti bir süre isteği kabul etmedi (kullanım sınırı); iş tamamlanamadı.';
-  if (g.startsWith('kararsiz')) return 'Denetim aynı kodla bir geçti bir kaldı; sonuç güvenilir değil.';
-  if (/gerileme/.test(g)) return 'İş kendi denetimini geçti ama projenin daha önce çalışan başka bir yerini bozdu.';
-  if (/^takildi: dongu/.test(g)) return 'Yapay zekâ aynı hatayı tekrarladı, ilerleme olmadığı için durduruldu.';
-  if (/proje disinda/.test(g)) return 'Yapay zekâ proje klasörünün dışında değişiklik yaptı; iş geçersiz sayıldı.';
-  if (/^takildi:/.test(g)) return `Verilen deneme hakkında denetim geçmedi${g.includes('saniyede bitmedi') ? ' (yapay zekâ süresinde bitiremedi)' : ''}.`;
+  if (is.durum === 'gecti') return t('r_n_gecti');
+  if (g.startsWith('butce:')) return t('r_n_butce', { ayrinti: g.slice(7).trim() });
+  if (g.startsWith('kota:')) return t('r_n_kota');
+  if (g.startsWith('kararsiz')) return t('r_n_kararsiz');
+  if (/gerileme/.test(g)) return t('r_n_gerileme');
+  if (/^takildi: dongu/.test(g)) return t('r_n_dongu');
+  if (/proje disinda/.test(g)) return t('r_n_disari');
+  if (/^takildi:/.test(g)) return t('r_n_takildi', { sure: g.includes('saniyede bitmedi') ? t('r_n_takildi_sure') : '' });
   return g === '' ? '-' : g;
 }
 
@@ -49,24 +50,24 @@ export function raporHtml(kok: string, zaman = new Date()): { html: string; ozet
     const satirlar = isler.map((is) => {
       const s = SONUC[is.durum]!;
       const supheler = is.supheler.length > 0
-        ? `<p class="uyari">Dikkat: ${is.supheler.map((x) => kacis(x)).join('; ')}. İşi bir de siz kontrol edin.</p>` : '';
+        ? `<p class="uyari">${kacis(t('r_dikkat', { metin: is.supheler.join('; ') }))}</p>` : '';
       const geriAl = is.durum !== 'gecti' && is.durum !== 'acik'
-        ? `<p class="ipucu">Bu işin yarım kalan değişikliklerini geri almak için: <code>mihenk geri-al ${is.id}</code></p>` : '';
+        ? `<p class="ipucu">${kacis(t('r_geri'))} <code>mihenk geri-al ${is.id}</code></p>` : '';
       return `<section class="is ${s.sinif}">
-  <h2><span class="rozet">${s.metin}</span> İş ${is.id}</h2>
+  <h2><span class="rozet">${kacis(t(s.anahtar))}</span> ${kacis(t('r_is', { id: is.id }))}</h2>
   <p class="soru">${kacis(is.soru)}</p>
-  <p><b>Neden:</b> ${kacis(neden(is))}</p>
+  <p><b>${kacis(t('r_neden'))}:</b> ${kacis(neden(is))}</p>
   ${supheler}
-  <p class="kucuk">Süre: ${sure(is.sure_sn)} · Maliyet: ${para(is.kullanim_toplami.maliyet_usd, is.kullanim_toplami.maliyeti_bilinmeyen_oturum)} · Yapay zekâ aracı: ${kacis(is.ajan)} · Deneme: ${is.deneme_sayisi}</p>
+  <p class="kucuk">${kacis(t('r_satir', { sure: sure(is.sure_sn), maliyet: para(is.kullanim_toplami.maliyet_usd, is.kullanim_toplami.maliyeti_bilinmeyen_oturum), ajan: is.ajan, deneme: is.deneme_sayisi }))}</p>
   ${geriAl}
 </section>`;
     }).join('\n');
     const ozetCumle = o.toplam === 0
-      ? 'Bu projede henüz kaydedilmiş iş yok.'
-      : `${o.toplam} işin ${o.gecti} tanesi başarıyla bitti, ${o.kaldi} tanesi yapılamadı, ${o.belirsiz} tanesinde emin olunamadı${o.acik ? `, ${o.acik} tanesi henüz bitmedi` : ''}.`;
+      ? t('r_bos')
+      : t('r_ozet', { toplam: o.toplam, gecti: o.gecti, kaldi: o.kaldi, belirsiz: o.belirsiz, acik: o.acik ? t('r_ozet_acik', { acik: o.acik }) : '' });
     const html = `<!doctype html>
-<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>mihenk raporu: ${kacis(basename(kok))}</title>
+<html lang="${hangiDil()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${kacis(t('r_sayfa_basligi', { proje: basename(kok) }))}</title>
 <style>
 :root{--zemin:#fafaf7;--yazi:#1d1d1b;--soluk:#5f5f5a;--kart:#fff;--cizgi:#e3e2dc;--iyi:#1f7a3f;--kotu:#b3261e;--orta:#8a6100}
 @media (prefers-color-scheme:dark){:root{--zemin:#161614;--yazi:#ecebe6;--soluk:#a5a49c;--kart:#201f1c;--cizgi:#34332f;--iyi:#5cc98a;--kotu:#ff8a80;--orta:#e0b44c}}
@@ -80,12 +81,12 @@ h1{font-size:1.5rem;margin:0 0 4px} .tarih{color:var(--soluk);margin:0 0 20px}
 .soru{margin:0 0 6px} .kucuk{color:var(--soluk);font-size:.9rem} .uyari{color:var(--orta);font-weight:500} .ipucu{font-size:.9rem}
 code{background:var(--cizgi);padding:1px 5px;border-radius:4px}
 </style></head><body><main>
-<h1>Ne yapıldı: ${kacis(basename(kok))}</h1>
-<p class="tarih">Rapor tarihi: ${zaman.toLocaleString('tr-TR')}</p>
+<h1>${kacis(t('r_baslik', { proje: basename(kok) }))}</h1>
+<p class="tarih">${kacis(t('r_tarih', { tarih: zaman.toLocaleString(hangiDil() === 'en' ? 'en-GB' : 'tr-TR') }))}</p>
 <div class="ozet" id="ozet" data-toplam="${o.toplam}" data-gecti="${o.gecti}" data-kaldi="${o.kaldi}" data-belirsiz="${o.belirsiz}" data-acik="${o.acik}">
-  <p><b>${ozetCumle}</b></p>
-  <p>Yapay zekânın çalıştığı toplam süre: ${sure(k.ajan_sure_sn)} · Toplam maliyet: ${para(k.maliyet_usd, k.maliyeti_bilinmeyen_oturum)}</p>
-  <p class="kucuk">"Başarıyla bitti", işin kendi denetiminin mihenk tarafından çalıştırılıp geçtiği anlamına gelir; yapay zekânın "bitti" demesi sayılmaz.</p>
+  <p><b>${kacis(ozetCumle)}</b></p>
+  <p>${kacis(t('r_toplam', { sure: sure(k.ajan_sure_sn), maliyet: para(k.maliyet_usd, k.maliyeti_bilinmeyen_oturum) }))}</p>
+  <p class="kucuk">${kacis(t('r_aciklama'))}</p>
 </div>
 ${satirlar}
 </main></body></html>

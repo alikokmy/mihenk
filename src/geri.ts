@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { projeDosyalari } from './bekci.js';
+import { t } from './dil.js';
 
 /** Bundan buyuk dosyalar fotografa girmez (geri alinamaz; atlananlar listesine yazilir). */
 const EN_BUYUK = 5 * 1024 * 1024;
@@ -130,10 +131,10 @@ function mevcutOzet(kok: string, g: string): string | null {
  */
 export function geriAl(kok: string, isId: number, o: { deneme?: boolean } = {}): GeriAlmaSonucu {
   if (!existsSync(fotografYolu(kok, isId, 'bas'))) {
-    throw new Error(`is ${isId} icin fotograf yok: geri alma kapaliydi ya da fotograf eskidigi icin silindi (ayar: geri_alma_sakla). Geri alinamaz.`);
+    throw new Error(t('g_fotograf_yok', { id: isId }));
   }
   if (!existsSync(fotografYolu(kok, isId, 'son'))) {
-    throw new Error(`is ${isId} henuz kapanmadi; geri alma kapanmis is icindir.`);
+    throw new Error(t('g_acik', { id: isId }));
   }
   const bas = JSON.parse(readFileSync(fotografYolu(kok, isId, 'bas'), 'utf8')) as Fotograf;
   const son = JSON.parse(readFileSync(fotografYolu(kok, isId, 'son'), 'utf8')) as Fotograf;

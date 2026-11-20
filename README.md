@@ -20,6 +20,7 @@ yazıldı ve denendi. Açık kalemler ve sürüm 0.2 taslağı [docs/IS_PLANI.md
 | Qwen Code | var | **denenmedi**: ücretsiz katmanı kapandı; kurulum belgeye göre yazıldı | belgeye göre yazıldı, denenmedi |
 | Gemini CLI | var | **denenmedi**: ücretsiz katmanda kaldırılmış | yok |
 
+- [README.en.md](README.en.md): English. İletileri İngilizce yapmak için: `mihenk ayar dil en`.
 - [docs/ARASTIRMA.md](docs/ARASTIRMA.md): benzer açık kaynak projelerin taraması ve hüküm.
 - [docs/IS_PLANI.md](docs/IS_PLANI.md): onaylı iş planı, iki bağlayıcı ilke, aşama sonuçları ve açık kararlar.
 - [AGENTS.md](AGENTS.md): bu depoda çalışan ajanlar için kısa kurallar.
@@ -71,6 +72,7 @@ açılır ya da kapanır ve hemen uygulanır, yalnız Enter çıkar. (Komut sat�
 | `arac_<araç>` | o araç için defter bağlantısı (ve varsa kapı kancası) | açık |
 | `saklama` | geçen işten sonra: `yerel` commit, `yok`, `yerel_gonder` | `yerel` |
 | `uyanik_tut` | liste yürürken bilgisayarı uyanık tut | kapalı |
+| `dil` | iletilerin dili: `tr`, `en` ya da `sistem` (bilgisayarın dili) | `tr` |
 | `bildirim` | liste bitince ya da durunca Windows bildirimi | açık |
 | `bilgi_notlari` | ayarların altında amaç, sonuç ve varsayılan bilgisi | açık |
 | `geri_alma` | her işin başında ve sonunda fotoğraf; `geri-al` bunu kullanır | açık |

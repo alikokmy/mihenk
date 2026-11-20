@@ -164,7 +164,7 @@ Sıra ölçütü: önce işin doğruluğu, sonra kullanıcı deneyiminin basitli
 | 12 | **tamam** (2026-11-20; `npm test`: 162 test geçti; bkz. "Aşama 12 sonucu"). **Gözetimsiz koşu emniyeti:** liste / iş başına dolar ve süre tavanı; aynı hatayı tekrarlayan denemeyi erken kesme; abonelik limitine takılınca güvenli duraklama ve sonra kaldığı yerden sürme; yıkıcı komut bekçisi (`rm -rf`, `git reset --hard`, `push --force`, proje dışına yazma) kancaya eklenir | tavan aşılınca iş "bütçe" gerekçesiyle kapanıyor ve liste duruyor; döngü taklidi erken kesiliyor; yıkıcı komut taklidi reddediliyor |
 | 13 | **tamam** (2026-11-20; `npm test`: 167 test geçti; bkz. "Aşama 13 sonucu"). **İş başına geri alma:** her işin başında bir geri dönüş noktası (git varsa geçici dal / stash, yoksa gölge kopya); `mihenk geri-al <iş>` o işin değişikliklerini geri alır | "kaldı" kapanan işin değişiklikleri tek komutla geri alınıyor; başka işlerin değişikliklerine dokunulmuyor; git'siz projede de çalışıyor |
 | 14 | **tamam, bir notla** (2026-11-20; `npm test`: 177 test geçti; bkz. "Aşama 14 sonucu"). **Kullanıcıya ulaşan yüz:** liste bitince ya da durunca Windows bildirimi; çift tıklanan tek sayfalık düz dil raporu (ne yapıldı, ne kaldı ve neden, süre, maliyet) | bildirim yönetici izni istemeden çıkıyor; rapor kodlama terimi bilmeyen birinin okuyacağı dilde ve defterle sayıca uyuşuyor |
-| 15 | **İngilizce dil desteği:** kullanıcıya görünen bütün iletiler (komut satırı, menü, sürücü, kapı ve kaldırma çıktıları, rapor) Türkçe ve İngilizce; dil `mihenk.json`'da `dil` ayarıyla seçilir (varsayılan: sistemin dili, bulunamazsa Türkçe). Belgeler (README, AGENTS.md bloğu) iki dilde. Ajana giden skill metinleri zaten İngilizce | her ileti iki dilde var (eksik çeviriyi bulan test); dil değişince aynı komutun çıktısı o dilde; kod tanımlayıcıları ASCII kalıyor |
+| 15 | **tamam, iki sınırla** (2026-11-20; `npm test`: 183 test geçti; bkz. "Aşama 15 sonucu"). **İngilizce dil desteği:** kullanıcıya görünen bütün iletiler (komut satırı, menü, sürücü, kapı ve kaldırma çıktıları, rapor) Türkçe ve İngilizce; dil `mihenk.json`'da `dil` ayarıyla seçilir (varsayılan: sistemin dili, bulunamazsa Türkçe). Belgeler (README, AGENTS.md bloğu) iki dilde. Ajana giden skill metinleri zaten İngilizce | her ileti iki dilde var (eksik çeviriyi bulan test); dil değişince aynı komutun çıktısı o dilde; kod tanımlayıcıları ASCII kalıyor |
 | 16 | **Uygulama penceresi:** kodlama bilmeyen kullanıcı için tek pencere, sekmeli: Proje (kurulum, kaldırma, durum), İş listesi (işleri ekle / düzenle / başlat, canlı ilerleme), Defter (geçmiş işler, kanıtlar, şüpheler, geri al), Ayarlar (bütün aç-kapa anahtarları, tavanlar), Öneri ve maliyet. Yönetici izni yok, kurulum yok: çift tıklanan dosya yerel bir sunucu açar ve pencereyi tarayıcıda gösterir (yalnız bu bilgisayardan erişilir) | CLI'de yapılabilen her yönetim işi ve her ayar pencereden de yapılabiliyor (eşleme tablosu ve test); her ayarın altında bilgi notu: amacı, sonuçları ve varsayılan değerin ne yaptığı (`AyarTanimi.amac / sonuc / varsayilan_aciklama`); notlar bir onay kutusuyla gizlenebiliyor, kutu varsayılan açık (`bilgi_notlari`); pencere yalnız 127.0.0.1'e bağlanıyor; uçtan uca tarayıcı testinde bir ayar değiştirilip sonucu dosyada görülüyor; iki dilde |
 
 **Karar (Aşama 16):** pencere, yerel sunucu + tarayıcı sayfası olarak yapılacak. Karşı görüş: gerçek bir masaüstü uygulaması (Electron,
@@ -714,6 +714,28 @@ yakalanmadı: test verisinde "geçti" ile "kaldı" sayıları eşitti; veri ayr�
 **Not:** bildirim bu bilgisayarda Windows'a gönderildi (`gosterildi: true`, hata yok), ama balonun ekranda göründüğü gözlenmedi
 (kullanıcı bilgisayar başında değildi). Odaklanma yardımcısı (rahatsız etmeyin) açıksa Windows balonu göstermez, yalnız bildirim
 merkezine koyar.
+
+## Aşama 15 sonucu (2026-11-20)
+
+Kullanıcıya görünen iletiler `src/dil.ts` kataloğunda, anahtar başına Türkçe ve İngilizce (yaklaşık 170 ileti): komut satırı, ayar
+menüsü ve bütün ayar notları, sürücü, kaldırma, kurulum, geri alma, öneri, uyku uyarısı, bildirim ve rapor sayfası. `dil` ayarı:
+`tr` (varsayılan), `en`, `sistem`. İngilizce README: `README.en.md`.
+
+**Kanıt:** `test/dil.test.ts` (6 test): her ileti iki dilde dolu, yer tutucuları aynı, İngilizcede Türkçe harf yok; ileti basan 9 dosyada
+`console.log` / `yaz` / `throw new Error` katalog dışı düz metin almıyor (bilinçli istisna `// dil-disi` ile işaretli, 1 yer);
+kaynak kodda dizge ve yorum dışında ASCII dışı karakter yok (çıplak bir BOM karakteri bulunup kaçış dizisine çevrildi); `dil en` iken
+ayar listesi, geri alma hatası ve kaldırma İngilizce, `tr` iken Türkçe; `sistem` LANG'a göre; rapor İngilizcede `lang="en"` ve Türkçe
+harf içermiyor. Çeviri işlevi kasıtlı bozulunca 3 test kaldı.
+
+**Karar:** varsayılan dil `tr` (planda "sistemin dili" yazıyordu). Bu bilgisayarın dili en-US; "sistem" varsayılanı Türkçe çalışan
+kullanıcıya her şeyi İngilizce gösterirdi. Karşı görüş: İngilizce sistemli yabancı kullanıcı ilk açılışta Türkçe görür; `dil sistem`
+ya da `dil en` ile tek adımda değişir.
+
+**Sınırlar:**
+- Sürücünün deftere yazdığı gerekçelerin başındaki kısa kodlar (`butce:`, `kota:`, `takildi:`, `dongu`) dil bağımsızdır ve rapor
+  bunlara bakar; gerekçelerin bir kısmı (örneğin deneme nedenleri) defterde Türkçe kalır ve sürücü satırında öyle görünür.
+- Ajana giden metinler (kapının ve defterin ret iletileri, MCP araç açıklamaları) Türkçedir; skill'ler ve AGENTS.md bloğu İngilizcedir.
+  Uyum raporu (`mihenk uyum`, geliştirici aracı) Türkçedir.
 
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 
