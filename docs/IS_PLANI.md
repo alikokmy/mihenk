@@ -240,6 +240,27 @@ aşama sonuçları plandan ayrı dosyaya taşınsın.
 - **Keşif belirlenimci ("her beşinci iş").** Karşı görüş: Thompson örneklemesi gibi rastgele yöntemler kuramsal olarak daha iyidir.
   Gerekçe: belirlenimci seçim tekrarlanabilir, sınanabilir ve kullanıcıya açıklanabilir.
 
+## Sürüm 0.6: kullanıcı dosya ve komut satırıyla uğraşmaz (kullanıcı isteği, 2026-11-20)
+
+Kullanıcı kodlama bilmiyor. İstenen: tek bir dosyaya çift tıklayarak başlamak; proje klasörünü gerekirse klasör seçiciyle seçmek; her
+ayarı pencereden yapmak; yalnız işleri girip takip etmek. `npm install`, JSON düzenleme ve komut satırı son kullanıcıya hiç
+gösterilmez.
+
+| Aşama | İş | Kabul ölçütü |
+|---|---|---|
+| 30 | **Her ayar pencerede.** Pencerede yeni bölümler: "Liste ayarları" (dolar ve süre tavanları, kota beklemesi, projenin bütün testleri, deneme sayısı, oturum süresi, bağlam eşiği, liste için saklama ve uyanık tutma), iş başına ajan ve zaman aşımı, "Gelişmiş" (izin verilen programlar, abonelik kotası, fiyatlar, doğrulama süreleri), öneri eşikleri. Liste uyarısındaki izinsiz program için "izin ver" düğmesi. Uyum raporu pencerede de okunur; sürücünün ajan seçim notu raporda görünür | eşleşme testi: komut satırının her seçeneği, `mihenk.json`'un her alanı, iş listesinin her alanı ve işin her alanı için penceredeki karşılık yazılı ve sayfada bulunuyor (yoksa nedeni yazılı); her yeni bölüm okunup yazılıyor ve dosyanın öteki alanları korunuyor; uyum raporu varken pencere ve komut satırı aynı öneriyi veriyor |
+| 31 | **Tek tıkla başlangıç.** Pakette tek giriş dosyası `Mihenk-Ac.cmd`: pencereyi proje seçmeden açar. Başlangıç ekranında son projeler, "Klasör seç" (Windows'un kendi klasör seçicisi) ya da yolu yapıştırma; kurulu değilse "Kur ve aç". Pencere açıkken proje değiştirilebilir; tarayıcı kapanınca ve liste çalışmıyorsa sunucu kendiliğinden kapanır; isteğe bağlı masaüstü kısayolu | paket başka klasöre açılıp `Mihenk-Ac.cmd` ile başlatılınca (PATH'te Node yok) başlangıç ekranı geliyor; seçilen boş klasöre kurup proje ekranına geçiyor; son projeler listesi kalıcı; liste çalışırken proje değişmiyor; nabız kesilince sunucu kapanıyor, liste çalışırken kapanmıyor; tarayıcıda baştan sona denendi |
+
+| 32 | **Fikirden iş listesine.** Hedef (kullanıcı, 2026-11-20): günlük kullanıcının fikrini uygulamaya ya da yazılıma çevirdiği bir arayüz. Kullanıcı yalnız fikrini düz dille yazar; doğrulama komutu yazmaz. (a) "Fikir" kutusu: kurulu bir ajan fikri küçük işlere böler; her iş düz dille gösterilir (ne yapılacak, bitince ne görülecek), kullanıcı onaylar, düzeltir ya da siler. (b) Komutsuz iş iki adımda yürür: önce ajan işin kabul testini yazar ve bu test işe başlamadan kalmalıdır; mihenk o testi işin doğrulama komutu olarak kaydeder ve test dosyasını korumaya alır; sonra ajan işi yapar ve test geçince iş biter. (c) Pencerede iş takibi düz dille: ne yapılıyor, ne bitti, ne takıldı ve neden | fikirden üretilen listede her işin doğrulama komutu dolu ve liste denetiminden uyarısız geçiyor; komutsuz işte önce yazılan test iş başlamadan kalıyor; ajan testi değiştirirse "geçti" şüpheli işaretleniyor; sahte ajanla fikirden bitmiş işe kadar uçtan uca akış; kullanıcının gördüğü hiçbir ekranda komut yazmak zorunlu değil |
+
+**Kararlar:**
+
+- **Konsol penceresi.** Sunucu küçültülmüş bir konsolda çalışır ve tarayıcı kapanınca kendiliğinden kapanır.
+  - Karşı görüş: gizli çalıştırmak (VBScript ile) daha temiz görünür.
+  - Gerekçe: gizli bir süreci kullanıcı göremez ve durduramaz.
+- **Son projeler.** Liste kullanıcının kendi uygulama verisinde tutulur (`%LOCALAPPDATA%\mihenk`). Burası mihenk'in kendi dosyasıdır;
+  hiçbir aracın küresel ayarına dokunulmaz.
+
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 
 - **Birim:** kapanmış iş. Alanlar: iş türü, ajan, model, süre, maliyet, hüküm (geçti / kaldı / belirsiz), yeniden deneme sayısı, uyum işaretleri.
