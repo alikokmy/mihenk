@@ -188,7 +188,7 @@ test('sayi ayari: komut satirindan ve menuden degisir; sinir disi deger reddedil
   assert.equal(ayarlariOku(kok).geri_alma_sakla, 0);
 });
 
-test('varsayilan: is basina dogrulama yalniz bir kez (is bitince) kosar; tam takim varsayilan kurulumda hic kosmaz', async () => {
+test('varsayilan: is basina dogrulama yalniz bir kez (is bitince) kosar; tam takim liste basinda ve sonunda', async () => {
   const { Defter } = await import('../src/defter.js');
   const kok = kurulu();
   writeFileSync(join(kok, 'say.js'), "const f=require('node:fs');f.appendFileSync('kosu.txt','x');process.exit(0);");
@@ -199,5 +199,5 @@ test('varsayilan: is basina dogrulama yalniz bir kez (is bitince) kosar; tam tak
   defter.kapat();
   assert.equal(readFileSync(join(kok, 'kosu.txt'), 'utf8'), 'x', 'tek kosu');
   const a = ayarlariOku(kok);
-  assert.deepEqual([a.bekci_bos_kanit, a.bekci_kararsiz, a.gerileme, a.saklama], [false, false, 'gonderirken', 'yerel']);
+  assert.deepEqual([a.bekci_bos_kanit, a.bekci_kararsiz, a.gerileme, a.saklama], [false, false, 'liste_sonunda', 'yerel']);
 });

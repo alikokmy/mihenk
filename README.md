@@ -87,14 +87,13 @@ açılır ya da kapanır ve hemen uygulanır, yalnız Enter çıkar. (Komut sat�
 | `geri_alma_sakla` | geri alınabilecek en son kaç işin fotoğrafı saklansın (0: hiçbiri) | 5 |
 | `bekci_test_kurcalama` | iş sırasında var olan test değişti, silindi ya da atlandıysa "geçti"ye şüpheli notu | açık |
 | `bekci_bos_kanit` | iş açılınca doğrulama bir kez koşar; zaten geçiyorsa "geçti"ye şüpheli notu | kapalı |
-| `gerileme` | bütün test takımı ne zaman koşsun: `gonderirken`, `liste_sonunda`, `her_iste`, `kapali` | `gonderirken` |
+| `gerileme` | bütün test takımı ne zaman koşsun: `liste_sonunda`, `gonderirken`, `her_iste`, `kapali` | `liste_sonunda` |
 | `bekci_dongu` | iş listesinde, aynı hatayı iki kez veren işte kalan denemeler harcanmaz | açık |
 | `bekci_yikici` | proje dışını silen ve git geçmişini ezen komutlar reddedilir | açık |
 | `bekci_kararsiz` | geçen doğrulama bir kez daha koşulur; sonuç değişirse iş "belirsiz (kararsız)" | kapalı |
 
-**Hız:** varsayılan ayarlarla her iş için doğrulama bir kez koşar: iş bitince, işin kendi komutuyla. Bu komutu hızlı ve hedefli
-yazın (ör. yalnız ilgili test dosyası). Bütün test takımı varsayılan olarak yalnız uzak depoya gönderilmeden önce koşar; varsayılan
-saklama kipi göndermediği için, varsayılan kurulumda hiç koşmaz. Uzun listeler için önerimiz `gerileme: liste_sonunda`dır.
+**Hız:** her iş için doğrulama bir kez koşar: iş bitince, işin kendi komutuyla. Bu komutu hızlı ve hedefli yazın. Bütün test takımı
+varsayılan olarak listenin başında ve sonunda birer kez koşar; uzun sürüyorsa sürücü ölçüp "yalnız göndermeden önce" kipini önerir.
 
 Kapatılan özelliğin dosyaları kaldırmadaki gibi geri alınır; yeniden açınca dosyalar bayt bayt önceki haline döner. Ayarlar `mihenk.json`'da
 durur ve yalnız varsayılandan farklı olanlar yazılır. Liste, kurulumun her oturumda ajana eklediği yaklaşık metin yükünü de gösterir (token).
@@ -143,8 +142,8 @@ Bilmeniz gerekenler:
 
 - **İşin bittiğine ajan değil sürücü karar verir:** doğrulama komutunu kendisi koşar. Ajan "bitti" dese de komut geçmeden iş kapanmaz.
 - **Başka yeri bozan iş:** bütün test takımı (`gerileme_komutu`; yazmazsanız `package.json` test betiği) `gerileme` ayarına göre
-  koşar. `gonderirken` (varsayılan): uzak depoya göndermeden önce; kalırsa iş yalnız yerelde saklanır. `liste_sonunda`: listenin başında
-  ve sonunda; kalırsa uyarır. `her_iste`: her denemede; önceden geçeni bozan iş "geçti" sayılmaz (yavaş). Testler liste başlamadan
+  koşar. `liste_sonunda` (varsayılan): listenin başında ve sonunda; kalırsa uyarır; uzun sürüyorsa daha hızlı kipi önerir.
+  `gonderirken`: uzak depoya göndermeden önce; kalırsa iş yalnız yerelde saklanır. `her_iste`: her denemede; önceden geçeni bozan iş "geçti" sayılmaz (yavaş). Testler liste başlamadan
   zaten kalıyorsa denetim yapılamaz ve bu söylenir.
 - **Harcama ve süre tavanı:** listede `butce_usd` / `is_butce_usd` (dolar) ve `sure_tavani_dk` / `is_sure_tavani_dk` (dakika)
   yazabilirsiniz. İş tavanı dolunca o iş "belirsiz (bütçe)" kapanır, sıradakine geçilir; liste tavanı dolunca liste durur ve yeniden

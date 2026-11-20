@@ -186,10 +186,11 @@ Kaynak: superpowers ve CodeBurn depolarının README, sürüm notları, belgeler
 | 22 | **Elle açılan oturumda döngü bekçisi (Claude Code, Codex):** aynı araç çağrısı ya da aynı başarısız komut tekrarlanınca önce uyarır, sonra durdurur; tek oturumluk izin | taklit kanca girdisiyle eşikte uyarı, sonra ret; farklı çağrı sayacı sıfırlıyor; anahtar kapalıyken etkisiz; bekçi kendisi bozulursa geçit verip kaydediyor |
 | 23 | **Elle açılan oturumların maliyeti** (Aşama 5'ten açık): CodeBurn ya da ccusage çıktısı zaman aralığıyla işe bağlanır; README'ye kullanıcı sorularıyla "Sorular" bölümü | kayıtlı CodeBurn çıktısı örneğinde iş aralığına düşen maliyet elle hesapla uyuşuyor; araç yoksa "bilinmiyor"; her soru bir komuta ya da sekmeye bağlı |
 
-**Açık karar (kullanıcının):** superpowers bulgusu: görev tek test dosyası adlandırınca ajanlar 12 koşunun 11'inde yalnız o dosyayı
-koşmuş ve yandaki bozuk testi görmemiş. mihenk'in bugünkü varsayılanında (`gerileme: gonderirken`, `saklama: yerel`) bütün test
-takımı hiç koşmuyor. Öneri: varsayılanı `liste_sonunda` yapmak (listede yalnız iki tam koşu). Karşı görüş: kullanıcı açıkça hızı
-seçti; karar onundur.
+**Karar (kullanıcı, 2026-11-20):** `gerileme` varsayılanı `liste_sonunda` oldu (superpowers bulgusu: görev tek test dosyası
+adlandırınca ajanlar yandaki bozuk testi görmüyor). Kullanıcının ek isteği uygulandı: sürücü bütün testlere harcanan süreyi ölçer; bu
+süre en az 2 dakika ve listenin en az %25'iyse liste sonunda rakamla öneri yazar ("Yalnız göndermeden önce" kipine geçilebileceğini).
+Kanıt: `test/gerileme.test.ts` (pahalı takımda öneri çıkıyor, eşiğin altında çıkmıyor); `npm test` 193/193. Kullanıcı sürüm 0.3'ün
+bütün aşamalarını onayladı.
 
 **Bilerek dışarıda:** telemetri; tepsi uygulaması (pencere karşılıyor); canlı kota okuma (aracın kimlik bilgisini okumak gerekir);
 kullanıcının küresel ayarını değiştiren otomatik "iyileştirme"; ayrıntılı soru-cevap akışları (superpowers'ın en çok şikâyet aldığı

@@ -122,3 +122,17 @@ test('gerileme "gonderirken" (varsayilan): yerel kipte tam takim kosmaz; yerel_g
   assert.equal(say(kok2), '2', 'yerelde commit edildi');
   assert.equal(say(uzak), '1', 'uzak depoya gonderilmedi');
 });
+
+test('olcume dayali oneri: butun testler listenin buyuk payini yiyorsa daha hizli kip onerilir; ucuzsa onerilmez', async () => {
+  const kok = proje();
+  ayarYaz(kok, { gerileme: 'liste_sonunda' });
+  writeFileSync(join(kok, 'tum.js'), "const f=require('node:fs');const t=Date.now();while(Date.now()-t<400){}process.exit(f.readFileSync('ortak.txt','utf8')==='saglam'?0:1);");
+  const satirlar: string[] = [];
+  await listeyiYurut({ kok, liste: liste('temiz'), saklama: 'yok', ajanlar: AJANLAR, korunanDizinler: [], yaz: (s) => satirlar.push(s), denemeSiniri: 1, gerilemeOneriEsigi: { enAzMs: 300, oran: 0.3 } });
+  assert.ok(satirlar.some((s) => /^ONERI: butun testler bu listede [\d.]+ dakika surdu \(listenin %\d+'i\)/.test(s)), satirlar.join('\n'));
+  const kok2 = proje();
+  ayarYaz(kok2, { gerileme: 'liste_sonunda' });
+  const satirlar2: string[] = [];
+  await listeyiYurut({ kok: kok2, liste: liste('temiz'), saklama: 'yok', ajanlar: AJANLAR, korunanDizinler: [], yaz: (s) => satirlar2.push(s), denemeSiniri: 1, gerilemeOneriEsigi: { enAzMs: 60_000, oran: 0.3 } });
+  assert.ok(!satirlar2.some((s) => /^ONERI:/.test(s)), 'esigin altinda oneri yok');
+});

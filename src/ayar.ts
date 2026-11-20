@@ -155,12 +155,12 @@ export const AYARLAR: readonly AyarTanimi[] = [
     varsayilan_aciklama: { tr: 'Dogrulama is bitince bir kez kosar.', en: 'The check runs once when the job ends.' },
   },
   {
-    ad: 'gerileme', baslik: { tr: 'Bütün testler ne zaman çalışsın', en: 'When to run all tests' }, varsayilan: 'gonderirken', secenekler: ['gonderirken', 'liste_sonunda', 'her_iste', 'kapali'], etki: 'calisma',
+    ad: 'gerileme', baslik: { tr: 'Bütün testler ne zaman çalışsın', en: 'When to run all tests' }, varsayilan: 'liste_sonunda', secenekler: ['liste_sonunda', 'gonderirken', 'her_iste', 'kapali'], etki: 'calisma',
     secenek_adlari: { gonderirken: { tr: 'Yalnız göndermeden önce', en: 'Only before pushing' }, liste_sonunda: { tr: 'Listenin başında ve sonunda', en: 'At the start and end of a list' }, her_iste: { tr: 'Her işte (yavaş)', en: 'For every job (slow)' }, kapali: { tr: 'Hiç', en: 'Never' } },
     aciklama: { tr: 'Projenin butun test takimi ne zaman kossun: gonderirken, liste_sonunda, her_iste ya da kapali.', en: 'When the project\'s full test suite runs: gonderirken (before push), liste_sonunda (end of list), her_iste (every job) or kapali (never).' },
     amac: { tr: 'Bir isin baska yeri bozdugunu (gerilemeyi) yakalamak icin; her is yalniz kendi hizli dogrulamasini kosar, tam takim zorunlu anlarda kosar.', en: 'To catch a job breaking something else (a regression); each job runs only its own quick check, the full suite runs when it must.' },
     sonuc: { tr: 'gonderirken: uzak depoya gondermeden once; kalirsa gonderilmez. liste_sonunda: listenin basinda ve sonunda birer kez; kalirsa uyarir. her_iste: her denemede (yavas). kapali: hic.', en: 'gonderirken: before pushing; if it fails, nothing is pushed. liste_sonunda: once at the start and once at the end; warns if it fails. her_iste: every attempt (slow). kapali: never.' },
-    varsayilan_aciklama: { tr: 'Varsayilan saklama kipi gondermedigi icin varsayilan kurulumda tam takim hic kosmaz.', en: 'The default save mode never pushes, so by default the full suite never runs.' },
+    varsayilan_aciklama: { tr: 'Listenin basinda ve sonunda birer kez; isler arasinda kosmaz. Tam takim uzun suruyorsa surucu olcup yalniz gondermeden once kosmayi onerir.', en: 'Once at the start and once at the end of a list, not between jobs. If the full suite takes long, the driver measures it and suggests running it only before pushing.' },
   },
   {
     ad: 'bekci_dongu', baslik: { tr: 'Aynı hatada ısrar etme', en: 'Do not repeat the same failure' }, varsayilan: true, etki: 'calisma',

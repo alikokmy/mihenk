@@ -54,6 +54,8 @@ export interface IsListesi {
 }
 
 export interface SurucuSecenekleri {
+  /** Butun testler pahaliysa oneri esigi (varsayilan: en az 2 dakika ve listenin %25'i). Testler kisaltir. */
+  gerilemeOneriEsigi?: { enAzMs: number; oran: number };
   /** Liste sonunda Windows bildirimi (ayar "bildirim" de acik olmali). Komut satiri acar; testler kapali birakir. */
   bildirim?: boolean;
   /** Kota beklemesinin suresi (ms); testler kisaltir. Verilmezse listedeki kota_bekleme_dk. */
@@ -285,7 +287,7 @@ export function uyanikIstendiMi(o: { bayrak: boolean; liste: IsListesi; kok: str
  * testin onceden kaldigini ayirt etmez) ve bu soylenir. Komut yoksa, bekci kapaliysa ya da izinsizse null.
  */
 async function gerilemeTabani(kok: string, liste: IsListesi, defter: Defter, yaz: (s: string) => void):
-  Promise<{ komut: string; kip: 'her_iste' | 'liste_sonunda' | 'gonderirken'; kos(ad: string): Promise<{ gecti: boolean; ozet: string; dosya: string }> } | null> {
+  Promise<{ komut: string; kip: 'her_iste' | 'liste_sonunda' | 'gonderirken'; kos(ad: string): Promise<{ gecti: boolean; ozet: string; dosya: string; sureMs: number }>; harcananMs(): number } | null> {
   const kipi = ayarlariOku(kok).gerileme;
   if (kipi === 'kapali') return null;
   if (kipi === 'gonderirken' && saklamaKipiSec({ liste, kok }) !== 'yerel_gonder') return null;
@@ -310,7 +312,7 @@ async function gerilemeTabani(kok: string, liste: IsListesi, defter: Defter, yaz
     return null;
   }
   const zamanAsimiMs = (liste.gerileme_zaman_asimi_sn ?? 600) * 1000;
-  const kos = async (ad: string): Promise<{ gecti: boolean; ozet: string; dosya: string }> => {
+  const kos = async (ad: string): Promise<{ gecti: boolean; ozet: string; dosya: string; sureMs: number }> => {
     const dosya = join(defter.dizin, 'ciktilar', `gerileme-${ad}.txt`);
     const k = await komutuCalistir(parcalar, { cwd: kok, zamanAsimiMs, ciktiDosyasi: dosya });
     let ham = '';
@@ -319,7 +321,7 @@ async function gerilemeTabani(kok: string, liste: IsListesi, defter: Defter, yaz
     } catch {
       ham = k.baslatma_hatasi ?? '';
     }
-    return { gecti: gectiMi(k), ozet: kisalt(ham.trim(), 800).metin, dosya: goreli(kok, dosya) };
+    return { gecti: gectiMi(k), ozet: kisalt(ham.trim(), 800).metin, dosya: goreli(kok, dosya), sureMs: k.sure_ms };
   };
   const taban = await kos('taban');
   if (!taban.gecti) {
@@ -328,7 +330,10 @@ async function gerilemeTabani(kok: string, liste: IsListesi, defter: Defter, yaz
   }
   const ne = t(kipi === 'her_iste' ? 'gerileme_ne_her_iste' : kipi === 'liste_sonunda' ? 'gerileme_ne_liste_sonunda' : 'gerileme_ne_gonderirken');
   yaz(t('gerileme_taban', { komut, ne }));
-  return { komut, kos, kip: kipi as 'her_iste' | 'liste_sonunda' | 'gonderirken' };
+  // Butun testlere harcanan sure (taban dahil): pahaliysa liste sonunda kullaniciya oneri yapilir.
+  let harcananMs = taban.sureMs;
+  const olcerek = async (ad: string) => { const r = await kos(ad); harcananMs += r.sureMs; return r; };
+  return { komut, kos: olcerek, kip: kipi as 'her_iste' | 'liste_sonunda' | 'gonderirken', harcananMs: () => harcananMs };
 }
 
 const round6 = (x: number): number => Math.round(x * 1e6) / 1e6;
@@ -395,6 +400,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
   let durdu = '';
   let gerilemeSonu = '';
   let gerilemeKaldi = false;
+  let gerilemeOnerisi = '';
   try {
     olay('liste_basla', { is_sayisi: s.liste.isler.length, saklama: kip, baglam_esigi: baglamEsigi });
     const gerileme = await gerilemeTabani(kok, s.liste, defter, yaz);
@@ -628,6 +634,16 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
       gerilemeSonu = t(g.gecti ? 'gerileme_sonu_gecti' : 'gerileme_sonu_kaldi', { komut: gerileme.komut, dosya: g.dosya });
       olay('gerileme_liste_sonu', { gecti: g.gecti, dosya: g.dosya });
     }
+    // Olcume dayali oneri: butun testler hem esikten uzun hem listenin onemli bir payiysa daha hizli kip onerilir.
+    if (gerileme && gerileme.kip !== 'gonderirken') {
+      const ms = gerileme.harcananMs();
+      const toplam = Date.now() - listeBasi;
+      const esik = s.gerilemeOneriEsigi ?? { enAzMs: 120_000, oran: 0.25 };
+      if (ms >= esik.enAzMs && toplam > 0 && ms / toplam >= esik.oran) {
+        gerilemeOnerisi = t('gerileme_oneri', { dk: Math.round(ms / 6000) / 10, oran: Math.round((ms / toplam) * 100) });
+        olay('gerileme_onerisi', { harcanan_ms: ms, liste_ms: toplam });
+      }
+    }
   } finally {
     defter.kapat();
   }
@@ -636,6 +652,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
   for (const r of sonuclar) ozet[r.durum] += 1;
   olay('liste_bitti', ozet);
   if (gerilemeSonu) yaz(gerilemeSonu);
+  if (gerilemeOnerisi) yaz(gerilemeOnerisi);
   if (durdu) {
     const kalan = s.liste.isler.length - sonuclar.length;
     yaz(t('liste_durdu', { neden: durdu, kalan }));
