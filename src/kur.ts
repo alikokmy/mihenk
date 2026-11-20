@@ -2,8 +2,9 @@
 // Yollar araclarin kendi belgelerinden dogrulandi (2026-11-19; kaynaklar docs/IS_PLANI.md "Asama 2").
 // Kurulum var olan icerigi ezmez ve tekrarlanabilir: ikinci kosu hicbir sey degistirmez.
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { kayitOku, kayitYaz, ozet, yedekYaz } from './kaldir.js';
 
 export type Arac = 'claude' | 'codex' | 'gemini' | 'antigravity' | 'opencode';
 export const ARACLAR: readonly Arac[] = ['claude', 'codex', 'gemini', 'antigravity', 'opencode'];
@@ -33,14 +34,38 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
   const sonuc: KurSonucu = { yazilan: [], degismeyen: [], uyarilar: [] };
   const mcpKaydi = { command: 'node', args: [egik(sunucu), '--kok', egik(hedef)] };
 
+  // Kurulum kaydi: temiz kaldirma icin her dosyanin kurulumdan onceki hali ve kurulumun yazdigi icerigin ozeti (kaldir.ts).
+  const kayit = kayitOku(hedef);
+  const yazmadanOnce = (goreli: string, yol: string): void => {
+    const g = egik(goreli);
+    const k = kayit.dosyalar[g];
+    const mevcut = existsSync(yol) ? readFileSync(yol) : undefined;
+    if (!k) {
+      kayit.dosyalar[g] = { once_vardi: mevcut !== undefined, yedek: mevcut !== undefined, ozet: '' };
+      if (mevcut !== undefined) yedekYaz(hedef, g, mevcut);
+    } else if (mevcut !== undefined && ozet(mevcut) !== k.ozet) {
+      // Kullanici kurulumdan sonra dosyayi degistirmis: yedege donmek onun degisikligini silerdi; kaldirma bu dosyada cerrahi calisir.
+      k.yedek = false;
+    }
+    for (let d = dirname(yol); d.startsWith(hedef) && d !== hedef && !existsSync(d); d = dirname(d)) {
+      const gd = egik(relative(hedef, d));
+      if (!kayit.dizinler.includes(gd)) kayit.dizinler.push(gd);
+    }
+  };
+  const yazdiktanSonra = (goreli: string, icerik: Buffer): void => {
+    kayit.dosyalar[egik(goreli)]!.ozet = ozet(icerik);
+  };
+
   const yaz = (goreli: string, icerik: string): void => {
     const yol = join(hedef, goreli);
     if (existsSync(yol) && readFileSync(yol, 'utf8') === icerik) {
       sonuc.degismeyen.push(goreli);
       return;
     }
+    yazmadanOnce(goreli, yol);
     mkdirSync(dirname(yol), { recursive: true });
     writeFileSync(yol, icerik);
+    yazdiktanSonra(goreli, Buffer.from(icerik));
     sonuc.yazilan.push(goreli);
   };
 
@@ -85,8 +110,10 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
         if (existsSync(yol) && readFileSync(yol).equals(icerik)) {
           sonuc.degismeyen.push(egik(goreli));
         } else {
+          yazmadanOnce(goreli, yol);
           mkdirSync(dirname(yol), { recursive: true });
           cpSync(kaynak, yol);
+          yazdiktanSonra(goreli, icerik);
           sonuc.yazilan.push(egik(goreli));
         }
       }
@@ -198,8 +225,13 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
   if (process.platform === 'win32') {
     const cli = egik(join(BURASI, 'cli.js'));
     yaz('mihenk-baslat.cmd', ['@echo off', 'rem mihenk: is listesini (mihenk-isler.json) yurutur. Cift tiklayin.', `node --disable-warning=ExperimentalWarning "${cli}" sur --hedef "%~dp0."`, 'echo.', 'pause', ''].join('\r\n'));
+    // Bu dosya en sonda kendini siler: "(goto) 2>nul & del" kalibi cmd'nin "batch file cannot be found" uyarisini onler.
+    // Kaldirma (--cmd-den) bu dosyaya dokunmaz; icerik kurulumun yazdigi gibi degilse cmd de silmez.
+    yaz('mihenk-kaldir.cmd', ['@echo off', 'rem mihenk: mihenk\'in bu projeye ekledigi her seyi geri alir; sizin dosyalariniza dokunmaz. Cift tiklayin.',
+      `node --disable-warning=ExperimentalWarning "${cli}" kaldir --hedef "%~dp0." --cmd-den`, 'echo.', 'pause', '(goto) 2>nul & del "%~f0"', ''].join('\r\n'));
   }
 
+  if (sonuc.yazilan.length > 0) kayitYaz(hedef, kayit);
   return sonuc;
 }
 

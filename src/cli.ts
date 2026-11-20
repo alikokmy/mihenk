@@ -13,6 +13,7 @@ import { uyanikTut, uykuAyariniOku, uykuUyarisi } from './uyanik.js';
 import { KONTROL_ACIKLAMASI, raporMetni, SENARYOLAR, senaryoKostur, uyumOzeti, type SenaryoSonucu } from './uyum.js';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { Defter } from './defter.js';
+import { kaldir } from './kaldir.js';
 import { oneriHesapla, oneriMetni, VARSAYILAN_ONERI_AYARLARI, type OneriAyarlari } from './oneri.js';
 
 const [komut, ...gerisi] = process.argv.slice(2);
@@ -34,6 +35,7 @@ function kullanim(): void {
   console.error('  mihenk sur [--hedef <proje klasoru>] [--liste <dosya>] [--ajan claude|codex|opencode]');
   console.error('             [--saklama yok|yerel|yerel_gonder] [--uyanik-tut]');
   console.error('  mihenk uyum [--arac claude,codex,opencode] [--senaryo duzeltme,tuzak,karar] [--cikis <klasor>]');
+  console.error('  mihenk kaldir [--hedef <proje klasoru>] [--defter-dahil]   kurulumun ekledigi her seyi geri alir');
   console.error('  mihenk oneri [--hedef <proje klasoru>] [--esik 0.5] [--en-az 5] [--uyum <uyum-raporu.json>] [--json]');
   console.error('Defter sunucusu ayri calisir: mihenk-defter [--kok <proje klasoru>]');
 }
@@ -109,6 +111,19 @@ function oneriKomutu(): number {
   return 0;
 }
 
+function kaldirKomutu(): number {
+  const kok = resolve(secenek('--hedef') ?? process.cwd());
+  console.log(`mihenk bu projeden kaldiriliyor: ${kok}`);
+  const s = kaldir(kok, { defterDahil: gerisi.includes('--defter-dahil'), cmdDen: gerisi.includes('--cmd-den') });
+  for (const d of s.silinen) console.log(`silindi            ${d}`);
+  for (const d of s.geri_yuklenen) console.log(`eski haline dondu  ${d}`);
+  for (const d of s.ayiklanan) console.log(`mihenk kismi cikarildi (sizin degisiklikleriniz duruyor)  ${d}`);
+  for (const d of s.birakilan) console.log(`dokunulmadi        ${d}`);
+  console.log(s.defter.charAt(0).toUpperCase() + s.defter.slice(1) + '.');
+  console.log('Tamam. Yeniden kurmak isterseniz: mihenk kur');
+  return 0;
+}
+
 function kurKomutu(): number {
   const istenen = (secenek('--arac') ?? ARACLAR.join(',')).split(',').map((a) => a.trim()).filter(Boolean);
   const bilinmeyen = istenen.filter((a) => !ARACLAR.includes(a as Arac));
@@ -174,6 +189,7 @@ try {
   else if (komut === 'sur') process.exitCode = await surKomutu();
   else if (komut === 'uyum') process.exitCode = await uyumKomutu();
   else if (komut === 'oneri') process.exitCode = oneriKomutu();
+  else if (komut === 'kaldir') process.exitCode = kaldirKomutu();
   else {
     kullanim();
     process.exitCode = komut === undefined || komut === '--help' ? 0 : 2;

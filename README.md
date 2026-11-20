@@ -47,6 +47,15 @@ Bu komut yedi skill'i (`.claude/skills` ve `.agents/skills`), her oturuma giren 
 Kurulum ayrıca proje klasörüne örnek bir iş listesi (`mihenk-isler.ornek.json`) ve Windows'ta çift tıklanır bir başlatma dosyası
 (`mihenk-baslat.cmd`) bırakır.
 
+## Kaldırmak
+
+Proje klasöründeki `mihenk-kaldir.cmd` dosyasına çift tıklayın (ya da: `node <mihenk yolu>/dist/src/cli.js kaldir --hedef <proje>`).
+mihenk'in eklediği her şey geri alınır: oluşturduğu dosyalar silinir, değiştirdiği dosyalar kurulumdan önceki haline bayt bayt döner.
+Kurulumdan sonra sizin değiştirdiğiniz dosyalarda yalnız mihenk'in parçası çıkarılır, sizin eklediğiniz durur. Ne yapıldığı tek tek yazılır.
+
+İş kaydınız (defter) silinmez: proje dışına, `%LOCALAPPDATA%\mihenk\kaldirilan\` altına taşınır ve yeri yazılır. Böylece proje kurulumdan
+önceki gibi kalır, kayıt da kaybolmaz. Kaydı da silmek isterseniz: `kaldir --defter-dahil`. Vazgeçerseniz yeniden `mihenk kur` yeter.
+
 ## İş listesini yürütmek (sürücü)
 
 Sürücü, yazdığınız iş listesini sırayla bir ajan aracına verir ve liste bitene dek siz başında olmadan sürdürür.
