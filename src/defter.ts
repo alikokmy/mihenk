@@ -177,6 +177,19 @@ export interface KullanimToplami {
   maliyeti_bilinmeyen_oturum: number;
 }
 
+/** Kapanmis bir isin olculmus sonucu (oneri hesabinin birimi). */
+export interface IsOlcumu {
+  id: number;
+  tur: string;
+  ajan: string;
+  model: string;
+  durum: 'gecti' | 'kaldi' | 'belirsiz';
+  sure_sn: number | null;
+  deneme_sayisi: number;
+  /** Isin butun oturumlarinin maliyeti; biri bile bilinmiyorsa null. */
+  maliyet_usd: number | null;
+}
+
 export interface Rapor {
   ozet: { toplam: number; acik: number; gecti: number; kaldi: number; belirsiz: number };
   /** Butun defterin kullanim toplami. */
@@ -590,6 +603,24 @@ export class Defter {
       this.dokumYaz();
       return this.db.prepare('SELECT * FROM kullanim WHERE id = ?').get(Number(sonuc.lastInsertRowid)) as unknown as KullanimKaydi;
     }, (k) => ({ is_id: k.is_id, maliyet_usd: k.maliyet_usd }));
+  }
+
+  /**
+   * Oneri hesabinin girdisi: kapanmis her is, olculmus sonucuyla. Model, aracin bildirdigi tek modelse odur; degilse kayittaki.
+   * Maliyet ancak butun oturumlarinki biliniyorsa yazilir (kismi toplam yaniltir); hic oturum olcumu yoksa da bilinmez.
+   */
+  olcumler(): IsOlcumu[] {
+    const isler = this.db.prepare("SELECT * FROM isler WHERE durum <> 'acik' ORDER BY id").all() as unknown as IsKaydi[];
+    const modelSorgusu = this.db.prepare('SELECT DISTINCT model FROM kullanim WHERE is_id = ? AND model IS NOT NULL');
+    return isler.map((is) => {
+      const k = this.kullanimToplami(is.id);
+      const modeller = (modelSorgusu.all(is.id) as Array<{ model: string }>).map((m) => m.model);
+      return {
+        id: is.id, tur: is.tur, ajan: is.ajan, model: modeller.length === 1 ? modeller[0]! : is.model,
+        durum: is.durum as Exclude<Durum, 'acik'>, sure_sn: sureSn(is), deneme_sayisi: is.deneme_sayisi,
+        maliyet_usd: k.oturum > 0 && k.maliyeti_bilinmeyen_oturum === 0 ? k.maliyet_usd : null,
+      };
+    });
   }
 
   private kullanimlar(isId: number): KullanimKaydi[] {

@@ -7,7 +7,7 @@ Ad: mihenk taşı, altının ayarını sınamak için kullanılan taştır. Proj
 değerini (doğruluk, süre, maliyet).
 
 **Durum:** Aşama 1 (defter), Aşama 2 (yöntem paketi ve kurulum) ve Aşama 3 (sürücü) yazıldı. Sürücü on işlik bir listeyi Codex ve OpenCode ile
-girdisiz bitirdi. Aşama 4 (uyum testleri: `mihenk uyum`) üç araçta koşuldu. Açık kalemler planda yazılı. Aşama 5: sürücü her işin süresini, token kullanımını ve (araç bildiriyorsa) dolar maliyetini deftere yazıyor. Öneri henüz yok.
+girdisiz bitirdi. Aşama 4 (uyum testleri: `mihenk uyum`) üç araçta koşuldu. Açık kalemler planda yazılı. Aşama 5: sürücü her işin süresini, token kullanımını ve (araç bildiriyorsa) dolar maliyetini deftere yazıyor. Aşama 6: `mihenk oneri` iş türü başına araç önerisi veriyor (az veride "veri yetersiz").
 
 - [docs/ARASTIRMA.md](docs/ARASTIRMA.md): benzer açık kaynak projelerin taraması ve hüküm.
 - [docs/IS_PLANI.md](docs/IS_PLANI.md): onaylı iş planı, iki bağlayıcı ilke, aşama sonuçları ve açık kararlar.
@@ -72,6 +72,18 @@ Bilmeniz gerekenler:
   size bildirilir.
 - Sınır: Antigravity'nin komut satırı kipi olmadığı için sürücü onu kullanamaz. Ajan araçlarını kurmak ve onlarda oturum açmak sizin
   işinizdir.
+
+## Hangi işe hangi ajan (öneri)
+
+```
+node <mihenk yolu>/dist/src/cli.js oneri --hedef <proje>
+```
+
+Defterdeki kapanmış işlerden, iş türü başına hangi aracın daha az harcayarak doğrulanmış başarı getirdiğini gösterir. Başarı yalnız
+doğrulama komutunun geçmesidir; ajanın "bitti" demesi sayılmaz. Bir seçenek için en az 5 iş ve başarı oranının %95 güven aralığının alt
+ucunun %50'yi geçmesi gerekir; yoksa "veri yetersiz" yazar ve öneri vermez. Uyum testi raporu varsa (`mihenk-uyum/uyum-raporu.json`)
+uyumu %80'in altındaki araç önerilmez. Maliyeti bilinmeyen araç (ör. abonelikle çalışan Codex) maliyetle karşılaştırılamaz; bu yazılır.
+Öneri yalnız gösterir; aracı her zaman siz seçersiniz. Eşikler `--esik` ve `--en-az` ile değişir.
 
 Veri proje içinde `.mihenk/` altında durur (git dışı): `defter.db` (SQLite), `defter.jsonl` (okunur döküm), `log.jsonl` (her işlemin başla /
 bitti satırı), `surucu.jsonl` (sürücünün olay kaydı), `ciktilar/` (doğrulama ve ajan çıktılarının tamamı).

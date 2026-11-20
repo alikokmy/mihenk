@@ -11,7 +11,9 @@ import { SAKLAMA_KIPLERI, type SaklamaKipi } from './saklama.js';
 import { listeOku, listeyiYurut } from './surucu.js';
 import { uyanikTut, uykuAyariniOku, uykuUyarisi } from './uyanik.js';
 import { KONTROL_ACIKLAMASI, raporMetni, SENARYOLAR, senaryoKostur, uyumOzeti, type SenaryoSonucu } from './uyum.js';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { Defter } from './defter.js';
+import { oneriHesapla, oneriMetni, VARSAYILAN_ONERI_AYARLARI, type OneriAyarlari } from './oneri.js';
 
 const [komut, ...gerisi] = process.argv.slice(2);
 const secenek = (ad: string): string | undefined => {
@@ -32,6 +34,7 @@ function kullanim(): void {
   console.error('  mihenk sur [--hedef <proje klasoru>] [--liste <dosya>] [--ajan claude|codex|opencode]');
   console.error('             [--saklama yok|yerel|yerel_gonder] [--uyanik-tut]');
   console.error('  mihenk uyum [--arac claude,codex,opencode] [--senaryo duzeltme,tuzak,karar] [--cikis <klasor>]');
+  console.error('  mihenk oneri [--hedef <proje klasoru>] [--esik 0.5] [--en-az 5] [--uyum <uyum-raporu.json>] [--json]');
   console.error('Defter sunucusu ayri calisir: mihenk-defter [--kok <proje klasoru>]');
 }
 
@@ -65,6 +68,44 @@ async function uyumKomutu(): Promise<number> {
   writeFileSync(join(cikis, 'uyum-raporu.json'), JSON.stringify({ tarih: new Date().toISOString(), ozet: uyumOzeti(sonuclar), sonuclar }, null, 2) + '\n');
   for (const u of uyumOzeti(sonuclar)) console.log(`${u.arac}: uyum ${u.gecen}/${u.toplam} (%${Math.round(u.oran * 100)}), basarili senaryo ${u.basarili_senaryo}/${u.senaryo}`);
   console.log(`Rapor: ${join(cikis, 'uyum-raporu.md')}`);
+  return 0;
+}
+
+/**
+ * Oneri: projenin defterindeki kapanmis islerden is turu basina ajan onerisi. Yalniz okur, hicbir seyi degistirmez.
+ * Uyum raporu varsa (varsayilan <hedef>/mihenk-uyum/uyum-raporu.json) arac basina uyum orani hesaba girer.
+ */
+function oneriKomutu(): number {
+  const kok = resolve(secenek('--hedef') ?? process.cwd());
+  if (!existsSync(join(kok, '.mihenk', 'defter.db'))) {
+    console.log(`Bu klasorde defter yok (${kok}). Once isleri mihenk ile yurutun; oneri olculen islerden hesaplanir.`);
+    return 0;
+  }
+  const oran = (ad: string, varsayilan: number): number => {
+    const d = secenek(ad);
+    if (d === undefined) return varsayilan;
+    const n = Number(d);
+    if (!(n >= 0 && n <= 1)) throw new Error(`${ad} 0 ile 1 arasinda bir sayi olmali (or. 0.5); gelen: ${d}.`);
+    return n;
+  };
+  const uyumYolu = resolve(secenek('--uyum') ?? join(kok, 'mihenk-uyum', 'uyum-raporu.json'));
+  let uyum: OneriAyarlari['uyum'];
+  if (existsSync(uyumYolu)) {
+    const ozet = (JSON.parse(readFileSync(uyumYolu, 'utf8')) as { ozet?: Array<{ arac: string; gecen: number; toplam: number }> }).ozet ?? [];
+    uyum = Object.fromEntries(ozet.map((u) => [u.arac, { gecen: u.gecen, toplam: u.toplam }]));
+  }
+  const ayarlar: Partial<OneriAyarlari> = {
+    esik: oran('--esik', VARSAYILAN_ONERI_AYARLARI.esik), enAz: sayi('--en-az') ?? VARSAYILAN_ONERI_AYARLARI.enAz,
+    ...(uyum ? { uyum } : {}),
+  };
+  const defter = new Defter(kok);
+  const turler = oneriHesapla(defter.olcumler(), ayarlar);
+  defter.kapat();
+  if (gerisi.includes('--json')) console.log(JSON.stringify(turler, null, 2));
+  else {
+    if (uyum) console.log(`Uyum raporu: ${uyumYolu}`);
+    console.log(oneriMetni(turler, ayarlar));
+  }
   return 0;
 }
 
@@ -132,6 +173,7 @@ try {
   if (komut === 'kur') process.exitCode = kurKomutu();
   else if (komut === 'sur') process.exitCode = await surKomutu();
   else if (komut === 'uyum') process.exitCode = await uyumKomutu();
+  else if (komut === 'oneri') process.exitCode = oneriKomutu();
   else {
     kullanim();
     process.exitCode = komut === undefined || komut === '--help' ? 0 : 2;

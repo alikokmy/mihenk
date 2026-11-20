@@ -126,7 +126,7 @@ Her aşamanın kabul ölçütü işe başlamadan yazılıdır; aşama, ölçüt 
 | 3 | Sürücü: iş listesi döngüsü, taze oturum, devir notu, bağlam bütçesi, zaman aşımı, isteğe bağlı uyanık tutma, saklama kipi (yok / yerel / yerel + gönder); önce iki araç | **tamam, iki açık kalemle** (2026-11-20; `npm test`: 84 test geçti; gerçek araçlarla on işlik liste 10/10). Açık: uyanık tutmanın uykuyu gerçekten önlediği gözlenmedi; oturum devri yalnız sahte ajanla gösterildi (bkz. "Aşama 3 sonucu"). Ölçüt: on küçük işlik liste kullanıcı girişi olmadan bitiyor; yapay büyük çıktılı işte oturum devri çalışıyor; takılan iş listeyi durdurmuyor; uyku açıkken sürücü uyarıyor, uyanık tutma seçeneği açıkken sistem uykuya geçmiyor; kurulum ve sürücü tek adımda (çift tıklama ya da tek komut) başlıyor, yönetici izni istemiyor; uzak deposu olmayan bir projede liste "yerel" kipte bitiyor ve hiçbir kipte kullanıcı açmadan push yapılmıyor; ajan yalnız kendisine verilen proje dizininde çalışıyor (başka dizinde değişiklik yaparsa iş geçersiz sayılıyor) |
 | 4 | Uyum testleri: senaryolar ve tuzak görevler; araç başına uyum oranı raporu | **tamam** (2026-11-20; `npm test`: 94 test geçti). Claude Code, Codex ve OpenCode için rapor üretildi; sekiz bozuk ajan taklidinin hepsi bozduğu yerden yakalandı (bkz. "Aşama 4 sonucu"). Ölçüt: her desteklenen araç için rapor üretiliyor; kasıtlı bozuk ajan taklidi yakalanıyor |
 | 5 | Maliyet ve süre: kullanım verisini işe bağlama | **tamam, bir notla** (2026-11-20; `npm test`: 101 test geçti). Sürücü kipinde kapanan her işte süre ve token dolu; dolar maliyeti araç bildirirse dolu, Codex'te "bilinmiyor" (abonelik, fiyat uydurulmaz). Bağımsız yeniden hesap üç araçta her alanda uyuştu (bkz. "Aşama 5 sonucu"). Ölçüt: kapanan her işte süre ve maliyet dolu; elle hesapla örneklemde uyuşuyor |
-| 6 | Öneri: iş türü × ajan / model başına doğrulanmış başarı, uyum, süre, maliyet; belirsizlikle birlikte | sentetik defterde bilinen en iyi seçeneği buluyor; az veride "veri yetersiz" diyor |
+| 6 | Öneri: iş türü × ajan / model başına doğrulanmış başarı, uyum, süre, maliyet; belirsizlikle birlikte | **tamam** (2026-11-20; `npm test`: 109 test geçti). `mihenk oneri`; sentetik defterlerde (biri elle, 50'si rastgele) bilinen en iyi seçenek bulundu; az veride "veri yetersiz". Gerçek veri henüz öneri için az (bkz. "Aşama 6 sonucu"). Ölçüt: sentetik defterde bilinen en iyi seçeneği buluyor; az veride "veri yetersiz" diyor |
 | 7 | Kanca uyarlamaları: etkileşimli oturumda mekanik kapı (önce Claude Code ve Codex) | kanıtsız "bitti" denemesi reddediliyor; atlama yolları belgeli |
 | 8 | Öteki araçlar: Qwen Code, OpenCode, Antigravity, Kilo Code / Cline | araç başına kurulum, duman testi ve uyum raporu |
 
@@ -387,6 +387,46 @@ maliyet "bilinmiyor", token 35616 / 72448 / 965). Fiyat tablosu hesabı ayrıca 
   bildiriyor ya da bilinmiyor); yalnız token toplamlarına etkisi olabilir.
 - Codex ve OpenCode model adını çıktıda vermiyor; bu işlerde model "bilinmiyor" kalıyor. Öneri hesabı (Aşama 6) model düzeyine
   inemeyecek, araç düzeyinde kalacak; kullanıcı modeli listede yazarsa o kullanılabilir.
+
+## Aşama 6 sonucu (2026-11-20)
+
+`mihenk oneri [--hedef] [--esik 0.5] [--en-az 5] [--uyum <json>] [--json]` defterin kapanmış işlerini (`Defter.olcumler`) iş türü ×
+ajan / model seçeneklerine ayırır ve `src/oneri.ts` ile hesaplar. Yalnız okur.
+
+- **Başarı:** doğrulanmış "geçti". "Kaldı" ve "belirsiz" (geçersiz sayılanlar dahil) başarısızdır.
+- **Belirsizlik:** başarı oranının %95 Wilson aralığı. Seçenek, en az 5 işi varsa ve aralığın alt ucu eşiği (0,5) geçiyorsa adaydır.
+  Uyum raporu varsa uyumu %80'in altındaki araç aday olmaz.
+- **Seçim:** adaylar arasında başarı başına beklenen maliyet (bütün işlerin, başarısızların ve yeniden denemelerin dahil, toplam
+  maliyeti / geçen iş) en düşük olan; eşitlikte başarı başına süre. Hiçbir adayın maliyeti bilinmiyorsa süreye göre seçilir ve bu yazılır.
+  Maliyeti bilinmeyen aday maliyetli olanlarla karşılaştırılamaz; nota yazılır.
+- **Model:** aracın bildirdiği tek model, yoksa kayıttaki ("aracin varsayilani"). Codex ve OpenCode'da öneri araç düzeyinde kalır.
+
+**Kanıt (ölçüt 1, en iyi seçenek):** `test/oneri.test.ts`. Elle kurulan defterde beş seçenekten bilinen en iyisi seçildi; en ucuz ama
+başarısız, iki işlik "parlak" ve maliyeti bilinmeyen seçenekler seçilmedi. Gerçek başarı oranı ve maliyeti bilinen dört seçenekten
+rastgele üretilen 50 defterin (seçenek başına 60 iş) 50'sinde bilinen en iyi bulundu. Hesap kasıtlı bozulunca (eşik ve az veri
+kontrolü kaldırıldı) sekiz testin beşi kaldı.
+
+**Kanıt (ölçüt 2, az veri):** 3 ve 4 işlik seçeneklerde öneri yok, "veri yetersiz" yazıyor (test). Gerçek defterde de:
+Aşama 5 koşusunun defteri (araç başına 1 iş) "veri yetersiz: seçenek başına en çok 1 kapanmış iş var, en az 5 gerekir" verdi.
+
+**Gerçek defter:** Aşama 3'ün 10 işlik defterinde (Codex 5, OpenCode 5; hepsi geçti) ikisi de aday çıktı; o koşu Aşama 5'ten önce
+olduğu için maliyet ölçülmemişti, öneri süreye göre OpenCode oldu (başarı başına 24,5 sn, Codex 46,1 sn). Bu, aracın daha iyi olduğunu
+göstermez: 5/5'in aralığı %57-%100'dür ve işler kolaydır.
+
+**Kararlar (öneri uygulandı; veto edilebilir):**
+
+| Karar | Seçilen | En güçlü karşı görüş |
+|---|---|---|
+| "Belirsiz" hüküm | başarısız sayılır | Ajan dürüstçe "belirsiz" dediyse cezalandırılmış olur; ayrı sayılabilirdi |
+| Kısmi maliyet | bir oturumun bile maliyeti bilinmiyorsa iş maliyeti bilinmiyor | Bilinen kısım alt sınır olarak kullanılabilirdi |
+| Varsayılan eşik ve en az iş | 0,5 ve 5 | 5/5 bile ancak %57 alt sınır verir; daha yüksek eşik çok iş ister, kullanıcı ilk haftalarda hiç öneri görmez |
+| Sürücüye bağlama | öneri yalnız gösterir; sürücü ajanı kendisi seçmez | `--ajan oneri` gibi bir seçenek kullanıcıya kolaylık olurdu; ilke "kullanıcı seçer" |
+
+**Sınırlar:**
+- Gerçek veri az: hiçbir gerçek seçenek maliyetiyle birlikte 5 işe ulaşmadı. Planın yanlışlama ölçütü (öneriye uyulan işler daha mı
+  başarılı ve ucuz) ancak gerçek kullanımla sınanabilir; sınanmadı.
+- İş türü kullanıcının yazdığı etikettir; benzer işlere farklı ad verilirse veri bölünür.
+- İşlerin zorluğu hesaba girmez: kolay işlere verilen araç iyi görünür.
 
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 
