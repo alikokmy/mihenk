@@ -165,9 +165,16 @@ Sıra ölçütü: önce işin doğruluğu, sonra kullanıcı deneyiminin basitli
 | 13 | **tamam** (2026-11-20; `npm test`: 167 test geçti; bkz. "Aşama 13 sonucu"). **İş başına geri alma:** her işin başında bir geri dönüş noktası (git varsa geçici dal / stash, yoksa gölge kopya); `mihenk geri-al <iş>` o işin değişikliklerini geri alır | "kaldı" kapanan işin değişiklikleri tek komutla geri alınıyor; başka işlerin değişikliklerine dokunulmuyor; git'siz projede de çalışıyor |
 | 14 | **Kullanıcıya ulaşan yüz:** liste bitince ya da durunca Windows bildirimi; çift tıklanan tek sayfalık düz dil raporu (ne yapıldı, ne kaldı ve neden, süre, maliyet) | bildirim yönetici izni istemeden çıkıyor; rapor kodlama terimi bilmeyen birinin okuyacağı dilde ve defterle sayıca uyuşuyor |
 
+| 15 | **İngilizce dil desteği:** kullanıcıya görünen bütün iletiler (komut satırı, menü, sürücü, kapı ve kaldırma çıktıları, rapor) Türkçe ve İngilizce; dil `mihenk.json`'da `dil` ayarıyla seçilir (varsayılan: sistemin dili, bulunamazsa Türkçe). Belgeler (README, AGENTS.md bloğu) iki dilde. Ajana giden skill metinleri zaten İngilizce | her ileti iki dilde var (eksik çeviriyi bulan test); dil değişince aynı komutun çıktısı o dilde; kod tanımlayıcıları ASCII kalıyor |
+| 16 | **Uygulama penceresi:** kodlama bilmeyen kullanıcı için tek pencere, sekmeli: Proje (kurulum, kaldırma, durum), İş listesi (işleri ekle / düzenle / başlat, canlı ilerleme), Defter (geçmiş işler, kanıtlar, şüpheler, geri al), Ayarlar (bütün aç-kapa anahtarları, tavanlar), Öneri ve maliyet. Yönetici izni yok, kurulum yok: çift tıklanan dosya yerel bir sunucu açar ve pencereyi tarayıcıda gösterir (yalnız bu bilgisayardan erişilir) | CLI'de yapılabilen her yönetim işi pencereden de yapılabiliyor (eşleme tablosu ve test); pencere yalnız 127.0.0.1'e bağlanıyor; uçtan uca tarayıcı testinde bir ayar değiştirilip sonucu dosyada görülüyor; iki dilde |
+
+**Karar (Aşama 16):** pencere, yerel sunucu + tarayıcı sayfası olarak yapılacak. Karşı görüş: gerçek bir masaüstü uygulaması (Electron,
+Tauri) daha tanıdık görünür; ama yükleme gerektirir, boyutu büyüktür ve imzasız uygulama Windows'ta uyarı verir. Tarayıcı sayfası Node
+dışında hiçbir şey istemez. Tepsi uygulaması (0.3 adayı) bu pencereyle büyük ölçüde karşılandığı için listeden çıkarıldı.
+
 Sonraya bırakılanlar (0.3 adayları): ajanın yazdığı testlere mutasyon denetimi (değerli ama dile bağlı ve büyük); yalnız not yazan
 bağımsız inceleyici ajan (incelemeyi otomatik düzeltmeye bağlamanın doğru kodu bozabildiğine dair kanıt var; hükmü etkilememeli);
-tepsi uygulaması (14 ihtiyacın çoğunu daha ucuza karşılar); iş listesinde bağımlılık ve büyük işin bölünmesi (doğrudan kullanıcı
+iş listesinde bağımlılık ve büyük işin bölünmesi (doğrudan kullanıcı
 talebi bulunamadı); elle açılan oturumların maliyetinin ölçülmesi (CodeBurn / ccusage bağlantısı; Aşama 5'ten açık).
 
 ## Aşama 1 sonucu (2026-11-19)
