@@ -280,8 +280,10 @@ export function uyanikIstendiMi(o: { bayrak: boolean; liste: IsListesi; kok: str
  * testin onceden kaldigini ayirt etmez) ve bu soylenir. Komut yoksa, bekci kapaliysa ya da izinsizse null.
  */
 async function gerilemeTabani(kok: string, liste: IsListesi, defter: Defter, yaz: (s: string) => void):
-  Promise<{ komut: string; kos(ad: string): Promise<{ gecti: boolean; ozet: string; dosya: string }> } | null> {
-  if (ayarlariOku(kok).bekci_gerileme === false) return null;
+  Promise<{ komut: string; kip: 'her_iste' | 'liste_sonunda' | 'gonderirken'; kos(ad: string): Promise<{ gecti: boolean; ozet: string; dosya: string }> } | null> {
+  const kipi = ayarlariOku(kok).gerileme;
+  if (kipi === 'kapali') return null;
+  if (kipi === 'gonderirken' && saklamaKipiSec({ liste, kok }) !== 'yerel_gonder') return null;
   let komut = liste.gerileme_komutu?.trim();
   if (!komut) {
     try {
@@ -319,8 +321,9 @@ async function gerilemeTabani(kok: string, liste: IsListesi, defter: Defter, yaz
     yaz(`Gerileme denetimi yok: "${komut}" liste baslamadan da kaliyor (${taban.dosya}); onceden kalan testler varken gerileme ayirt edilemez.`);
     return null;
   }
-  yaz(`Gerileme tabani: "${komut}" liste baslamadan geciyor; her iste yeniden kosulacak.`);
-  return { komut, kos };
+  const ne = kipi === 'her_iste' ? 'her iste' : kipi === 'liste_sonunda' ? 'listenin sonunda' : 'uzak depoya gondermeden once';
+  yaz(`Gerileme tabani: "${komut}" liste baslamadan geciyor; ${ne} yeniden kosulacak.`);
+  return { komut, kos, kip: kipi as 'her_iste' | 'liste_sonunda' | 'gonderirken' };
 }
 
 const round6 = (x: number): number => Math.round(x * 1e6) / 1e6;
@@ -385,6 +388,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
 
   const sonuclar: IsSonucu[] = [];
   let durdu = '';
+  let gerilemeSonu = '';
   try {
     olay('liste_basla', { is_sayisi: s.liste.isler.length, saklama: kip, baglam_esigi: baglamEsigi });
     const gerileme = await gerilemeTabani(kok, s.liste, defter, yaz);
@@ -533,7 +537,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
         deneme += 1;
         if ((defter.rapor({ is_id: isId }).is as IsGorunumu).durum !== 'acik') break; // ajan defteri kullanip isi kendisi kapatti
         // Gerileme bekcisi: listenin basinda gecen butun test takimi simdi kaliyorsa is bu denemede gecemez.
-        if (gerileme) {
+        if (gerileme?.kip === 'her_iste') {
           const g = await gerileme.kos(`is-${isId}-deneme-${deneme}`);
           if (!g.gecti) {
             gerilemeNotu = `gerileme: listenin basinda gecen butun test takimi (${gerileme.komut}) simdi kaliyor; is kendi dogrulamasini gecse de "gecti" sayilmaz`;
@@ -587,7 +591,17 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
         son = defter.rapor({ is_id: isId }).is as IsGorunumu;
       }
       if (son.durum === 'gecti' && !gecersiz) {
-        const saklama = sakla(kok, kip, `mihenk: is ${isId} gecti: ${tekSatir(listeIsi.soru, 60)}`);
+        // Gerileme "gonderirken": gondermeden once tam takim; kalirsa yalniz yerelde saklanir, gonderilmez.
+        let saklamaKipi = kip;
+        if (gerileme?.kip === 'gonderirken' && kip === 'yerel_gonder') {
+          const g = await gerileme.kos(`is-${isId}-gonderim`);
+          if (!g.gecti) {
+            saklamaKipi = 'yerel';
+            surucuNotu(isId, `gonderilmedi: tam test takimi (${gerileme.komut}) kaliyor; yalniz yerelde saklandi. Cikti: ${g.dosya}`);
+            yaz(`${baslik}   GONDERILMEDI: tam test takimi kaliyor (${g.dosya}); is yalniz yerelde saklandi.`);
+          }
+        }
+        const saklama = sakla(kok, saklamaKipi, `mihenk: is ${isId} gecti: ${tekSatir(listeIsi.soru, 60)}`);
         not = saklama.not;
         olay('saklama', { is_id: isId, kip, commit: saklama.commit, push: saklama.push, not: saklama.not });
       } else if (not === '') {
@@ -601,6 +615,14 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
       olay('is_bitti', { is_id: isId, kimlik, durum: son.durum, deneme, devir, gecersiz });
       sonuclar.push({ kimlik, is_id: isId, durum: son.durum, atlandi: false, deneme, devir, gecersiz, not });
     }
+    // Gerileme "liste_sonunda": butun isler bitince tam takim bir kez.
+    if (gerileme?.kip === 'liste_sonunda') {
+      const g = await gerileme.kos('liste-sonu');
+      gerilemeSonu = g.gecti
+        ? `Gerileme denetimi: tam test takimi (${gerileme.komut}) liste sonunda da geciyor.`
+        : `UYARI: GERILEME: tam test takimi (${gerileme.komut}) liste basinda geciyordu, simdi kaliyor (${g.dosya}). Hangi isin bozdugu ayirt edilemedi; gecen isleri "mihenk geri-al" ile tek tek geri alabilirsiniz.`;
+      olay('gerileme_liste_sonu', { gecti: g.gecti, dosya: g.dosya });
+    }
   } finally {
     defter.kapat();
   }
@@ -608,6 +630,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
   const ozet = { toplam: sonuclar.length, gecti: 0, kaldi: 0, belirsiz: 0, acik: 0 };
   for (const r of sonuclar) ozet[r.durum] += 1;
   olay('liste_bitti', ozet);
+  if (gerilemeSonu) yaz(gerilemeSonu);
   if (durdu) {
     const kalan = s.liste.isler.length - sonuclar.length;
     yaz(`LISTE DURDU: ${durdu}. Baslatilmayan is: ${kalan}. Yeniden baslatinca kaldigi yerden surer.`);

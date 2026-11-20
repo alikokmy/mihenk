@@ -17,6 +17,8 @@ function proje(): string {
   writeFileSync(join(kok, 'src', 'topla.js'), 'module.exports = (a, b) => a - b;\n');
   writeFileSync(join(kok, 'test', 'topla.test.js'),
     "const t = require('node:test');\nconst a = require('node:assert');\nconst topla = require('../src/topla.js');\nt.test('topla', () => a.equal(topla(2, 3), 5));\n");
+  // Bu dosya bekcileri sinar: varsayilanda kapali olan iki bekci (bos kanit, kararsiz) burada acilir.
+  ayarYaz(kok, { bekci_bos_kanit: true, bekci_kararsiz: true });
   writeFileSync(join(kok, 'kos.js'), "const r = require('node:child_process').spawnSync(process.execPath, ['--test'], { stdio: 'inherit' }); process.exit(r.status ?? 1);\n");
   return kok;
 }

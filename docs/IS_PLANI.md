@@ -165,7 +165,7 @@ Sıra ölçütü: önce işin doğruluğu, sonra kullanıcı deneyiminin basitli
 | 13 | **tamam** (2026-11-20; `npm test`: 167 test geçti; bkz. "Aşama 13 sonucu"). **İş başına geri alma:** her işin başında bir geri dönüş noktası (git varsa geçici dal / stash, yoksa gölge kopya); `mihenk geri-al <iş>` o işin değişikliklerini geri alır | "kaldı" kapanan işin değişiklikleri tek komutla geri alınıyor; başka işlerin değişikliklerine dokunulmuyor; git'siz projede de çalışıyor |
 | 14 | **Kullanıcıya ulaşan yüz:** liste bitince ya da durunca Windows bildirimi; çift tıklanan tek sayfalık düz dil raporu (ne yapıldı, ne kaldı ve neden, süre, maliyet) | bildirim yönetici izni istemeden çıkıyor; rapor kodlama terimi bilmeyen birinin okuyacağı dilde ve defterle sayıca uyuşuyor |
 | 15 | **İngilizce dil desteği:** kullanıcıya görünen bütün iletiler (komut satırı, menü, sürücü, kapı ve kaldırma çıktıları, rapor) Türkçe ve İngilizce; dil `mihenk.json`'da `dil` ayarıyla seçilir (varsayılan: sistemin dili, bulunamazsa Türkçe). Belgeler (README, AGENTS.md bloğu) iki dilde. Ajana giden skill metinleri zaten İngilizce | her ileti iki dilde var (eksik çeviriyi bulan test); dil değişince aynı komutun çıktısı o dilde; kod tanımlayıcıları ASCII kalıyor |
-| 16 | **Uygulama penceresi:** kodlama bilmeyen kullanıcı için tek pencere, sekmeli: Proje (kurulum, kaldırma, durum), İş listesi (işleri ekle / düzenle / başlat, canlı ilerleme), Defter (geçmiş işler, kanıtlar, şüpheler, geri al), Ayarlar (bütün aç-kapa anahtarları, tavanlar), Öneri ve maliyet. Yönetici izni yok, kurulum yok: çift tıklanan dosya yerel bir sunucu açar ve pencereyi tarayıcıda gösterir (yalnız bu bilgisayardan erişilir) | CLI'de yapılabilen her yönetim işi pencereden de yapılabiliyor (eşleme tablosu ve test); pencere yalnız 127.0.0.1'e bağlanıyor; uçtan uca tarayıcı testinde bir ayar değiştirilip sonucu dosyada görülüyor; iki dilde |
+| 16 | **Uygulama penceresi:** kodlama bilmeyen kullanıcı için tek pencere, sekmeli: Proje (kurulum, kaldırma, durum), İş listesi (işleri ekle / düzenle / başlat, canlı ilerleme), Defter (geçmiş işler, kanıtlar, şüpheler, geri al), Ayarlar (bütün aç-kapa anahtarları, tavanlar), Öneri ve maliyet. Yönetici izni yok, kurulum yok: çift tıklanan dosya yerel bir sunucu açar ve pencereyi tarayıcıda gösterir (yalnız bu bilgisayardan erişilir) | CLI'de yapılabilen her yönetim işi ve her ayar pencereden de yapılabiliyor (eşleme tablosu ve test); her ayarın altında bilgi notu: amacı, sonuçları ve varsayılan değerin ne yaptığı (`AyarTanimi.amac / sonuc / varsayilan_aciklama`); notlar bir onay kutusuyla gizlenebiliyor, kutu varsayılan açık (`bilgi_notlari`); pencere yalnız 127.0.0.1'e bağlanıyor; uçtan uca tarayıcı testinde bir ayar değiştirilip sonucu dosyada görülüyor; iki dilde |
 
 **Karar (Aşama 16):** pencere, yerel sunucu + tarayıcı sayfası olarak yapılacak. Karşı görüş: gerçek bir masaüstü uygulaması (Electron,
 Tauri) daha tanıdık görünür; ama yükleme gerektirir, boyutu büyüktür ve imzasız uygulama Windows'ta uyarı verir. Tarayıcı sayfası Node
@@ -670,6 +670,31 @@ git deposunda iş sırasında silinen dosya git listesinde kaldığı için "atl
 **Sınırlar:** 5 MB'tan büyük dosya fotoğrafa girmez. İlk fotoğraf bütün projeyi okur; çok büyük projede iş açılışı yavaşlar (aynı
 içerik bir kez saklandığı için disk kullanımı değişen dosyalarla sınırlı). Git'in yok saydığı dosyalar (ör. `dist/`) git deposunda
 fotoğrafa girmez. Nesneler hiç silinmez; temizlik sonraki iş.
+
+## Varsayılan değişikliği ve fotoğraf temizliği (2026-11-20, kullanıcı isteği)
+
+**Doğrulama koşuları:** kullanıcının isteği: varsayılanda iş başına tek doğrulama koşusu (iş bitince), ötekiler isteğe bağlı; metamorfik'te
+yaşanan "her işte tam takım" yavaşlığından kaçınmak. Uygulanan:
+- `bekci_bos_kanit` ve `bekci_kararsiz` varsayılan **kapalı** (Aşama 10'da açıktı). `bekci_test_kurcalama` açık kalır: test koşmaz,
+  yalnız dosya özetine bakar.
+- `bekci_gerileme` (açık / kapalı) yerine `gerileme` kipi: `gonderirken` (varsayılan: tam takım yalnız uzak depoya göndermeden önce;
+  kalırsa iş yalnız yerelde saklanır), `liste_sonunda` (listenin başında ve sonunda birer kez; kalırsa uyarı, hangi işin bozduğu ayırt
+  edilemez), `her_iste` (Aşama 11 davranışı), `kapali`. Varsayılan saklama kipi göndermediği için varsayılan kurulumda tam takım koşmaz.
+- Öneri (kullanıcıya sunuldu): uzun listelerde `liste_sonunda`; işin kendi doğrulama komutu hızlı ve hedefli yazılır.
+- Karşı görüş: varsayılanda daha az koşu, Aşama 10-11'in yakaladığı hataları (kararsız test, gerileme) varsayılanda kaçırır. Karar
+  kullanıcınındır; ayarlar menüsünde bilgi notu bunu açıkça yazar.
+
+**Fotoğraf temizliği:** `geri_alma_sakla` (sayı, 0-100, varsayılan 5): bir iş kapanınca en son N kapanan işin fotoğrafı kalır, eskiler ve
+hiçbir fotoğrafın kullanmadığı içerikler silinir; 0 hiçbirini tutmaz; `geri_alma` kapalıyken fotoğraf alınmaz.
+
+**Bilgi notları:** her ayarın amacı, sonucu ve varsayılanının ne yaptığı ayar tanımına yazıldı; `mihenk ayar` ve menü bunları ayarın altında
+gösterir; `bilgi_notlari` (varsayılan açık) gizler. Aşama 16'daki pencere aynı tanımları kullanacak.
+
+**Kanıt:** `npm test` 173/173. Yeni testler: varsayılanda tek koşu (sayaç betiği 1 kez); fotoğraf temizliği (N=2'de yalnız son 2 iş, eski
+içerik silindi, en son iş hâlâ geri alınıyor; N=0); `liste_sonunda` uyarısı; `gonderirken`: yerel kipte tam takım koşmadı, `yerel_gonder`
+kipinde kalınca commit yerelde kaldı ve uzak depoya gitmedi; bilgi notları her ayarda var, listede görünüyor, anahtarla gizleniyor; sayı
+ayarı komut satırından ve menüden değişiyor, sınır dışı değer reddediliyor. Temizlik ve "gönderilmedi" denetimi kasıtlı bozulunca ikisi de
+yakalandı.
 
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 

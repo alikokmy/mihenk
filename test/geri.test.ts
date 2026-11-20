@@ -111,7 +111,7 @@ test('deneme kipi hicbir seyi degistirmez; ikinci geri alma bir sey yapmaz; acik
   const kok2 = proje();
   ayarYaz(kok2, { geri_alma: false });
   const id2 = await is(kok2, () => writeFileSync(join(kok2, 'a.js'), 'x'));
-  assert.throws(() => geriAl(kok2, id2), /baslangic fotografi yok/);
+  assert.throws(() => geriAl(kok2, id2), /fotograf yok/);
   assert.ok(!existsSync(join(kok2, '.mihenk', 'geri')));
 });
 
@@ -122,4 +122,27 @@ test('komut satiri: mihenk geri-al <is> sonucu duz dille yazar', async () => {
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /eski haline dondu {3}a\.js/);
   assert.match(r.stdout, /3 dosya geri alindi/);
+});
+
+test('KABUL fotograf temizligi: yalniz son N kapanan isin fotografi kalir, kullanilmayan icerik silinir; 0 hicbirini tutmaz', async () => {
+  const kok = proje();
+  ayarYaz(kok, { geri_alma_sakla: 2 });
+  const idler: number[] = [];
+  for (let n = 0; n < 4; n++) idler.push(await is(kok, () => writeFileSync(join(kok, 'a.js'), `surum ${n}\n`)));
+  const kalan = readdirSync(join(kok, '.mihenk', 'geri')).filter((x) => /-(bas|son)\.json$/.test(x)).sort();
+  assert.deepEqual(kalan, [`is-${idler[2]}-bas.json`, `is-${idler[2]}-son.json`, `is-${idler[3]}-bas.json`, `is-${idler[3]}-son.json`]);
+  assert.throws(() => geriAl(kok, idler[0]!), /fotograf eskidigi icin silindi/);
+  // "surum 0" icerigi artik hicbir fotografta yok: silinmis olmali.
+  const nesneler = readdirSync(join(kok, '.mihenk', 'nesneler'), { recursive: true }).filter((x) => String(x).length > 10);
+  const icerikler = nesneler.map((x) => readFileSync(join(kok, '.mihenk', 'nesneler', String(x)), 'utf8'));
+  assert.ok(!icerikler.includes('surum 0\n'));
+  assert.ok(icerikler.includes('surum 3\n'));
+  geriAl(kok, idler[3]!); // en sonuncu hala geri alinabilir
+  assert.equal(readFileSync(join(kok, 'a.js'), 'utf8'), 'surum 2\n');
+
+  const kok2 = proje();
+  ayarYaz(kok2, { geri_alma_sakla: 0 });
+  const id = await is(kok2, () => writeFileSync(join(kok2, 'a.js'), 'x'));
+  assert.deepEqual(readdirSync(join(kok2, '.mihenk', 'geri')).filter((x) => /-(bas|son)\.json$/.test(x)), []);
+  assert.throws(() => geriAl(kok2, id), /fotograf yok/);
 });

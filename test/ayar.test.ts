@@ -132,9 +132,9 @@ test('kullanicinin kendi mihenk.json\'u: ayar ac-kapa sonrasi kendi bicimiyle ba
 
 test('menu (mihenk-ayarlar.cmd\'nin actigi): numara anahtari degistirir, Enter cikar; duz node sureci, yonetici izni yok', () => {
   const kok = kurulu();
-  const r = spawnSync(process.execPath, ['--disable-warning=ExperimentalWarning', CLI, 'ayar', '--hedef', kok, '--menu'], { input: '2\nabc\n\n', encoding: 'utf8' });
+  const r = spawnSync(process.execPath, ['--disable-warning=ExperimentalWarning', CLI, 'ayar', '--hedef', kok, '--menu'], { input: '3\nabc\n\n', encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, / 2\. \[ACIK  \] skiller/);
+  assert.match(r.stdout, / 3\. \[ACIK  \] skiller/);
   assert.match(r.stdout, /skiller: KAPALI \(kurulum guncellendi/);
   assert.match(r.stdout, /"abc" bir numara degil/);
   assert.match(r.stdout, /Ayarlar kaydedildi/);
@@ -158,4 +158,44 @@ test('baglam yuku: defter araclarinin tanim boyutu gercek sunucudan olculenle %1
   assert.ok(y.yontem_metni > 0 && y.skill > 0 && y.mcp > 0);
   assert.equal(y.toplam_token, Math.round((y.yontem_metni + y.skill + y.mcp) / 4));
   assert.ok(AYARLAR.length >= 13);
+});
+
+test('bilgi notlari: her ayarin amaci, sonucu ve varsayilan aciklamasi var; listede gorunur, anahtarla gizlenir', () => {
+  for (const t of AYARLAR) {
+    for (const alan of ['amac', 'sonuc', 'varsayilan_aciklama', 'aciklama'] as const) assert.ok(t[alan].length > 10, `${t.ad}.${alan}`);
+  }
+  const kok = kurulu();
+  const kos = (...a: string[]) => spawnSync(process.execPath, ['--disable-warning=ExperimentalWarning', CLI, 'ayar', '--hedef', kok, ...a], { encoding: 'utf8' });
+  assert.match(kos().stdout, /Amac: Fotograflarin diski doldurmamasi icin/);
+  assert.match(kos().stdout, /Varsayilan \(5\): Son 5 kapanan isin/);
+  kos('bilgi_notlari', 'kapa');
+  assert.doesNotMatch(kos().stdout, /Amac:/);
+});
+
+test('sayi ayari: komut satirindan ve menuden degisir; sinir disi deger reddedilir', () => {
+  const kok = kurulu();
+  const kos = (a: string[], input?: string) => spawnSync(process.execPath, ['--disable-warning=ExperimentalWarning', CLI, 'ayar', '--hedef', kok, ...a], { encoding: 'utf8', input });
+  assert.equal(kos(['geri_alma_sakla', '3']).status, 0);
+  assert.equal(ayarlariOku(kok).geri_alma_sakla, 3);
+  const red = kos(['geri_alma_sakla', '101']);
+  assert.notEqual(red.status, 0);
+  assert.match(red.stderr, /0 ile 100 arasinda/);
+  const sira = AYARLAR.findIndex((t) => t.ad === 'geri_alma_sakla') + 1;
+  const m = kos(['--menu'], `${sira}\n0\n\n`);
+  assert.match(m.stdout, /Yeni deger \(0-100, simdiki 3\)/);
+  assert.equal(ayarlariOku(kok).geri_alma_sakla, 0);
+});
+
+test('varsayilan: is basina dogrulama yalniz bir kez (is bitince) kosar; tam takim varsayilan kurulumda hic kosmaz', async () => {
+  const { Defter } = await import('../src/defter.js');
+  const kok = kurulu();
+  writeFileSync(join(kok, 'say.js'), "const f=require('node:fs');f.appendFileSync('kosu.txt','x');process.exit(0);");
+  const defter = new Defter(kok);
+  const i = defter.isAc({ tur: 't', soru: 's', beklenti: 'b', yanlissa: 'y', dogrulama_komutu: 'node say.js', ajan: 'a', model: 'm' });
+  assert.equal((await defter.baslangicDogrula(i.id)).kosuldu, false);
+  await defter.hukumVer({ is_id: i.id });
+  defter.kapat();
+  assert.equal(readFileSync(join(kok, 'kosu.txt'), 'utf8'), 'x', 'tek kosu');
+  const a = ayarlariOku(kok);
+  assert.deepEqual([a.bekci_bos_kanit, a.bekci_kararsiz, a.gerileme, a.saklama], [false, false, 'gonderirken', 'yerel']);
 });

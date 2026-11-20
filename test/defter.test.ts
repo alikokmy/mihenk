@@ -110,10 +110,9 @@ test('hukum_ver: dogrulama gecerse is gecti diye kapanir; kanit sunucu kaynaklid
   const r = defter.rapor({ is_id: is.id });
   assert.equal(r.is?.durum, 'gecti');
   assert.ok(r.is?.bitis);
-  // Gecen dogrulama kararsizlik bekcisince bir kez daha kosulur (Asama 10): iki sunucu kaniti.
-  assert.equal(r.kanitlar?.length, 2);
+  // Varsayilanda dogrulama yalniz is bitince bir kez kosar (tekrar kosusu bekcisi kapali).
+  assert.equal(r.kanitlar?.length, 1);
   assert.equal(r.kanitlar?.[0]?.kaynak, 'sunucu');
-  assert.match(r.kanitlar?.[1]?.cikti_ozeti ?? '', /^\[tekrar kosusu\]/);
   assert.ok(existsSync(join(kok, r.kanitlar?.[0]?.cikti_dosyasi ?? 'yok')));
   defter.kapat();
 });
@@ -412,7 +411,7 @@ test('JSONL dokumu: her is bir satir, kanitlariyla birlikte okunur', async () =>
   const satirlar = readFileSync(join(kok, '.mihenk', 'defter.jsonl'), 'utf8').trim().split('\n').map((s) => JSON.parse(s));
   assert.equal(satirlar.length, 2);
   assert.equal(satirlar[0].durum, 'gecti');
-  assert.equal(satirlar[0].kanitlar.length, 2); // dogrulama ve tekrar kosusu
+  assert.equal(satirlar[0].kanitlar.length, 1);
   assert.equal(satirlar[0].testler_ozeti, undefined); // buyuk ozet dokume girmez
   assert.equal(satirlar[1].tur, 'belge');
   defter.kapat();

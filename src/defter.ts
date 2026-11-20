@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { gectiMi, komutuCalistir, komutuCoz, VARSAYILAN_IZINLI } from './dogrulama.js';
 import { kurcalamaFarki, testOzeti, type TestDosyasi } from './bekci.js';
-import { fotografCek } from './geri.js';
+import { fotografCek, fotograflariBuda } from './geri.js';
 import { ayarlariOku as ozellikleriOku } from './ayar.js';
 import { Ret } from './hata.js';
 import { Log } from './log.js';
@@ -445,9 +445,11 @@ export class Defter {
 
   /** Geri alma fotografi (Asama 13). Alinamamasi isi durdurmaz; loga yazilir. Ayarla kapatilabilir. */
   private fotograf(isId: number, an: 'bas' | 'son'): void {
-    if (ozellikleriOku(this.kok).geri_alma === false) return;
+    const oz = ozellikleriOku(this.kok);
+    if (oz.geri_alma === false) return;
     try {
       fotografCek(this.kok, isId, an);
+      if (an === 'son') fotograflariBuda(this.kok, Number(oz.geri_alma_sakla));
     } catch (e) {
       this.log.olay('fotograf_alinamadi', { is_id: isId, an, hata: e instanceof Error ? e.message : String(e) });
     }

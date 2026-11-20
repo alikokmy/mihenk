@@ -49,10 +49,21 @@ export function baglamYuku(kok: string): BaglamYuku {
 }
 
 const goster = (d: AyarDegeri): string => (d === true ? 'ACIK  ' : d === false ? 'KAPALI' : String(d).padEnd(6));
+const deger = (d: AyarDegeri): string => (d === true ? 'acik' : d === false ? 'kapali' : String(d));
 
 function listeMetni(kok: string): string {
   const a = ayarlariOku(kok);
-  const satirlar = AYARLAR.map((t, i) => `${String(i + 1).padStart(2)}. [${goster(a[t.ad]!)}] ${t.ad.padEnd(17)} ${t.aciklama}`);
+  const notlar = a.bilgi_notlari !== false;
+  const satirlar = AYARLAR.flatMap((t, i) => {
+    const s = [`${String(i + 1).padStart(2)}. [${goster(a[t.ad]!)}] ${t.ad.padEnd(20)} ${t.aciklama}`];
+    if (notlar) {
+      s.push(`      Amac: ${t.amac}`, `      Sonuc: ${t.sonuc}`, `      Varsayilan (${deger(t.varsayilan)}): ${t.varsayilan_aciklama}`);
+      if (t.secenekler) s.push(`      Secenekler: ${t.secenekler.join(', ')}`);
+      if (t.sayi) s.push(`      Deger: ${t.sayi.en_az} ile ${t.sayi.en_cok} arasi tam sayi`);
+    }
+    return s;
+  });
+  if (notlar) satirlar.push('', 'Bilgi notlarini gizlemek icin 1 numarali "bilgi_notlari" ayarini kapatin.');
   const y = baglamYuku(kok);
   satirlar.push('', `Her oturuma eklenen yaklasik baglam: ${y.toplam_token} token (kurallar ${y.yontem_metni}, skill ozetleri ${y.skill}, ` +
     `defter araclari ${y.mcp} karakter; token = karakter / 4, yaklasik).`);
@@ -79,8 +90,10 @@ async function menu(kok: string): Promise<void> {
     console.log('');
     process.stdout.write('Degistirmek icin numara yazip Enter\'a basin; cikmak icin yalniz Enter: ');
   };
+  const it = rl[Symbol.asyncIterator]();
+  const sonraki = async (): Promise<string | undefined> => { const r = await it.next(); return r.done ? undefined : r.value; };
   sor();
-  for await (const satir of rl) {
+  for (let satir = await sonraki(); satir !== undefined; satir = await sonraki()) {
     const s = satir.trim();
     if (s === '' || s === '0' || s.toLowerCase() === 'q') break;
     const t = AYARLAR[Number(s) - 1];
@@ -90,9 +103,20 @@ async function menu(kok: string): Promise<void> {
       continue;
     }
     const simdiki = ayarlariOku(kok)[t.ad]!;
-    const yeni: AyarDegeri = t.secenekler
-      ? t.secenekler[(t.secenekler.indexOf(String(simdiki)) + 1) % t.secenekler.length]!
-      : !simdiki;
+    let yeni: AyarDegeri;
+    if (t.sayi) {
+      process.stdout.write(`Yeni deger (${t.sayi.en_az}-${t.sayi.en_cok}, simdiki ${simdiki}): `);
+      const r = await sonraki();
+      try {
+        yeni = degerCoz(t, (r ?? '').trim());
+      } catch (e) {
+        console.log(`\n${e instanceof Error ? e.message : String(e)}`);
+        sor();
+        continue;
+      }
+    } else {
+      yeni = t.secenekler ? t.secenekler[(t.secenekler.indexOf(String(simdiki)) + 1) % t.secenekler.length]! : !simdiki;
+    }
     try {
       console.log('\n' + ayarDegistir(kok, t.ad, yeni));
     } catch (e) {

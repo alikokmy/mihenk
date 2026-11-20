@@ -75,6 +75,46 @@ export function fotografCek(kok: string, isId: number, an: 'bas' | 'son'): Fotog
   return f;
 }
 
+/**
+ * Eski fotograflari temizler: en son `sakla` kapanan isin fotografi kalir (0: hicbiri); acik islerinki hep kalir.
+ * Sonra hicbir fotografin kullanmadigi icerikler silinir. Silinen is numaralarini doner.
+ */
+export function fotograflariBuda(kok: string, sakla: number): number[] {
+  const d = dizin(kok);
+  if (!existsSync(d)) return [];
+  const adlar = readdirSync(d);
+  const kapali = [...new Set(adlar.map((a) => /^is-(\d+)-son\.json$/.exec(a)?.[1]).filter((x): x is string => x !== undefined).map(Number))].sort((a, b) => b - a);
+  const silinecek = kapali.slice(Math.max(0, sakla));
+  for (const id of silinecek) {
+    for (const an of ['bas', 'son'] as const) {
+      try {
+        unlinkSync(fotografYolu(kok, id, an));
+      } catch {
+        // zaten yok
+      }
+    }
+  }
+  // Kullanilmayan icerikler.
+  const kullanilan = new Set<string>();
+  for (const a of readdirSync(d).filter((x) => /^is-\d+-(bas|son)\.json$/.test(x))) {
+    try {
+      for (const o of Object.values((JSON.parse(readFileSync(join(d, a), 'utf8')) as Fotograf).dosyalar)) kullanilan.add(o);
+    } catch {
+      // bozuk fotograf: iceriklerini korumak icin temizlik durur
+      return silinecek;
+    }
+  }
+  const nesneler = join(kok, '.mihenk', 'nesneler');
+  if (existsSync(nesneler)) {
+    for (const alt of readdirSync(nesneler)) {
+      const ad = join(nesneler, alt);
+      for (const n of readdirSync(ad)) if (!kullanilan.has(n)) unlinkSync(join(ad, n));
+      if (readdirSync(ad).length === 0) rmdirSync(ad);
+    }
+  }
+  return silinecek;
+}
+
 function mevcutOzet(kok: string, g: string): string | null {
   const tam = join(kok, g);
   try {
@@ -90,7 +130,7 @@ function mevcutOzet(kok: string, g: string): string | null {
  */
 export function geriAl(kok: string, isId: number, o: { deneme?: boolean } = {}): GeriAlmaSonucu {
   if (!existsSync(fotografYolu(kok, isId, 'bas'))) {
-    throw new Error(`is ${isId} icin baslangic fotografi yok (geri alma bu isten sonra acildi ya da kapaliydi). Geri alinamaz.`);
+    throw new Error(`is ${isId} icin fotograf yok: geri alma kapaliydi ya da fotograf eskidigi icin silindi (ayar: geri_alma_sakla). Geri alinamaz.`);
   }
   if (!existsSync(fotografYolu(kok, isId, 'son'))) {
     throw new Error(`is ${isId} henuz kapanmadi; geri alma kapanmis is icindir.`);
