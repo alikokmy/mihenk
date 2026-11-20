@@ -63,8 +63,8 @@ Kurulum ayrıca proje klasörüne örnek bir iş listesi (`mihenk-isler.ornek.js
 
 Proje klasöründeki `mihenk-pencere.cmd` dosyasına çift tıklayın. Tarayıcıda beş sekmeli bir pencere açılır: **Proje** (kur, güncelle,
 kaldır), **İş listesi** (işleri yazın, başlatın, ilerlemeyi canlı izleyin, durdurun), **Defter** (geçmiş işler, nedenleri, şüpheler,
-tek tıkla geri alma, rapor), **Ayarlar** (bütün anahtarlar; her birinin altında amacı, sonucu ve varsayılanın ne yaptığı; bu notlar
-en üstteki kutuyla gizlenir) ve **Öneri ve maliyet**. Pencere yalnız bu bilgisayardan açılır (127.0.0.1) ve her açılışta değişen bir
+tek tıkla geri alma, rapor), **Ayarlar** (her ayarın anlaşılır adı, kısa açıklaması, Açık / Kapalı anahtarı ve "Dosyayı aç";
+altında amacı, sonucu ve varsayılanın ne yaptığı; bu notlar en üstteki kutuyla gizlenir) ve **Öneri ve maliyet**. Pencere yalnız bu bilgisayardan açılır (127.0.0.1) ve her açılışta değişen bir
 anahtarla korunur; başka bir web sitesi ona ulaşamaz. Kurulum ve yönetici izni gerekmez. İşiniz bitince siyah komut penceresini kapatın.
 
 ## Özellikleri açıp kapatmak

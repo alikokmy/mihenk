@@ -3,6 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { request } from 'node:http';
+import vm from 'node:vm';
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -86,7 +87,8 @@ test('KABUL ayar: pencereden degisen ayarin sonucu dosyada gorulur; her ayar not
   try {
     const d = (await api('/api/durum')).veri;
     assert.deepEqual(d.ayarlar.map((a: any) => a.ad), AYARLAR.map((a) => a.ad), 'her ayar pencerede');
-    for (const a of d.ayarlar) assert.ok(a.amac && a.sonuc && a.varsayilan_aciklama, a.ad);
+    for (const a of d.ayarlar) assert.ok(a.baslik && a.amac && a.sonuc && a.varsayilan_aciklama, a.ad);
+    assert.equal(d.ayarlar.find((a: any) => a.ad === 'saklama').secenek_adlari.yerel, 'Bu bilgisayarda kaydet');
     assert.equal((await api('/api/ayar', { ad: 'skiller', deger: false })).kod, 200);
     assert.equal(JSON.parse(readFileSync(join(kok, 'mihenk.json'), 'utf8')).skiller, false);
     assert.ok(!existsSync(join(kok, '.claude', 'skills')), 'kurulum ayara esitlendi');
@@ -101,15 +103,54 @@ test('KABUL ayar: pencereden degisen ayarin sonucu dosyada gorulur; her ayar not
   }
 });
 
-test('is listesi: gecersiz liste kaydedilmez (dosya degismez), gecerli liste kaydedilir', async () => {
+test('is listesi formu: alan alan okunur ve yazilir; bos alanli is reddedilir; listedeki oteki ayarlar korunur', async () => {
   const { kok, p, api } = await ortam();
   try {
-    assert.equal((await api('/api/liste', { icerik: '{ bozuk' })).kod, 400);
-    assert.ok(!existsSync(join(kok, 'mihenk-isler.json')));
-    const liste = { isler: [{ tur: 't', soru: 's', beklenti: 'b', yanlissa: 'y', dogrulama_komutu: 'node -v' }] };
-    assert.equal((await api('/api/liste', { icerik: JSON.stringify(liste) })).kod, 200);
-    assert.deepEqual(JSON.parse(readFileSync(join(kok, 'mihenk-isler.json'), 'utf8')), liste);
-    assert.match((await api('/api/liste')).veri.icerik, /dogrulama_komutu/);
+    const ilk = (await api('/api/liste')).veri;
+    assert.equal(ilk.var, false);
+    assert.ok(Array.isArray(ilk.isler) && Array.isArray(ilk.araclar), 'ornek listeden alanlar');
+    assert.equal((await api('/api/liste', { isler: [{ tur: 'ozellik', soru: 'Bir sey yap', beklenti: '', yanlissa: 'y', dogrulama_komutu: 'node -v' }] })).kod, 400);
+    assert.ok(!existsSync(join(kok, 'mihenk-isler.json')), 'gecersiz liste dosyaya yazilmadi');
+    writeFileSync(join(kok, 'mihenk-isler.json'), JSON.stringify({ saklama: 'yok', butce_usd: 2, isler: [] }));
+    const is = { tur: 'ozellik', soru: 'Bir sey yap', beklenti: 'olur', yanlissa: 'olmaz', dogrulama_komutu: 'node -v' };
+    assert.equal((await api('/api/liste', { isler: [is], ajan: 'kilo' })).kod, 200);
+    assert.deepEqual(JSON.parse(readFileSync(join(kok, 'mihenk-isler.json'), 'utf8')), { saklama: 'yok', butce_usd: 2, isler: [is], ajan: 'kilo' });
+    const geri = (await api('/api/liste')).veri;
+    assert.deepEqual(geri.isler, [is]);
+    assert.equal(geri.ajan, 'kilo');
+  } finally {
+    await p.kapat();
+  }
+});
+
+test('port cakismasi: istenen port doluysa baska bir portta acilir', async () => {
+  const kok = mkdtempSync(join(tmpdir(), 'mihenk-port-'));
+  const ilk = await pencereAc(kok, { port: 47790 });
+  try {
+    const ikinci = await pencereAc(kok, { port: ilk.port });
+    try {
+      assert.notEqual(ikinci.port, ilk.port);
+      assert.equal((await istek(ikinci.port, '/api/durum', { anahtar: ikinci.anahtar })).kod, 200);
+    } finally {
+      await ikinci.kapat();
+    }
+  } finally {
+    await ilk.kapat(); // ikinci acilamasa bile ilk kapanir (aksi halde test sureci asili kalir)
+  }
+});
+
+test('dosyayi ac: her ayar kendi dosyasini acar; yol disaridan alinmaz', async () => {
+  const kok = mkdtempSync(join(tmpdir(), 'mihenk-dosya-'));
+  kur(kok, { esitle: true });
+  const acilan: string[] = [];
+  const p = await pencereAc(kok, { dosyaAcici: (y) => acilan.push(y) });
+  try {
+    const ac = async (ayar: string) => JSON.parse((await istek(p.port, '/api/dosya-ac', { anahtar: p.anahtar, yontem: 'POST', govde: { ayar } })).govde);
+    assert.equal((await ac('arac_claude')).acilan, '.mcp.json');
+    assert.equal((await ac('yontem_metni')).acilan, 'AGENTS.md');
+    assert.equal((await ac('kapi')).acilan, '.', 'mihenk.json yokken proje klasoru acilir');
+    assert.equal((await istek(p.port, '/api/dosya-ac', { anahtar: p.anahtar, yontem: 'POST', govde: { ayar: '../../Windows' } })).kod, 400);
+    assert.ok(acilan.every((y) => y.startsWith(kok)), 'yalniz proje icindeki yollar');
   } finally {
     await p.kapat();
   }
@@ -159,6 +200,13 @@ test('sayfa: bes sekme, bilgi notu kutusu; kullanici verisi textContent ile yazi
   for (const id of ['proje', 'liste', 'defter', 'ayarlar', 'oneri']) assert.ok(PENCERE_SAYFASI.includes(`<section id="${id}"`), id);
   assert.ok(PENCERE_SAYFASI.includes("id: 'bilgi-notlari'"));
   assert.ok(!PENCERE_SAYFASI.includes('innerHTML'));
+  assert.ok(!/\bs\.replaceChildren\(/.test(PENCERE_SAYFASI), 'sekmeler null ayiklayan koy() ile cizilir');
+  // Sayfanin betigi sozdizimi bakimindan gecerli (tarayici denemesinde bir kacis hatasi sayfayi bos birakmisti).
+  const betik = /<script>([\s\S]*)<\/script>/.exec(PENCERE_SAYFASI)![1]!;
+  assert.doesNotThrow(() => new vm.Script(betik), 'sayfa betiginde sozdizimi hatasi');
+  // Gunluk kullanici JSON gormez: liste alan alan, oneri cumleyle, ayarlarda kod adi yok.
+  assert.ok(!PENCERE_SAYFASI.includes('JSON.stringify(D') && !PENCERE_SAYFASI.includes('liste-metni') && !PENCERE_SAYFASI.includes('oneri-metni'));
+  assert.ok(!PENCERE_SAYFASI.includes("class: 'ad', metin: a.ad"));
   // "display:flex" gibi kurallar hidden ozniteligini ezmesin (kaldir onayi tiklanmadan gorunuyordu).
   assert.ok(PENCERE_SAYFASI.includes('[hidden]{display:none!important}'));
   // append'e null verilirse sayfaya "null" yazisi duser (tarayici denemesinde goruldu): dogrudan append(...) cagrilari null tasimamali.

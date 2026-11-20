@@ -16,7 +16,7 @@ import { Defter } from './defter.js';
 import { kaldir } from './kaldir.js';
 import { geriAl } from './geri.js';
 import { raporYaz } from './rapor.js';
-import { pencereAc } from './pencere.js';
+import { pencereAc, VARSAYILAN_PORT } from './pencere.js';
 import { spawnSync } from 'node:child_process';
 import { ayarKomutu } from './ayar-cli.js';
 import { ayarlariOku } from './ayar.js';
@@ -240,7 +240,7 @@ try {
   else if (komut === 'geri-al') process.exitCode = geriAlKomutu();
   else if (komut === 'rapor') process.exitCode = raporKomutu();
   else if (komut === 'pencere') {
-    const p = await pencereAc(resolve(secenek('--hedef') ?? process.cwd()), { port: sayi('--port') ?? 0 });
+    const p = await pencereAc(resolve(secenek('--hedef') ?? process.cwd()), { port: sayi('--port') ?? VARSAYILAN_PORT });
     console.log(t('pencere_acildi', { url: p.url }));
     console.log(t('pencere_kapat'));
     if (!gerisi.includes('--acma')) {

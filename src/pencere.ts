@@ -20,9 +20,30 @@ import { kur } from './kur.js';
 import { oneriHesapla, oneriMetni } from './oneri.js';
 import { raporHtml } from './rapor.js';
 import { listeOku } from './surucu.js';
+import { AJANLAR } from './ajanlar.js';
 import { PENCERE_SAYFASI } from './pencere-sayfa.js';
 
 const CLI = join(dirname(fileURLToPath(import.meta.url)), 'cli.js');
+
+/** Pencerenin varsayilan portu; doluysa sonraki 20 port, o da olmazsa isletim sisteminin verdigi bos port denenir. */
+export const VARSAYILAN_PORT = 47700;
+
+/** "Dosyayi ac" dugmesi: her ayarin bulundugu dosya (proje icinde sabit yollar; disaridan yol alinmaz). */
+export function ayarDosyasi(ad: string): string {
+  const arac: Record<string, string> = {
+    arac_claude: '.mcp.json', arac_codex: '.codex/config.toml', arac_gemini: '.gemini/settings.json', arac_antigravity: '.agents/plugins/mihenk/mcp_config.json',
+    arac_opencode: 'opencode.json', arac_kilo: 'kilo.json', arac_cline: '.cline/mcp_settings.json', arac_qwen: '.qwen/settings.json',
+  };
+  if (arac[ad]) return arac[ad]!;
+  if (ad === 'yontem_metni') return 'AGENTS.md';
+  if (ad === 'skiller') return '.claude/skills';
+  return 'mihenk.json';
+}
+
+function isletimSistemiyleAc(yol: string): void {
+  if (process.platform === 'win32') spawn('cmd.exe', ['/d', '/c', 'start', '""', `"${yol}"`], { windowsHide: true, windowsVerbatimArguments: true, detached: true, stdio: 'ignore' }).unref();
+  else spawn(process.platform === 'darwin' ? 'open' : 'xdg-open', [yol], { detached: true, stdio: 'ignore' }).unref();
+}
 
 /** Her CLI yonetim komutunun penceredeki karsiligi (sekme ve API). uyum gelistirici aracidir, pencerede yok. */
 export const PENCERE_ESLEME: Record<string, { sekme: string; api: string } | { yok: string }> = {
@@ -81,7 +102,8 @@ function durum(kok: string) {
     proje: { kok, ad: basename(kok), kurulu: existsSync(join(kok, '.mihenk', 'kurulum.json')), liste_var: existsSync(join(kok, 'mihenk-isler.json')) },
     ozet, baglam: baglamYuku(kok),
     ayarlar: AYARLAR.map((t) => ({
-      ad: t.ad, deger: a[t.ad], varsayilan: t.varsayilan, secenekler: t.secenekler ?? null, sayi: t.sayi ?? null, etki: t.etki,
+      ad: t.ad, baslik: sec(t.baslik), deger: a[t.ad], varsayilan: t.varsayilan, secenekler: t.secenekler ?? null, sayi: t.sayi ?? null, etki: t.etki,
+      secenek_adlari: t.secenek_adlari ? Object.fromEntries(Object.entries(t.secenek_adlari).map(([k, v]) => [k, sec(v)])) : null,
       aciklama: sec(t.aciklama), amac: sec(t.amac), sonuc: sec(t.sonuc), varsayilan_aciklama: sec(t.varsayilan_aciklama),
     })),
   };
@@ -95,7 +117,7 @@ export interface PencereSunucusu {
 }
 
 /** Sunucuyu baslatir (port 0: bos bir port). Yalniz 127.0.0.1'e baglanir. */
-export function pencereAc(hedef: string, o: { port?: number } = {}): Promise<PencereSunucusu> {
+export function pencereAc(hedef: string, o: { port?: number; dosyaAcici?: (yol: string) => void } = {}): Promise<PencereSunucusu> {
   const kok = resolve(hedef);
   const anahtar = randomBytes(24).toString('hex');
   let surucu: { cocuk: ChildProcess; satirlar: string[]; bitti: boolean; cikis: number | null } | null = null;
@@ -163,15 +185,49 @@ export function pencereAc(hedef: string, o: { port?: number } = {}): Promise<Pen
         }
       }
       if (yol === 'GET /api/liste') {
+        // Liste alan alan doner (pencere JSON gostermez). Dosya yoksa ornekten, o da yoksa bos.
         const dosya = join(kok, 'mihenk-isler.json');
         const ornek = join(kok, 'mihenk-isler.ornek.json');
-        return json(res, 200, { var: existsSync(dosya), icerik: existsSync(dosya) ? readFileSync(dosya, 'utf8') : existsSync(ornek) ? readFileSync(ornek, 'utf8') : '{\n  "isler": []\n}\n' });
+        let ham: Record<string, unknown> = {};
+        let bozuk = false;
+        try {
+          ham = existsSync(dosya) ? JSON.parse(readFileSync(dosya, 'utf8')) : existsSync(ornek) ? JSON.parse(readFileSync(ornek, 'utf8')) : {};
+        } catch {
+          bozuk = true;
+        }
+        const alan = (x: Record<string, unknown>, a: string): string => (typeof x[a] === 'string' ? (x[a] as string) : '');
+        const liste = Array.isArray(ham.isler) ? (ham.isler as Record<string, unknown>[]) : [];
+        const araclar = Object.entries(AJANLAR).filter(([, t]) => t.komutBul() !== null).map(([a]) => a);
+        return json(res, 200, {
+          var: existsSync(dosya), bozuk, ajan: typeof ham.ajan === 'string' ? ham.ajan : '', araclar,
+          isler: liste.map((x) => ({ tur: alan(x, 'tur'), soru: alan(x, 'soru'), beklenti: alan(x, 'beklenti'), yanlissa: alan(x, 'yanlissa'), dogrulama_komutu: alan(x, 'dogrulama_komutu') })),
+        });
       }
       if (yol === 'POST /api/liste') {
+        // Formdan gelen isler ve arac; dosyadaki oteki alanlar (saklama, tavanlar...) korunur. Gecersizse dosyaya dokunulmaz.
         const g = await govde(req);
         const dosya = join(kok, 'mihenk-isler.json');
+        let ham: Record<string, unknown> = {};
+        try {
+          if (existsSync(dosya)) ham = JSON.parse(readFileSync(dosya, 'utf8')) as Record<string, unknown>;
+        } catch {
+          ham = {};
+        }
+        delete ham.aciklama;
+        const temiz = (s: unknown): string => String(s ?? '').trim();
+        ham.isler = (Array.isArray(g.isler) ? g.isler as Record<string, unknown>[] : []).map((x) => ({
+          tur: temiz(x.tur) || 'hata_duzeltme', soru: temiz(x.soru), beklenti: temiz(x.beklenti), yanlissa: temiz(x.yanlissa), dogrulama_komutu: temiz(x.dogrulama_komutu),
+        }));
+        const ALANLAR = [['soru', 'p_alan_soru'], ['beklenti', 'p_alan_beklenti'], ['yanlissa', 'p_alan_yanlissa'], ['dogrulama_komutu', 'p_alan_komut']] as const;
+        for (const [n, x] of (ham.isler as Record<string, string>[]).entries()) {
+          for (const [a, k] of ALANLAR) {
+            if (!x[a]) return json(res, 400, { hata: METINLER.p_alan_bos[hangiDil()].replace('{n}', String(n + 1)).replace('{alan}', METINLER[k][hangiDil()]) });
+          }
+        }
+        if (typeof g.ajan === 'string' && g.ajan !== '') ham.ajan = g.ajan;
+        else delete ham.ajan;
         const gecici = `${dosya}.${process.pid}.tmp`;
-        writeFileSync(gecici, String(g.icerik ?? ''));
+        writeFileSync(gecici, JSON.stringify(ham, null, 2) + '\n');
         try {
           listeOku(gecici); // gecersizse hata; asil dosyaya dokunulmaz
         } catch (e) {
@@ -193,6 +249,14 @@ export function pencereAc(hedef: string, o: { port?: number } = {}): Promise<Pen
         surucu = s;
         return json(res, 200, { basladi: true });
       }
+      if (yol === 'POST /api/dosya-ac') {
+        const g = await govde(req);
+        const goreli = ayarDosyasi(ayarTanimi(String(g.ayar)).ad);
+        const tam = join(kok, goreli);
+        const acilan = existsSync(tam) ? tam : kok; // dosya henuz yoksa (ayar varsayilanda) proje klasoru acilir
+        (o.dosyaAcici ?? isletimSistemiyleAc)(acilan);
+        return json(res, 200, { acilan: acilan === kok ? '.' : goreli });
+      }
       if (yol === 'GET /api/sur') return json(res, 200, surucu ? { calisiyor: !surucu.bitti, cikis: surucu.cikis, satirlar: surucu.satirlar } : { calisiyor: false, cikis: null, satirlar: [] });
       if (yol === 'POST /api/sur/durdur') {
         if (surucu && !surucu.bitti) agaciOldur(surucu.cocuk);
@@ -204,9 +268,21 @@ export function pencereAc(hedef: string, o: { port?: number } = {}): Promise<Pen
     }
   });
 
+  // Port cakismasi: istenen port doluysa sonraki 20 port, o da olmazsa isletim sisteminin verdigi bos port.
+  const adaylar = o.port === undefined || o.port === 0 ? [0] : [...Array.from({ length: 21 }, (_, i) => o.port! + i), 0];
+  const dene = (i: number, ok: () => void, red: (e: Error) => void): void => {
+    const hata = (e: NodeJS.ErrnoException): void => {
+      sunucu.off('listening', dinliyor);
+      if (e.code === 'EADDRINUSE' && i + 1 < adaylar.length) dene(i + 1, ok, red);
+      else red(e);
+    };
+    const dinliyor = (): void => { sunucu.off('error', hata); ok(); };
+    sunucu.once('error', hata);
+    sunucu.once('listening', dinliyor);
+    sunucu.listen(adaylar[i], '127.0.0.1');
+  };
   return new Promise((ok, red) => {
-    sunucu.once('error', red);
-    sunucu.listen(o.port ?? 0, '127.0.0.1', () => {
+    dene(0, () => {
       const adres = sunucu.address();
       port = typeof adres === 'object' && adres ? adres.port : 0;
       ok({
@@ -217,6 +293,6 @@ export function pencereAc(hedef: string, o: { port?: number } = {}): Promise<Pen
           sunucu.closeAllConnections?.();
         }),
       });
-    });
+    }, red);
   });
 }

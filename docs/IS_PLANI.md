@@ -758,6 +758,18 @@ tıklanmadan görünüyordu (`display:flex` `hidden`'ı eziyordu); kurulum notu 
 **Sınırlar:** iş listesi düzenleyicisi düz JSON metnidir (alan alan form değil); liste penceredeyken başlatılırsa çıktı pencere
 kapanınca kaybolmaz ama sunucu kapatılırsa sürücü de durur. Ayar notlarının Türkçesi komut satırı için Türkçe harfsiz yazılmıştır.
 
+**Sadeleştirme (kullanıcı geri bildirimi, 2026-11-20):** "Arayüzde günlük kullanıcının anlamayacağı JSON görünümü olmasın." Uygulanan:
+iş listesi JSON metni yerine alan alan form (iş ekle / sil, iş türü seçimi, araç seçimi; boş alanlı iş anlaşılır iletiyle reddedilir,
+listedeki öteki ayarlar korunur); ayarlarda yalnız anlaşılır ad (`AyarTanimi.baslik`), tek cümlelik açıklama ve Açık / Kapalı anahtarı;
+seçimli ayarlarda kod yerine ad (`secenek_adlari`: "Bu bilgisayarda kaydet" gibi); her ayarda "Dosyayı aç" (ayarın bulunduğu proje içi
+dosya, sabit eşleme `ayarDosyasi`; dosya yoksa proje klasörü açılır); öneri sekmesi cümleyle; sürücünün ayrıntılı kaydı kapalı bir
+bölümde. **Port çakışması:** pencere 47700'den açılır; doluysa sonraki 20 port, o da olmazsa işletim sisteminin verdiği boş port.
+Kanıt: `test/pencere.test.ts` 9 test (form, port çakışması, dosyayı aç ve yol dışarıdan alınmaz, sayfada JSON görünümü ve kod adı yok,
+sayfa betiğinin sözdizimi). Tarayıcıda denendi. Yolda bulunanlar: sayfa betiğinde bir kaçış hatası sayfayı boş bırakıyordu (testler
+betiği çalıştırmadığı için görmemişti; artık sözdizimi testi var); sekme çiziminde "null" yazısı (bütün çizimler boş öğe ayıklayan tek
+yardımcıdan geçiyor, testli); port bozma denetiminde test asılı kalıyordu (ilk sunucu hata durumunda da kapanıyor). Sınır: ayar notları
+komut satırı uyumu için Türkçe harfsiz yazılmıştır ve pencerede de öyle görünür.
+
 **Sürüm 0.2:** Aşama 9-16 kapandı; `v0.2.0` etiketi konuldu. Açık kalemler: Cline ve Qwen Code'un gerçek araçla denenmesi, Antigravity
 2.0, gerileme denetiminin test bazına inmesi, iş listesinin form ile düzenlenmesi, 0.3 adayları.
 
