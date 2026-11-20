@@ -81,6 +81,12 @@ export const AYARLAR: readonly AyarTanimi[] = [
     varsayilan_aciklama: 'Uyku aciksa surucu yalniz uyarir.',
   },
   {
+    ad: 'bildirim', aciklama: 'Is listesi bitince ya da durunca Windows bildirimi goster.', varsayilan: true, etki: 'calisma',
+    amac: 'Basinda olmadiginiz uzun bir listenin bittigini ya da durdugunu hemen ogrenmek icin.',
+    sonuc: 'Kapatinca bildirim gelmez; sonucu pencereden ya da mihenk-rapor.cmd ile ogrenirsiniz.',
+    varsayilan_aciklama: 'Liste bitince ekranin kosesinde kisa bir ozet cikar; tiklamaniz gerekmez. Yonetici izni istemez.',
+  },
+  {
     ad: 'geri_alma', aciklama: 'Her isin basinda ve sonunda projenin fotografi alinir; "mihenk geri-al <is>" o isin degisikliklerini geri alir.', varsayilan: true, etki: 'calisma',
     amac: 'Begenmediginiz ya da yarim kalan bir isin degisikliklerini git bilmeden tek komutla geri alabilmek icin.',
     sonuc: 'Kapatinca fotograf alinmaz, geri alma yapilamaz; is acilisi biraz hizlanir ve disk kullanilmaz.',

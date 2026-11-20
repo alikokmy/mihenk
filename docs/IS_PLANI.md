@@ -163,7 +163,7 @@ Sıra ölçütü: önce işin doğruluğu, sonra kullanıcı deneyiminin basitli
 | 11 | **tamam, bir sınırla** (2026-11-20; `npm test`: 156 test geçti; bkz. "Aşama 11 sonucu"). **Gerileme tabanı:** listenin başında projenin bütün test takımı bir kez koşulur; iş kapanırken önceden geçen bir şey kalırsa hüküm "geçti" olmaz | taklit bir ajanın kendi testini geçirip başka testi bozduğu iş "geçti" kapanmıyor |
 | 12 | **tamam** (2026-11-20; `npm test`: 162 test geçti; bkz. "Aşama 12 sonucu"). **Gözetimsiz koşu emniyeti:** liste / iş başına dolar ve süre tavanı; aynı hatayı tekrarlayan denemeyi erken kesme; abonelik limitine takılınca güvenli duraklama ve sonra kaldığı yerden sürme; yıkıcı komut bekçisi (`rm -rf`, `git reset --hard`, `push --force`, proje dışına yazma) kancaya eklenir | tavan aşılınca iş "bütçe" gerekçesiyle kapanıyor ve liste duruyor; döngü taklidi erken kesiliyor; yıkıcı komut taklidi reddediliyor |
 | 13 | **tamam** (2026-11-20; `npm test`: 167 test geçti; bkz. "Aşama 13 sonucu"). **İş başına geri alma:** her işin başında bir geri dönüş noktası (git varsa geçici dal / stash, yoksa gölge kopya); `mihenk geri-al <iş>` o işin değişikliklerini geri alır | "kaldı" kapanan işin değişiklikleri tek komutla geri alınıyor; başka işlerin değişikliklerine dokunulmuyor; git'siz projede de çalışıyor |
-| 14 | **Kullanıcıya ulaşan yüz:** liste bitince ya da durunca Windows bildirimi; çift tıklanan tek sayfalık düz dil raporu (ne yapıldı, ne kaldı ve neden, süre, maliyet) | bildirim yönetici izni istemeden çıkıyor; rapor kodlama terimi bilmeyen birinin okuyacağı dilde ve defterle sayıca uyuşuyor |
+| 14 | **tamam, bir notla** (2026-11-20; `npm test`: 177 test geçti; bkz. "Aşama 14 sonucu"). **Kullanıcıya ulaşan yüz:** liste bitince ya da durunca Windows bildirimi; çift tıklanan tek sayfalık düz dil raporu (ne yapıldı, ne kaldı ve neden, süre, maliyet) | bildirim yönetici izni istemeden çıkıyor; rapor kodlama terimi bilmeyen birinin okuyacağı dilde ve defterle sayıca uyuşuyor |
 | 15 | **İngilizce dil desteği:** kullanıcıya görünen bütün iletiler (komut satırı, menü, sürücü, kapı ve kaldırma çıktıları, rapor) Türkçe ve İngilizce; dil `mihenk.json`'da `dil` ayarıyla seçilir (varsayılan: sistemin dili, bulunamazsa Türkçe). Belgeler (README, AGENTS.md bloğu) iki dilde. Ajana giden skill metinleri zaten İngilizce | her ileti iki dilde var (eksik çeviriyi bulan test); dil değişince aynı komutun çıktısı o dilde; kod tanımlayıcıları ASCII kalıyor |
 | 16 | **Uygulama penceresi:** kodlama bilmeyen kullanıcı için tek pencere, sekmeli: Proje (kurulum, kaldırma, durum), İş listesi (işleri ekle / düzenle / başlat, canlı ilerleme), Defter (geçmiş işler, kanıtlar, şüpheler, geri al), Ayarlar (bütün aç-kapa anahtarları, tavanlar), Öneri ve maliyet. Yönetici izni yok, kurulum yok: çift tıklanan dosya yerel bir sunucu açar ve pencereyi tarayıcıda gösterir (yalnız bu bilgisayardan erişilir) | CLI'de yapılabilen her yönetim işi ve her ayar pencereden de yapılabiliyor (eşleme tablosu ve test); her ayarın altında bilgi notu: amacı, sonuçları ve varsayılan değerin ne yaptığı (`AyarTanimi.amac / sonuc / varsayilan_aciklama`); notlar bir onay kutusuyla gizlenebiliyor, kutu varsayılan açık (`bilgi_notlari`); pencere yalnız 127.0.0.1'e bağlanıyor; uçtan uca tarayıcı testinde bir ayar değiştirilip sonucu dosyada görülüyor; iki dilde |
 
@@ -695,6 +695,25 @@ içerik silindi, en son iş hâlâ geri alınıyor; N=0); `liste_sonunda` uyarı
 kipinde kalınca commit yerelde kaldı ve uzak depoya gitmedi; bilgi notları her ayarda var, listede görünüyor, anahtarla gizleniyor; sayı
 ayarı komut satırından ve menüden değişiyor, sınır dışı değer reddediliyor. Temizlik ve "gönderilmedi" denetimi kasıtlı bozulunca ikisi de
 yakalandı.
+
+## Aşama 14 sonucu (2026-11-20)
+
+- **Rapor** (`src/rapor.ts`, `mihenk rapor [--ac]`, çift tıklanan `mihenk-rapor.cmd`): `.mihenk/rapor.html`, kendi başına çalışan tek sayfa
+  (dış dosya ve betik yok; açık ve koyu temada okunur). Özet cümlesi, iş başına sonuç ("Başarıyla bitti", "Yapılamadı", "Emin
+  olunamadı", "Henüz bitmedi"), düz dilde neden (teknik gerekçeler çevrilir: bütçe, kota, kararsız test, gerileme, döngü, proje dışı
+  değişiklik), şüphe notu, süre, maliyet, araç ve başarısız işte geri alma komutu. Sürücü her liste sonunda raporu yeniler.
+- **Bildirim** (`src/bildirim.ts`): Windows'un bildirim balonu, Windows PowerShell'in kendi uygulama kimliğiyle; yönetici izni yok. Metin
+  ortam değişkeniyle geçer (komut satırına kaçış sorunu yok). Yalnız komut satırından başlatılan sürücü gönderir ve `bildirim` ayarı
+  açıksa; gösterilemezse liste etkilenmez, nedeni yazılır.
+
+**Kanıt:** `test/rapor.test.ts` (4 test): rapordaki sayılar defterin özetiyle birebir uyuşuyor (sayfadaki `data-*` alanları ve özet
+cümlesi); 11 teknik terim ve ham alan adı görünen metinde yok; ajandan gelen `<script>` kaçışlanıyor; sürücü raporu yeniliyor; ayar
+kapalıyken bildirim gönderilmiyor; komut satırı. Kaçışlama ve sayı bağı kasıtlı bozulunca yakalandı (sayı bozması ilk denemede
+yakalanmadı: test verisinde "geçti" ile "kaldı" sayıları eşitti; veri ayrıştırıldı).
+
+**Not:** bildirim bu bilgisayarda Windows'a gönderildi (`gosterildi: true`, hata yok), ama balonun ekranda göründüğü gözlenmedi
+(kullanıcı bilgisayar başında değildi). Odaklanma yardımcısı (rahatsız etmeyin) açıksa Windows balonu göstermez, yalnız bildirim
+merkezine koyar.
 
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 

@@ -71,6 +71,7 @@ açılır ya da kapanır ve hemen uygulanır, yalnız Enter çıkar. (Komut sat�
 | `arac_<araç>` | o araç için defter bağlantısı (ve varsa kapı kancası) | açık |
 | `saklama` | geçen işten sonra: `yerel` commit, `yok`, `yerel_gonder` | `yerel` |
 | `uyanik_tut` | liste yürürken bilgisayarı uyanık tut | kapalı |
+| `bildirim` | liste bitince ya da durunca Windows bildirimi | açık |
 | `bilgi_notlari` | ayarların altında amaç, sonuç ve varsayılan bilgisi | açık |
 | `geri_alma` | her işin başında ve sonunda fotoğraf; `geri-al` bunu kullanır | açık |
 | `geri_alma_sakla` | geri alınabilecek en son kaç işin fotoğrafı saklansın (0: hiçbiri) | 5 |
@@ -87,6 +88,13 @@ saklama kipi göndermediği için, varsayılan kurulumda hiç koşmaz. Uzun list
 
 Kapatılan özelliğin dosyaları kaldırmadaki gibi geri alınır; yeniden açınca dosyalar bayt bayt önceki haline döner. Ayarlar `mihenk.json`'da
 durur ve yalnız varsayılandan farklı olanlar yazılır. Liste, kurulumun her oturumda ajana eklediği yaklaşık metin yükünü de gösterir (token).
+
+## Ne yapıldı: rapor ve bildirim
+
+`mihenk-rapor.cmd` dosyasına çift tıklayınca tarayıcıda tek sayfalık bir rapor açılır: kaç iş başarıyla bitti, hangisi neden yapılamadı,
+ne kadar sürdü, ne kadar tuttu. Kodlama terimi kullanmaz. "Başarıyla bitti", işin kendi denetiminin mihenk tarafından çalıştırılıp
+geçtiği anlamına gelir; yapay zekânın "bitti" demesi sayılmaz. Sürücü her liste sonunda raporu yeniler ve (Windows'ta) ekranın köşesinde
+kısa bir bildirim gösterir; bildirim ayarlardan kapatılabilir (`bildirim`). Rapor `.mihenk/rapor.html` dosyasındadır.
 
 ## Bir işi geri almak
 

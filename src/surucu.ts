@@ -15,6 +15,8 @@ import { agaciOldur, gectiMi, komutuCalistir, komutuCoz } from './dogrulama.js';
 import { Ret } from './hata.js';
 import { depoDurumu, sakla, SAKLAMA_KIPLERI, type SaklamaKipi } from './saklama.js';
 import { ayarlariOku } from './ayar.js';
+import { bildir } from './bildirim.js';
+import { raporYaz } from './rapor.js';
 import { kisalt } from './sinir.js';
 
 export interface ListeIsi {
@@ -51,6 +53,8 @@ export interface IsListesi {
 }
 
 export interface SurucuSecenekleri {
+  /** Liste sonunda Windows bildirimi (ayar "bildirim" de acik olmali). Komut satiri acar; testler kapali birakir. */
+  bildirim?: boolean;
   /** Kota beklemesinin suresi (ms); testler kisaltir. Verilmezse listedeki kota_bekleme_dk. */
   kotaBeklemeMs?: number;
   kok: string;
@@ -637,5 +641,20 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
     olay('liste_durdu', { neden: durdu, kalan });
   }
   yaz(`Liste bitti: ${ozet.gecti} gecti, ${ozet.kaldi} kaldi, ${ozet.belirsiz} belirsiz (toplam ${ozet.toplam}).`);
+  // Duz dilde rapor her liste sonunda yenilenir; bildirim istenirse gonderilir (Asama 14).
+  try {
+    const raporYolu = raporYaz(kok);
+    yaz(`Rapor: ${raporYolu} (mihenk-rapor.cmd ile acilir)`);
+    if (s.bildirim && ayarlariOku(kok).bildirim !== false) {
+      const baslik = durdu ? 'mihenk: liste durdu' : 'mihenk: liste bitti';
+      const metin = `${ozet.toplam} isin ${ozet.gecti} tanesi basariyla bitti, ${ozet.kaldi} tanesi yapilamadi, ${ozet.belirsiz} tanesi belirsiz.` +
+        (durdu ? ` Neden: ${durdu}.` : '') + (gerilemeSonu.startsWith('UYARI') ? ' Gerileme uyarisi var.' : '');
+      const b = bildir(baslik, metin);
+      olay('bildirim', { gosterildi: b.gosterildi, not: b.not });
+      if (!b.gosterildi) yaz(`(${b.not})`);
+    }
+  } catch (e) {
+    yaz(`Rapor yazilamadi: ${e instanceof Error ? e.message : String(e)}`);
+  }
   return { ...(durdu ? { durdu } : {}), isler: sonuclar, ozet };
 }

@@ -15,6 +15,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { Defter } from './defter.js';
 import { kaldir } from './kaldir.js';
 import { geriAl } from './geri.js';
+import { raporYaz } from './rapor.js';
+import { spawnSync } from 'node:child_process';
 import { ayarKomutu } from './ayar-cli.js';
 import { oneriHesapla, oneriMetni, VARSAYILAN_ONERI_AYARLARI, type OneriAyarlari } from './oneri.js';
 
@@ -38,6 +40,7 @@ function kullanim(): void {
   console.error('             [--saklama yok|yerel|yerel_gonder] [--uyanik-tut]');
   console.error('  mihenk uyum [--arac claude,codex,opencode,kilo] [--senaryo duzeltme,tuzak,karar] [--cikis <klasor>]');
   console.error('  mihenk ayar [--hedef <proje klasoru>] [<ayar> ac|kapa|<deger>] [--menu]   ozellikleri acip kapatir');
+  console.error('  mihenk rapor [--hedef <proje klasoru>] [--ac]   duz dilde tek sayfa rapor');
   console.error('  mihenk geri-al <is> [--hedef <proje klasoru>] [--deneme]   bir isin dosya degisikliklerini geri alir');
   console.error('  mihenk kaldir [--hedef <proje klasoru>] [--defter-dahil]   kurulumun ekledigi her seyi geri alir');
   console.error('  mihenk oneri [--hedef <proje klasoru>] [--esik 0.5] [--en-az 5] [--uyum <uyum-raporu.json>] [--json]');
@@ -111,6 +114,22 @@ function oneriKomutu(): number {
   else {
     if (uyum) console.log(`Uyum raporu: ${uyumYolu}`);
     console.log(oneriMetni(turler, ayarlar));
+  }
+  return 0;
+}
+
+/** Duz dilde tek sayfa rapor: .mihenk/rapor.html. --ac ile varsayilan tarayicida acilir. */
+function raporKomutu(): number {
+  const kok = resolve(secenek('--hedef') ?? process.cwd());
+  if (!existsSync(join(kok, '.mihenk', 'defter.db'))) {
+    console.log(`Bu klasorde defter yok (${kok}); rapor edilecek is yok.`);
+    return 0;
+  }
+  const yol = raporYaz(kok);
+  console.log(`Rapor: ${yol}`);
+  if (gerisi.includes('--ac')) {
+    if (process.platform === 'win32') spawnSync('cmd.exe', ['/d', '/c', 'start', '""', `"${yol}"`], { windowsHide: true, windowsVerbatimArguments: true });
+    else spawnSync(process.platform === 'darwin' ? 'open' : 'xdg-open', [yol]);
   }
   return 0;
 }
@@ -202,6 +221,7 @@ async function surKomutu(): Promise<number> {
       ...(denemeSiniri === undefined ? {} : { denemeSiniri }),
       ...(ajanZamanAsimiSn === undefined ? {} : { ajanZamanAsimiSn }),
       ...(baglamEsigi === undefined ? {} : { baglamEsigi }),
+      bildirim: true,
     });
     console.log(`Ayrinti: ${join(kok, '.mihenk', 'defter.jsonl')}`);
     return rapor.ozet.gecti === rapor.ozet.toplam ? 0 : 1;
@@ -217,6 +237,7 @@ try {
   else if (komut === 'oneri') process.exitCode = oneriKomutu();
   else if (komut === 'kaldir') process.exitCode = kaldirKomutu();
   else if (komut === 'geri-al') process.exitCode = geriAlKomutu();
+  else if (komut === 'rapor') process.exitCode = raporKomutu();
   else if (komut === 'ayar') process.exitCode = await ayarKomutu();
   else {
     kullanim();
