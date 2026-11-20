@@ -115,3 +115,29 @@ Bu araçların ortak dili HTTP değil, üç açık biçimdir:
 
 Kanca desteği araçlar arasında en tutarsız alandır; mekanik zorlama araç başına ayrı uyarlama ister ve her araçta mümkün olmayabilir.
 Model çağrısı düzeyinde yönlendirme (vekil sunucu) ayrı bir yoldur ve abonelikle çalışan araçlarda uygulanamayabilir; ilk sürümde yok.
+
+## 6. Sürüm 0.2 için tarama (2026-11-20)
+
+Soru: benzer araçlarda ya da kullanıcı şikâyetlerinde görülen, mihenk'te olmayan ihtiyaçlar. Yöntem: belgeler ve `src/` okundu, yaklaşık
+15 web araması, 4 sayfa doğrudan okundu; araç kurulmadı. Kanıtın çoğu blog, topluluk aracı ve gayriresmî issue aynası; yıldız sayısı verilmedi.
+
+| Aday | Ne | Kanıt | Kimde var | Boyut |
+|---|---|---|---|---|
+| Test kurcalama bekçisi | iş sırasında test / beklenen çıktı değiştiyse, `skip` eklendiyse hüküm şüpheli | ajanın testi zayıflatarak geçmesi ölçülmüş: [EvilGenie](https://arxiv.org/pdf/2511.21654), [dev.to](https://dev.to/jtorchia/ai-agents-that-pass-your-tests-thats-the-problem-2cm) | değerlendirme düzenekleri | küçük |
+| Değişmez / gizli kabul testi | doğrulamanın okuduğu dosyalar ajana kapalı ya da sonradan eklenir | aynı kaynaklar | SWE-bench tarzı değerlendiriciler | orta |
+| Gerileme tabanı | listenin başında bütün testler; önceden geçen bozulursa "geçti" yok | "130 test bozulmuşken bitti dedi" türü raporlar ([ayna](https://claudeissues.com/issue/37818-claude-repeatedly-declares-fixes-done-without-end-to-end-verification-same-bugs)) | Aider `--auto-test` kısmen | orta |
+| Kararsız (flaky) test tespiti | doğrulama tekrar koşulur; değişirse "kararsız" | [dev.to](https://dev.to/byteframe/why-claude-code-autofix-cant-fix-flaky-tests-e6d) | yaygın değil | küçük |
+| Boş kanıt denetimi | doğrulama iş başlamadan geçiyorsa kayıt hiçbir şey kanıtlamaz | spec-kit `/analyze` benzeri; ayrıntı çıkarımdır | spec-kit (kısmen) | küçük |
+| Bütçe tavanı, döngü kesici | dolar / süre tavanı; tekrarlayan hatada erken kes | CodeBurn Guard; "yineleme sınırı maliyeti sınırlamaz" ([stevekinney](https://stevekinney.com/courses/ai-development-setup/running-a-ralph-loop)) | CodeBurn, Claude `--max-budget-usd` | küçük-orta |
+| Kota farkındalığı | abonelik limitinde güvenli duraklama, sonra sürme | [OpenAI forum](https://community.openai.com/t/feature-request-user-configurable-usage-limit-warning-and-safe-pause-for-codex-work/1398420), [claude-code#17431](https://github.com/anthropics/claude-code/issues/17431) | yalnız izleme araçları | orta |
+| Yıkıcı komut bekçisi | `rm -rf`, `reset --hard`, `push --force` kancayla reddedilir | ev dizini silme olayları ([dev.to](https://dev.to/yurukusa/claude-code-deleted-my-entire-home-directory-heres-what-i-built-to-prevent-it-14e)) | dcg, cc-safety-net | küçük |
+| İş başına geri alma | işin değişiklikleri tek komutla geri alınır | [Cline checkpoint](https://docs.cline.bot/core-workflows/checkpoints), Aider `/undo`, Gemini CLI | Cline, Kilo, Aider, Gemini CLI | orta |
+| Bildirim, düz dil raporu | liste bitince bildirim; tek sayfa rapor | çok sayıda topluluk bildirim kancası; CodeBurn web panosu | topluluk kancaları, CodeBurn | küçük |
+| Aç-kapa ve bağlam yükü | özellikler tek tek açılır / kapanır; her oturuma eklenen token gösterilir | superpowers 6 duyurusunda en sık şikâyet token maliyeti ([blog](https://blog.fsck.com/2026/06/15/Superpowers-6/)); ECC "yalın kurulum" tartışması | superpowers 6 | küçük |
+| Temiz kaldırma | kurulumun yaptığı her şey kayıttan geri alınır | doğrudan şikâyet bulunamadı (zayıf kanıt); kullanıcının isteği | yaygın değil | küçük |
+| Mutasyon denetimi | ajanın testleri basit mutantları yakalıyor mu | dolaylı ("hiçbir şeyi ölçmeyen testler") | taranan depolarda yok | büyük |
+| Bağımsız inceleyici | diff başka araca okutulur, not deftere | superpowers, ECC, OpenHands; karşı kanıt: inceleme-düzeltme döngüsü doğru kodu bozabiliyor ([imbue](https://imbue.com/blog/2026-04-29-how-ai-code-review-can-make-correct-code-worse)) | superpowers, ECC, OpenHands | orta |
+| Tepsi uygulaması | durum ve harcama görünür, başlat / durdur | CodeBurn tepsi uygulaması, opcode | CodeBurn, opcode | büyük |
+
+Hüküm: ilk on aday sürüm 0.2'ye alındı (IS_PLANI "Sürüm 0.2"); mutasyon, inceleyici, tepsi uygulaması ve iş bağımlılığı 0.3 adayı.
+Kanıtı zayıf noktalar: kaldırma ve iş bağımlılığı için doğrudan kullanıcı şikâyeti bulunamadı; tek kaynaklı maliyet olay anlatıları sayılmadı.

@@ -128,10 +128,47 @@ Her aşamanın kabul ölçütü işe başlamadan yazılıdır; aşama, ölçüt 
 | 5 | Maliyet ve süre: kullanım verisini işe bağlama | **tamam, bir notla** (2026-11-20; `npm test`: 101 test geçti). Sürücü kipinde kapanan her işte süre ve token dolu; dolar maliyeti araç bildirirse dolu, Codex'te "bilinmiyor" (abonelik, fiyat uydurulmaz). Bağımsız yeniden hesap üç araçta her alanda uyuştu (bkz. "Aşama 5 sonucu"). Ölçüt: kapanan her işte süre ve maliyet dolu; elle hesapla örneklemde uyuşuyor |
 | 6 | Öneri: iş türü × ajan / model başına doğrulanmış başarı, uyum, süre, maliyet; belirsizlikle birlikte | **tamam** (2026-11-20; `npm test`: 109 test geçti). `mihenk oneri`; sentetik defterlerde (biri elle, 50'si rastgele) bilinen en iyi seçenek bulundu; az veride "veri yetersiz". Gerçek veri henüz öneri için az (bkz. "Aşama 6 sonucu"). Ölçüt: sentetik defterde bilinen en iyi seçeneği buluyor; az veride "veri yetersiz" diyor |
 | 7 | Kanca uyarlamaları: etkileşimli oturumda mekanik kapı (önce Claude Code ve Codex) | **tamam** (2026-11-20; `npm test`: 121 test geçti). Gerçek Claude Code ve Codex oturumlarında kanıtsız bitirme ve commit reddedildi; atlama yolları aşağıda (bkz. "Aşama 7 sonucu"). Ölçüt: kanıtsız "bitti" denemesi reddediliyor; atlama yolları belgeli |
-| 8 | Öteki araçlar: Qwen Code, OpenCode, Antigravity, Kilo Code / Cline | araç başına kurulum, duman testi ve uyum raporu |
+| 8 | Öteki araçlar: Qwen Code, OpenCode, Antigravity, Kilo Code / Cline; **temiz kaldırma** (`mihenk kaldir`) | araç başına kurulum, duman testi ve uyum raporu; kaldırma ölçütü aşağıda ("Temiz kaldırma") |
+
+**Sürüm 0.1 = Aşama 1-8.** Aşama 8 kapanınca sürüm 0.1 etiketlenir (`v0.1.0`; etiket yalnız yerelde ve bu gizli depoda). Sonraki
+özellikler sürüm 0.2 olarak aşağıdaki "Sürüm 0.2" tablosundadır.
+
+### Temiz kaldırma (sürüm 0.1'in parçası)
+
+Kullanıcı mihenk'i denedikten sonra vazgeçerse hiçbir şey kaybetmemeli; kaldırma, kurulumun yaptığını eksiksiz ve yalnız onu geri almalı.
+
+- `mihenk kur` yaptığı her değişikliği bir kurulum kaydına yazar (`.mihenk/kurulum.json`): kendi oluşturduğu dosyalar (içerik özetiyle),
+  var olan dosyaya eklediği bloklar (AGENTS.md, `.codex/config.toml`), JSON dosyalarına eklediği anahtarlar ve kancalar, `.gitignore` satırı.
+- `mihenk kaldir` (Windows'ta çift tıklanır `mihenk-kaldir.cmd` da) bu kaydı tersine işler. Kurulumdan sonra kullanıcının değiştirdiği
+  dosyaya dokunmaz, yalnız mihenk'in bloğunu çıkarır; kullanıcının kendi kanca ve ayarlarını korur. Ne yaptığını tek tek yazar.
+- Defter (`.mihenk/`) kullanıcının iş kaydıdır: varsayılan olarak yerinde bırakılır ve bu söylenir; `--defter-dahil` ile o da silinir.
+- **Ölçüt:** önceden AGENTS.md, CLAUDE.md, `.claude/settings.json` (kendi kancasıyla), `.codex/config.toml` ve `.gitignore` bulunan
+  örnek projelerde `kur` ardından `kaldir` sonrası her dosya bayt bayt kurulum öncesiyle aynı (git'siz projede de); kurulumdan sonra
+  kullanıcının eklediği satırlar korunuyor; kaldırma sonrası yeniden kurulum çalışıyor; kaldırma ikinci kez koşunca hiçbir şey değiştirmiyor.
+- Karar: kaldırma 0.1'e alındı (0.2 değil). Karşı görüş: 0.1'in kapsamı büyür. Gerekçe: geri dönüş yolu olmayan bir kurulum İlke 3'e
+  aykırı ve kullanıcının denemeye cesaret etmesinin ön koşulu; iş küçüktür, çünkü kurulum zaten işaretli bloklarla yazıyor.
 
 Sıra gerekçesi: zorlama (1) metinden (2) önce gelir, çünkü metin tek başına yetmiyor. Sürücü (3) hem kesintisiz çalışmanın hem ajanlar arası
 iş dağıtımının taşıyıcısıdır. Maliyet ve öneri (5, 6) asıl ayırt edici parçadır ama 1-4'ün ürettiği veriye muhtaçtır.
+
+## Sürüm 0.2 (taslak; 0.1 bitince sırası yeniden gözden geçirilir)
+
+Kaynak: benzer araçların ve kullanıcı şikâyetlerinin taraması, 2026-11-20 ([ARASTIRMA.md](ARASTIRMA.md) "Sürüm 0.2 için tarama").
+Sıra ölçütü: önce işin doğruluğu, sonra kullanıcı deneyiminin basitliği, sonra maliyet.
+
+| Aşama | İş | Kabul ölçütü |
+|---|---|---|
+| 9 | **Aç-kapa ayarları:** her özellik tek bir anahtarla açılıp kapanır (kapı, araç başına kancalar, skiller, sürücünün saklama kipi, uyanık tutma, bildirim, sonraki aşamaların bekçileri). Ayar `mihenk.json`'da durur; kodlama bilmeyen kullanıcı için çift tıklanan `mihenk-ayarlar.cmd` numaralı bir menü gösterir (aç / kapa, ne işe yaradığı tek cümle). Kurulumun her oturuma eklediği bağlam yükü (token) gösterilir | her anahtar için: kapalıyken etkisi yok, açıkken var (anahtar başına test); aç-kapa-aç dosyaları bayt bayt aynı bırakıyor; menü yönetici izni istemiyor |
+| 10 | **Doğruluk bekçileri:** (a) test kurcalama: iş sırasında test dosyası, beklenen çıktı değiştiyse ya da `skip` eklendiyse hüküm "şüpheli" notu taşır; (b) boş kanıt: doğrulama komutu iş başlamadan zaten geçiyorsa kayıtta not; (c) kararsız test: geçen doğrulama bir kez daha koşulur, sonuç değişirse "belirsiz (kararsız)" | her bekçi için kasıtlı bozuk ajan taklidi yakalanıyor; uyumlu taklit takılmıyor |
+| 11 | **Gerileme tabanı:** listenin başında projenin bütün test takımı bir kez koşulur; iş kapanırken önceden geçen bir şey kalırsa hüküm "geçti" olmaz | taklit bir ajanın kendi testini geçirip başka testi bozduğu iş "geçti" kapanmıyor |
+| 12 | **Gözetimsiz koşu emniyeti:** liste / iş başına dolar ve süre tavanı; aynı hatayı tekrarlayan denemeyi erken kesme; abonelik limitine takılınca güvenli duraklama ve sonra kaldığı yerden sürme; yıkıcı komut bekçisi (`rm -rf`, `git reset --hard`, `push --force`, proje dışına yazma) kancaya eklenir | tavan aşılınca iş "bütçe" gerekçesiyle kapanıyor ve liste duruyor; döngü taklidi erken kesiliyor; yıkıcı komut taklidi reddediliyor |
+| 13 | **İş başına geri alma:** her işin başında bir geri dönüş noktası (git varsa geçici dal / stash, yoksa gölge kopya); `mihenk geri-al <iş>` o işin değişikliklerini geri alır | "kaldı" kapanan işin değişiklikleri tek komutla geri alınıyor; başka işlerin değişikliklerine dokunulmuyor; git'siz projede de çalışıyor |
+| 14 | **Kullanıcıya ulaşan yüz:** liste bitince ya da durunca Windows bildirimi; çift tıklanan tek sayfalık düz dil raporu (ne yapıldı, ne kaldı ve neden, süre, maliyet) | bildirim yönetici izni istemeden çıkıyor; rapor kodlama terimi bilmeyen birinin okuyacağı dilde ve defterle sayıca uyuşuyor |
+
+Sonraya bırakılanlar (0.3 adayları): ajanın yazdığı testlere mutasyon denetimi (değerli ama dile bağlı ve büyük); yalnız not yazan
+bağımsız inceleyici ajan (incelemeyi otomatik düzeltmeye bağlamanın doğru kodu bozabildiğine dair kanıt var; hükmü etkilememeli);
+tepsi uygulaması (14 ihtiyacın çoğunu daha ucuza karşılar); iş listesinde bağımlılık ve büyük işin bölünmesi (doğrudan kullanıcı
+talebi bulunamadı); elle açılan oturumların maliyetinin ölçülmesi (CodeBurn / ccusage bağlantısı; Aşama 5'ten açık).
 
 ## Aşama 1 sonucu (2026-11-19)
 
