@@ -3,6 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { request } from 'node:http';
+import { spawnSync } from 'node:child_process';
 import vm from 'node:vm';
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -169,7 +170,15 @@ test('defter sekmesi: isler listelenir, pencereden geri alinir; rapor acilir; on
     const isler = (await api('/api/isler')).veri;
     assert.equal(isler[0].id, is.id);
     assert.equal(isler[0].geri_alinabilir, true);
-    const g = await api('/api/geri-al', { id: is.id });
+    // KABUL (Asama 18): onaysiz geri alma reddedilir ve dosya degismez; onizleme komut satirinin --deneme ciktisiyla ayni.
+    assert.equal((await api('/api/geri-al', { id: is.id })).kod, 400);
+    assert.equal(readFileSync(join(kok, 'a.txt'), 'utf8'), 'sonra');
+    const onizleme = (await api('/api/geri-al', { id: is.id, deneme: true })).veri;
+    assert.equal(readFileSync(join(kok, 'a.txt'), 'utf8'), 'sonra', 'onizleme dosyaya dokunmaz');
+    const cli = spawnSync(process.execPath, ['--disable-warning=ExperimentalWarning', join(KAYNAK, '..', 'dist', 'src', 'cli.js'), 'geri-al', String(is.id), '--deneme', '--hedef', kok], { encoding: 'utf8' });
+    for (const y of onizleme.geri_yuklenen) assert.ok(cli.stdout.includes(y), `${y} komut satiri onizlemesinde de var`);
+    assert.deepEqual(onizleme.geri_yuklenen, ['a.txt']);
+    const g = await api('/api/geri-al', { id: is.id, onay: true });
     assert.equal(g.kod, 200);
     assert.equal(readFileSync(join(kok, 'a.txt'), 'utf8'), 'once');
     const rapor = await istek(p.port, '/rapor', { anahtar: p.anahtar });

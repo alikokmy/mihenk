@@ -171,8 +171,11 @@ export function pencereAc(hedef: string, o: { port?: number; dosyaAcici?: (yol: 
         return json(res, 200, kaldir(kok, { defterDahil: g.defter_dahil === true }));
       }
       if (yol === 'POST /api/geri-al') {
+        // Once onizleme (deneme), sonra acik onay: onaysiz istek dosyaya dokunmaz (Asama 18).
         const g = await govde(req);
-        return json(res, 200, geriAl(kok, Number(g.id), { deneme: g.deneme === true }));
+        if (g.deneme === true) return json(res, 200, geriAl(kok, Number(g.id), { deneme: true }));
+        if (g.onay !== true) return json(res, 400, { hata: METINLER.p_onay_gerekli_geri[hangiDil()] });
+        return json(res, 200, geriAl(kok, Number(g.id)));
       }
       if (yol === 'GET /api/oneri') {
         if (!existsSync(join(kok, '.mihenk', 'defter.db'))) return json(res, 200, { metin: METINLER.p_defter_bos[hangiDil()], turler: [] });

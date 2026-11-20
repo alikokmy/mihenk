@@ -179,7 +179,7 @@ Kaynak: superpowers ve CodeBurn depolarının README, sürüm notları, belgeler
 | Aşama | İş | Kabul ölçütü |
 |---|---|---|
 | 17 | **tamam** (2026-11-20; `npm test`: 198 test geçti; bkz. "Aşama 17 sonucu"). **Kurulum sağlamlığı:** kanca komutu `node`'u mutlak yolla çağırır (proje köküne konan sahte `node.cmd` çalışmaz; superpowers'ta benzer bir açık çıktı); her `SKILL.md` boyut sınırının altında (Claude Code sıkıştırmada uzun skill'i kesiyor) | proje köküne konan `node.cmd` / `node.bat` kanca koşunca çalışmıyor (işaret dosyası oluşmuyor); `PATH`'te node yokken kanca yine çalışıyor; 20.000 baytı aşan skill testi kaldırıyor; kaldırma sonrası bayt bayt eşitlik korunuyor |
-| 18 | **Geri almada önizleme ve onay** (pencerede bugün tek tık): önce hangi dosyaların geri alınacağı gösterilir, sonra onaylanır | onaysız `/api/geri-al` 400 veriyor ve dosya değişmiyor; önizleme listesi `--deneme` çıktısıyla aynı; tarayıcıda denendi |
+| 18 | **tamam** (2026-11-20; `npm test`: 199 test geçti; bkz. "Aşama 18 sonucu"). **Geri almada önizleme ve onay** (pencerede bugün tek tık): önce hangi dosyaların geri alınacağı gösterilir, sonra onaylanır | onaysız `/api/geri-al` 400 veriyor ve dosya değişmiyor; önizleme listesi `--deneme` çıktısıyla aynı; tarayıcıda denendi |
 | 19 | **Doktor ve hata paketi:** `mihenk doktor` ve pencerede "Durum": Node sürümü, bulunan araçlar, MCP kaydı okunuyor mu, kancanın son çalışması, Codex kanca onayı, uyku; her satırda TAMAM ya da SORUN ve ne yapılacağı. Kişisel yol ve anahtarları temizlenmiş tek dosyalık hata paketi | kasıtlı bozulan dört kurulum (MCP kaydı silinmiş, kanca silinmiş, ajan yok, eski Node) doğru satırda SORUN veriyor; temiz kurulumda hepsi TAMAM; komut dosya yazmıyor; pakette ev dizini yolu ve gizli anahtar deseni yok |
 | 20 | **Başlatmadan önce liste denetimi ("yapıcı denetimi"):** her işte eksik alan, izinsiz program, projede tanımlı olmayan betik (ör. `npm test` yok) için anlaşılır uyarı; pencerede ve komut satırında | tanımsız betik ve izinsiz program içeren liste başlamadan iş başına uyarı veriyor; temiz liste uyarısız |
 | 21 | **Öneride geri alma sinyali:** sonradan geri alınan "geçti" işi öneri hesabında başarı sayılmaz; rapor onu "geri alındı" gösterir | sentetik defterde geri alınan işin seçeneğinin başarı oranı düşüyor, öteki işler etkilenmiyor |
@@ -810,6 +810,20 @@ Kurulum `node`'u her yerde mutlak yolla yazar: MCP kayıtları, Claude Code (kab
 
 **Bulgu:** bu oturumun ortamında `NoDefaultCurrentDirectoryInExePath=1` tanımlı ve cmd'nin çalışılan klasörde aramasını kapatıyordu;
 saldırı testi ilk seferde bu yüzden kaldı. Kullanıcının çift tıkladığı normal ortamda bu değişken yoktur; testler onu kaldırarak koşar.
+
+## Aşama 18 sonucu (2026-11-20)
+
+Pencerede geri alma iki adımlı: "Değişikliklerini geri al" önce önizleme gösterir (eski haline dönecek / silinecek / geri gelecek /
+dokunulmayacak dosyalar), "Eminim, geri al" uygular, "Vazgeç" kapatır. API onaysız geri almayı reddeder (400).
+
+**Kanıt:** `test/pencere.test.ts`: onaysız istek 400 ve dosya değişmiyor; önizleme dosyaya dokunmuyor ve komut satırının `--deneme`
+çıktısıyla aynı dosyayı gösteriyor; onaydan sonra dosya geri dönüyor. Tarayıcıda uçtan uca: önizleme "Eski haline dönecek: selam.txt"
+gösterdi, dosya değişmedi; onaydan sonra dosya eski metne döndü.
+
+**Bulunan hata (tarayıcı denemesi):** başka bir git deposunun yok sayılan alt klasöründeki projede fotoğraf boş çıkıyordu: git üst depoyu
+bulup klasörü "yok sayılan" diye boş döndürüyordu; geri alma "değişiklik yok" diyordu. Aynı açık kapının değişiklik denetiminde de
+vardı (kapı o projede hiçbir değişikliği görmezdi). Artık git'e yalnız proje klasörü deponun kökü ise sorulur (`gitKokuMu`), değilse
+dosyalar doğrudan taranır. Test: `test/geri.test.ts` iç içe depo testi; düzeltme kaldırılınca kaldı.
 
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 

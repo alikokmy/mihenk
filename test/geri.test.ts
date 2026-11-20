@@ -146,3 +146,21 @@ test('KABUL fotograf temizligi: yalniz son N kapanan isin fotografi kalir, kulla
   assert.deepEqual(readdirSync(join(kok2, '.mihenk', 'geri')).filter((x) => /-(bas|son)\.json$/.test(x)), []);
   assert.throws(() => geriAl(kok2, id), /fotograf yok/);
 });
+
+test('baska bir git deposunun yok sayilan alt klasorundeki proje: fotograf dosyalari gorur, geri alma ve kapi calisir', async () => {
+  const ust = mkdtempSync(join(tmpdir(), 'mihenk-ust-depo-'));
+  for (const a of [['init', '-q'], ['config', 'user.email', 'u@ornek.test'], ['config', 'user.name', 'u']]) spawnSync('git', a, { cwd: ust });
+  writeFileSync(join(ust, '.gitignore'), 'ic/\n');
+  const kok = join(ust, 'ic');
+  mkdirSync(kok);
+  writeFileSync(join(kok, 'kalir.js'), 'process.exit(1);');
+  writeFileSync(join(kok, 'a.txt'), 'once');
+  const { kapiDenetimi, oturumBaslat, degisenDosyalar } = await import('../src/kapi.js');
+  oturumBaslat(kok, 'o', 'claude', new Date(Date.now() - 1000));
+  const id = await is(kok, () => writeFileSync(join(kok, 'a.txt'), 'sonra'));
+  assert.deepEqual(degisenDosyalar(kok, 0).map((d) => d.yol).sort(), ['a.txt', 'kalir.js'], 'kapi da dosyalari goruyor');
+  const s = geriAl(kok, id);
+  assert.deepEqual(s.geri_yuklenen, ['a.txt']);
+  assert.equal(readFileSync(join(kok, 'a.txt'), 'utf8'), 'once');
+  assert.equal(typeof kapiDenetimi, 'function');
+});

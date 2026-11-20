@@ -3,7 +3,7 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 /** Test ya da beklenen cikti sayilan yollar (dil bagimsiz yaygin adlandirmalar). */
 export const TEST_DOSYASI =
@@ -21,9 +21,22 @@ export interface TestDosyasi {
 }
 
 /** Projenin dosyalari (git deposunda git'in yok saydiklari haric; degilse nokta ile baslayanlar ve node_modules haric). */
+/**
+ * Proje klasoru bir git deposunun KOKU mu? Degilse (or. baska bir deponun yok sayilan alt klasoru) git'e sorulmaz: git ust depoyu
+ * bulur ve klasoru "yok sayilan" diye bos dondurur (pencere denemesinde geri almayi bos birakmisti).
+ */
+export function gitKokuMu(kok: string): boolean {
+  const r = spawnSync('git', ['rev-parse', '--show-toplevel'], { cwd: kok, encoding: 'utf8', windowsHide: true });
+  if (r.status !== 0 || typeof r.stdout !== 'string') return false;
+  const norm = (y: string): string => resolve(y.trim()).toLowerCase();
+  return norm(r.stdout) === norm(kok);
+}
+
 export function projeDosyalari(kok: string): string[] {
-  const git = spawnSync('git', ['ls-files', '-z', '-c', '-o', '--exclude-standard'], { cwd: kok, encoding: 'utf8', windowsHide: true, maxBuffer: 64 * 1024 * 1024 });
-  if (git.status === 0 && typeof git.stdout === 'string') return git.stdout.split('\0').filter(Boolean);
+  const git = gitKokuMu(kok)
+    ? spawnSync('git', ['ls-files', '-z', '-c', '-o', '--exclude-standard'], { cwd: kok, encoding: 'utf8', windowsHide: true, maxBuffer: 64 * 1024 * 1024 })
+    : null;
+  if (git && git.status === 0 && typeof git.stdout === 'string') return git.stdout.split('\0').filter(Boolean);
   const sonuc: string[] = [];
   const yuru = (d: string): void => {
     for (const g of readdirSync(join(kok, d), { withFileTypes: true })) {

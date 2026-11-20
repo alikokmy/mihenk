@@ -8,6 +8,7 @@ import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statS
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { ayarlariOku } from './ayar.js';
+import { gitKokuMu } from './bekci.js';
 
 /** Ust uste bu kadar engelden sonra kapi gecit verir ve bunu kaydeder (sonsuz donguyu onler). */
 export const ENGEL_SINIRI = 3;
@@ -73,8 +74,9 @@ export function oturumBaslat(kok: string, oturum: string, arac: string, simdi = 
 /** Proje dosyalarindan `sonraMs`'den sonra degisenler (en yenisi basta). Git deposunda git'in yok saydiklari sayilmaz. */
 export function degisenDosyalar(kok: string, sonraMs: number): Array<{ yol: string; ms: number }> {
   let adaylar: string[];
-  const git = spawnSync('git', ['ls-files', '-z', '-c', '-o', '--exclude-standard'], { cwd: kok, encoding: 'utf8', windowsHide: true, maxBuffer: 64 * 1024 * 1024 });
-  if (git.status === 0 && typeof git.stdout === 'string') {
+  // Git'e yalniz proje klasoru deponun koku ise sorulur (bekci.gitKokuMu).
+  const git = gitKokuMu(kok) ? spawnSync('git', ['ls-files', '-z', '-c', '-o', '--exclude-standard'], { cwd: kok, encoding: 'utf8', windowsHide: true, maxBuffer: 64 * 1024 * 1024 }) : null;
+  if (git && git.status === 0 && typeof git.stdout === 'string') {
     adaylar = git.stdout.split('\0').filter(Boolean).slice(0, TARAMA_SINIRI);
   } else {
     adaylar = [];

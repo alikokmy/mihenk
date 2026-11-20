@@ -124,16 +124,30 @@ async function defterCiz() {
   const s = $('defter'); const isler = await api('/api/isler');
   const ust = el('div', { class: 'satir' }, el('a', { class: 'dugme ikincil', href: '/rapor?anahtar=' + ANAHTAR, target: '_blank', metin: m('p_rapor_ac') }), el('button', { class: 'dugme ikincil', metin: m('p_yenile'), onclick: () => defterCiz() }));
   const kartlar = isler.length === 0 ? [el('div', { class: 'kart' }, el('p', { metin: m('p_defter_bos') }))] : isler.map((i) => {
-    const sonuc = el('div', { class: 'ileti' });
+    const sonuc = el('div', { class: 'ileti' }); const onizleme = el('div', { class: 'onizleme', 'data-onizleme': String(i.id) });
     return el('div', { class: 'kart is ' + i.durum, 'data-is': String(i.id) },
       el('div', {}, el('span', { class: 'rozet', metin: m('p_durum_' + i.durum) }), document.createTextNode(' · ' + m('p_is', { id: i.id }))),
       el('p', { metin: i.soru }),
       i.supheler.length ? el('p', { class: 'soluk', metin: m('p_supheli') + ': ' + i.supheler.join('; ') }) : null,
       el('p', { class: 'soluk', metin: m('p_ayrinti', { sure: i.sure_sn === null ? '-' : i.sure_sn + ' s', maliyet: i.maliyet_usd === null ? m('p_bilinmiyor') : i.maliyet_usd + ' USD', ajan: i.ajan, deneme: i.deneme }) }),
-      i.geri_alinabilir ? el('button', { class: 'dugme ikincil', 'data-eylem': 'geri-al', metin: m('p_geri_al'), onclick: async () => { try { const r = await api('/api/geri-al', { id: i.id }); ileti(sonuc, m('p_geri_alindi', { sayi: r.geri_yuklenen.length + r.silinen.length + r.geri_getirilen.length, cakisan: r.cakisan.length })); } catch (e) { ileti(sonuc, m('p_hata', { hata: e.message }), true); } } }) : null,
-      sonuc);
+      i.geri_alinabilir ? el('button', { class: 'dugme ikincil', 'data-eylem': 'geri-al', metin: m('p_geri_al'), onclick: () => onizle(i.id, onizleme, sonuc) }) : null,
+      onizleme, sonuc);
   });
   koy(s, el('div', { class: 'kart' }, ust), ...kartlar);
+}
+
+// Geri alma iki adimlidir: once neyin olacagi gosterilir (deneme), sonra "Eminim" ile uygulanir.
+async function onizle(id, yer, sonuc) {
+  try {
+    const r = await api('/api/geri-al', { id, deneme: true });
+    const satirlar = [...r.geri_yuklenen.map((y) => m('p_onizleme_yuklenecek', { yol: y })), ...r.silinen.map((y) => m('p_onizleme_silinecek', { yol: y })),
+      ...r.geri_getirilen.map((y) => m('p_onizleme_gelecek', { yol: y })), ...r.cakisan.map((y) => m('p_onizleme_cakisan', { yol: y }))];
+    const degisecek = r.geri_yuklenen.length + r.silinen.length + r.geri_getirilen.length;
+    koy(yer, el('p', { metin: degisecek ? m('p_onizleme_baslik') : m('p_onizleme_bos') }), el('ul', {}, ...satirlar.map((s) => el('li', { metin: s }))),
+      degisecek ? el('div', { class: 'satir' },
+        el('button', { class: 'dugme tehlike', 'data-eylem': 'geri-al-eminim', metin: m('p_eminim_geri'), onclick: async () => { try { const s = await api('/api/geri-al', { id, onay: true }); koy(yer); ileti(sonuc, m('p_geri_alindi', { sayi: s.geri_yuklenen.length + s.silinen.length + s.geri_getirilen.length, cakisan: s.cakisan.length })); } catch (e) { ileti(sonuc, m('p_hata', { hata: e.message }), true); } } }),
+        el('button', { class: 'dugme ikincil', metin: m('p_vazgec'), onclick: () => koy(yer) })) : null);
+  } catch (e) { ileti(sonuc, m('p_hata', { hata: e.message }), true); }
 }
 
 function ayarlarCiz() {
