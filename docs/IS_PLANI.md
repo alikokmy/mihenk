@@ -125,7 +125,7 @@ Her aşamanın kabul ölçütü işe başlamadan yazılıdır; aşama, ölçüt 
 | 2 | Yöntem paketi: 6-8 skill + AGENTS.md; her kuralın denetimiyle birlikte; Claude Code, Codex, Gemini CLI | **tamam, bir notla** (2026-11-20). Aynı küçük görevde Claude Code, Codex CLI ve OpenCode defteri kullandı (üçünde betik hükmü GEÇTİ); Antigravity 4 ölçütten 3'ünü sağladı. Not: skill listesi Claude Code'da tam, Codex ve OpenCode'da dolaylı gösterildi (bkz. "Aşama 2"). Gemini CLI yerine OpenCode denendi: Gemini CLI ücretsiz katmanda kaldırılmış |
 | 3 | Sürücü: iş listesi döngüsü, taze oturum, devir notu, bağlam bütçesi, zaman aşımı, isteğe bağlı uyanık tutma, saklama kipi (yok / yerel / yerel + gönder); önce iki araç | **tamam, iki açık kalemle** (2026-11-20; `npm test`: 84 test geçti; gerçek araçlarla on işlik liste 10/10). Açık: uyanık tutmanın uykuyu gerçekten önlediği gözlenmedi; oturum devri yalnız sahte ajanla gösterildi (bkz. "Aşama 3 sonucu"). Ölçüt: on küçük işlik liste kullanıcı girişi olmadan bitiyor; yapay büyük çıktılı işte oturum devri çalışıyor; takılan iş listeyi durdurmuyor; uyku açıkken sürücü uyarıyor, uyanık tutma seçeneği açıkken sistem uykuya geçmiyor; kurulum ve sürücü tek adımda (çift tıklama ya da tek komut) başlıyor, yönetici izni istemiyor; uzak deposu olmayan bir projede liste "yerel" kipte bitiyor ve hiçbir kipte kullanıcı açmadan push yapılmıyor; ajan yalnız kendisine verilen proje dizininde çalışıyor (başka dizinde değişiklik yaparsa iş geçersiz sayılıyor) |
 | 4 | Uyum testleri: senaryolar ve tuzak görevler; araç başına uyum oranı raporu | **tamam** (2026-11-20; `npm test`: 94 test geçti). Claude Code, Codex ve OpenCode için rapor üretildi; sekiz bozuk ajan taklidinin hepsi bozduğu yerden yakalandı (bkz. "Aşama 4 sonucu"). Ölçüt: her desteklenen araç için rapor üretiliyor; kasıtlı bozuk ajan taklidi yakalanıyor |
-| 5 | Maliyet ve süre: kullanım verisini işe bağlama | kapanan her işte süre ve maliyet dolu; elle hesapla örneklemde uyuşuyor |
+| 5 | Maliyet ve süre: kullanım verisini işe bağlama | **tamam, bir notla** (2026-11-20; `npm test`: 101 test geçti). Sürücü kipinde kapanan her işte süre ve token dolu; dolar maliyeti araç bildirirse dolu, Codex'te "bilinmiyor" (abonelik, fiyat uydurulmaz). Bağımsız yeniden hesap üç araçta her alanda uyuştu (bkz. "Aşama 5 sonucu"). Ölçüt: kapanan her işte süre ve maliyet dolu; elle hesapla örneklemde uyuşuyor |
 | 6 | Öneri: iş türü × ajan / model başına doğrulanmış başarı, uyum, süre, maliyet; belirsizlikle birlikte | sentetik defterde bilinen en iyi seçeneği buluyor; az veride "veri yetersiz" diyor |
 | 7 | Kanca uyarlamaları: etkileşimli oturumda mekanik kapı (önce Claude Code ve Codex) | kanıtsız "bitti" denemesi reddediliyor; atlama yolları belgeli |
 | 8 | Öteki araçlar: Qwen Code, OpenCode, Antigravity, Kilo Code / Cline | araç başına kurulum, duman testi ve uyum raporu |
@@ -356,6 +356,37 @@ taklitlerin her biri tam bozduğu kontrolden yakalanıyor; uyumlu ve temkinli ta
 | Beyanın biçimi | ajandan son satıra `SONUC: BASARILI` ya da `SONUC: BASARISIZ` yazması istenir | Bu istek ajanın davranışını biraz değiştirir; serbest metinden çıkarım daha doğal ama güvenilmez olurdu |
 | Temkinli beyan | başarıyı "başarısız" diye bildirmek uyum sayılır, nota düşer | Kullanıcı başarılı işi kaybetmiş gibi görür; ayrı bir "temkin oranı" olarak da raporlanabilir |
 | Senaryolar ürüne gömülü | üç senaryo `src/uyum.ts` içinde | Kullanıcının kendi projesine benzer senaryo ekleyebilmesi daha değerli olurdu |
+
+## Aşama 5 sonucu (2026-11-20)
+
+Sürücü her ajan oturumunun kullanımını (süre, girdi / önbellek / çıktı token, maliyet ve kaynağı) deftere işe bağlı yazar: devir ve
+başarısız denemeler dahil. Rapor iş ve defter düzeyinde toplam verir; JSONL dökümüne girer. Kullanım kaydı değiştirilemez (tetikleyici).
+
+Araçların bildirdiği (gerçek çıktılardan doğrulandı, `test/ajanlar.test.ts` bu satırlarla sınar):
+
+| Araç | Token | Dolar maliyeti | Model adı |
+|---|---|---|---|
+| Claude Code | oturum toplamı (`result` olayı) | bildiriyor (`total_cost_usd`) | bildiriyor |
+| OpenCode | adım başına (`step_finish`) | adım başına (ücretsiz modelde 0) | çıktıda yok |
+| Codex | tur sonunda (`turn.completed`) | bildirmiyor (ChatGPT aboneliği) | çıktıda yok |
+
+**Kanıt:** `kabul_asama3 --ajanlar codex,opencode,claude --is-sayisi 3` (sürücü, üç araç, 3/3 geçti, 1,8 dakika), ardından
+`kabul_asama5 --proje <aynı klasör>`. İkinci betik defterdeki sayıları ajanların ham çıktısından, `src/ajanlar.ts`'e dokunmayan düz metin
+okumayla yeniden hesapladı: üç işte süre, dört token alanı ve maliyet birebir uyuştu (Claude Code 0,164334 USD; OpenCode 0 USD; Codex
+maliyet "bilinmiyor", token 35616 / 72448 / 965). Fiyat tablosu hesabı ayrıca elle hesaplanmış bir değerle sınanıyor (`test/defter.test.ts`).
+
+**Not ve sınırlar:**
+- "Maliyet dolu" şöyle yorumlandı: değer ya da açık "bilinmiyor". Codex abonelikle çalıştığı için iş başına dolar yoktur; mihenk fiyat
+  uydurmaz. Kullanıcı isterse `mihenk.json` içine `fiyatlar` yazar (milyon token başına USD); o zaman hesaplanır ve kaynağı
+  "fiyat_tablosu" yazılır. Karşı görüş: abonelikte de bir "eşdeğer maliyet" göstermek öneri hesabı için karşılaştırmayı kolaylaştırırdı;
+  ama gerçek olmayan bir sayı kullanıcıyı yanıltır.
+- Yalnız sürücü kipi ölçülür. Kullanıcının elle açtığı etkileşimli oturumlar için plan CodeBurn / ccusage çıktısını öngörüyordu; bu
+  aşamada bağlanmadı (ölçüt sürücü kipinde sağlanıyor). Sonraki iş olarak açık.
+- Codex'in `input_tokens` değerinin önbellekten okunanı içerdiği gözlemden çıkarıldı (133632 önbellek, 143225 girdi), belgeden
+  doğrulanmadı. OpenCode'un `input` değerinin önbelleği içermediği de doğrulanmadı. Dolar maliyetine etkisi yok (araç kendisi
+  bildiriyor ya da bilinmiyor); yalnız token toplamlarına etkisi olabilir.
+- Codex ve OpenCode model adını çıktıda vermiyor; bu işlerde model "bilinmiyor" kalıyor. Öneri hesabı (Aşama 6) model düzeyine
+  inemeyecek, araç düzeyinde kalacak; kullanıcı modeli listede yazarsa o kullanılabilir.
 
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 
