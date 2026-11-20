@@ -23,6 +23,7 @@ import { listeOku } from './surucu.js';
 import { AJANLAR } from './ajanlar.js';
 import { PENCERE_SAYFASI } from './pencere-sayfa.js';
 import { doktor, hataPaketi } from './doktor.js';
+import { listeDenetimi } from './liste-denetim.js';
 
 const CLI = join(dirname(fileURLToPath(import.meta.url)), 'cli.js');
 
@@ -210,8 +211,10 @@ export function pencereAc(hedef: string, o: { port?: number; dosyaAcici?: (yol: 
         const alan = (x: Record<string, unknown>, a: string): string => (typeof x[a] === 'string' ? (x[a] as string) : '');
         const liste = Array.isArray(ham.isler) ? (ham.isler as Record<string, unknown>[]) : [];
         const araclar = Object.entries(AJANLAR).filter(([, t]) => t.komutBul() !== null).map(([a]) => a);
+        const listeIsleri = liste.map((x) => ({ soru: alan(x, 'soru'), beklenti: alan(x, 'beklenti'), yanlissa: alan(x, 'yanlissa'), dogrulama_komutu: alan(x, 'dogrulama_komutu'), ...(alan(x, 'ajan') ? { ajan: alan(x, 'ajan') } : {}) }));
         return json(res, 200, {
           var: existsSync(dosya), bozuk, ajan: typeof ham.ajan === 'string' ? ham.ajan : '', araclar,
+          uyarilar: existsSync(dosya) ? listeDenetimi(kok, listeIsleri, { ...(typeof ham.ajan === 'string' ? { ajan: ham.ajan } : {}) }) : [],
           isler: liste.map((x) => ({ tur: alan(x, 'tur'), soru: alan(x, 'soru'), beklenti: alan(x, 'beklenti'), yanlissa: alan(x, 'yanlissa'), dogrulama_komutu: alan(x, 'dogrulama_komutu') })),
         });
       }
@@ -247,7 +250,7 @@ export function pencereAc(hedef: string, o: { port?: number; dosyaAcici?: (yol: 
           return json(res, 400, { hata: e instanceof Error ? e.message : String(e) });
         }
         renameSync(gecici, dosya);
-        return json(res, 200, { tamam: true });
+        return json(res, 200, { tamam: true, uyarilar: listeDenetimi(kok, ham.isler as Record<string, string>[], { ...(typeof ham.ajan === 'string' ? { ajan: ham.ajan as string } : {}) }) });
       }
       if (yol === 'POST /api/sur') {
         if (surucu && !surucu.bitti) return json(res, 409, { hata: METINLER.p_zaten_calisiyor[hangiDil()] });

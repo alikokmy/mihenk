@@ -18,6 +18,7 @@ import { geriAl } from './geri.js';
 import { raporYaz } from './rapor.js';
 import { pencereAc, VARSAYILAN_PORT } from './pencere.js';
 import { doktor, doktorMetni, hataPaketi } from './doktor.js';
+import { listeDenetimi, listeDenetimMetni } from './liste-denetim.js';
 import { spawnSync } from 'node:child_process';
 import { ayarKomutu } from './ayar-cli.js';
 import { ayarlariOku } from './ayar.js';
@@ -201,6 +202,9 @@ async function surKomutu(): Promise<number> {
     throw new Error(t('sur_ajan_yok'));
   }
 
+  // Baslamadan once liste denetimi (Asama 20): engellemez, uyarir.
+  const uyarilar = listeDenetimi(kok, liste.isler, { ajan });
+  if (uyarilar.length) console.log(listeDenetimMetni(uyarilar));
   const uyanikIstendi = uyanikIstendiMi({ bayrak: gerisi.includes('--uyanik-tut'), liste, kok });
   let durdur = (): void => undefined;
   if (uyanikIstendi) {

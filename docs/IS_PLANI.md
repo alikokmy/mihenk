@@ -181,7 +181,7 @@ Kaynak: superpowers ve CodeBurn depolarının README, sürüm notları, belgeler
 | 17 | **tamam** (2026-11-20; `npm test`: 198 test geçti; bkz. "Aşama 17 sonucu"). **Kurulum sağlamlığı:** kanca komutu `node`'u mutlak yolla çağırır (proje köküne konan sahte `node.cmd` çalışmaz; superpowers'ta benzer bir açık çıktı); her `SKILL.md` boyut sınırının altında (Claude Code sıkıştırmada uzun skill'i kesiyor) | proje köküne konan `node.cmd` / `node.bat` kanca koşunca çalışmıyor (işaret dosyası oluşmuyor); `PATH`'te node yokken kanca yine çalışıyor; 20.000 baytı aşan skill testi kaldırıyor; kaldırma sonrası bayt bayt eşitlik korunuyor |
 | 18 | **tamam** (2026-11-20; `npm test`: 199 test geçti; bkz. "Aşama 18 sonucu"). **Geri almada önizleme ve onay** (pencerede bugün tek tık): önce hangi dosyaların geri alınacağı gösterilir, sonra onaylanır | onaysız `/api/geri-al` 400 veriyor ve dosya değişmiyor; önizleme listesi `--deneme` çıktısıyla aynı; tarayıcıda denendi |
 | 19 | **tamam** (2026-11-20; `npm test`: 204 test geçti; bkz. "Aşama 19 sonucu"). **Doktor ve hata paketi:** `mihenk doktor` ve pencerede "Durum": Node sürümü, bulunan araçlar, MCP kaydı okunuyor mu, kancanın son çalışması, Codex kanca onayı, uyku; her satırda TAMAM ya da SORUN ve ne yapılacağı. Kişisel yol ve anahtarları temizlenmiş tek dosyalık hata paketi | kasıtlı bozulan dört kurulum (MCP kaydı silinmiş, kanca silinmiş, ajan yok, eski Node) doğru satırda SORUN veriyor; temiz kurulumda hepsi TAMAM; komut dosya yazmıyor; pakette ev dizini yolu ve gizli anahtar deseni yok |
-| 20 | **Başlatmadan önce liste denetimi ("yapıcı denetimi"):** her işte eksik alan, izinsiz program, projede tanımlı olmayan betik (ör. `npm test` yok) için anlaşılır uyarı; pencerede ve komut satırında | tanımsız betik ve izinsiz program içeren liste başlamadan iş başına uyarı veriyor; temiz liste uyarısız |
+| 20 | **tamam** (2026-11-20; `npm test`: 208 test geçti; bkz. "Aşama 20 sonucu"). **Başlatmadan önce liste denetimi ("yapıcı denetimi"):** her işte eksik alan, izinsiz program, projede tanımlı olmayan betik (ör. `npm test` yok) için anlaşılır uyarı; pencerede ve komut satırında | tanımsız betik ve izinsiz program içeren liste başlamadan iş başına uyarı veriyor; temiz liste uyarısız |
 | 21 | **Öneride geri alma sinyali:** sonradan geri alınan "geçti" işi öneri hesabında başarı sayılmaz; rapor onu "geri alındı" gösterir | sentetik defterde geri alınan işin seçeneğinin başarı oranı düşüyor, öteki işler etkilenmiyor |
 | 22 | **Elle açılan oturumda döngü bekçisi (Claude Code, Codex):** aynı araç çağrısı ya da aynı başarısız komut tekrarlanınca önce uyarır, sonra durdurur; tek oturumluk izin | taklit kanca girdisiyle eşikte uyarı, sonra ret; farklı çağrı sayacı sıfırlıyor; anahtar kapalıyken etkisiz; bekçi kendisi bozulursa geçit verip kaydediyor |
 | 23 | **Elle açılan oturumların maliyeti** (Aşama 5'ten açık): CodeBurn ya da ccusage çıktısı zaman aralığıyla işe bağlanır; README'ye kullanıcı sorularıyla "Sorular" bölümü | kayıtlı CodeBurn çıktısı örneğinde iş aralığına düşen maliyet elle hesapla uyuşuyor; araç yoksa "bilinmiyor"; her soru bir komuta ya da sekmeye bağlı |
@@ -839,6 +839,17 @@ boş klasörde dosya yazıyor; komut satırı çıkış kodu; hata paketinde ev 
 kaldırılınca test kaldı. Pencerede "Durum" tarayıcıda görüldü.
 
 **Sınır:** Codex'in kanca onayı Codex'in kullanıcı ayarında tutulur ve okunmaz; doktor yalnız "kanca hiç çalışmamış" ipucunu verir.
+
+## Aşama 20 sonucu (2026-11-20)
+
+`src/liste-denetim.ts`: her iş için boş alan; çalıştırılamayan denetim komutu (izin listesi dışı program, kabuk karakteri);
+`package.json`'da olmayan npm / pnpm / yarn betiği (Aşama 4'te Codex'in yazdığı tanımsız `npm test`); olmayan `node` / `python` betik
+dosyası; bu bilgisayarda bulunmayan araç. Engellemez: `mihenk sur` başlarken uyarıları yazar; pencerede iş listesi açılınca ve
+kaydedilince "Başlamadan önce dikkat" kutusunda görünür.
+
+**Kanıt:** `test/liste-denetim.test.ts` (4 test): temiz liste uyarısız; yedi sorunlu iş, her biri kendi numarası ve anlaşılır metniyle;
+`package.json` yokken ve yarn / pnpm betiklerinde uyarı; pencere kaydetme ve açma yanıtında uyarılar. Betik denetimi kasıtlı
+kaldırılınca 3 test kaldı.
 
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 

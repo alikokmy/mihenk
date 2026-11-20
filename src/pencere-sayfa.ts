@@ -115,7 +115,10 @@ async function listeCiz() {
     });
   }
   isleriCiz();
-  const kaydet = async () => { await api('/api/liste', { isler, ajan: ajan.value }); };
+  const uyariKutusu = el('div', { class: 'kart uyari', id: 'liste-uyarilari' });
+  const uyarilariGoster = (u) => { koy(uyariKutusu, ...(u && u.length ? [el('b', { metin: m('p_uyarilar') }), el('ul', {}, ...u.map((x) => el('li', { metin: m('p_uyari_satir', { n: x.is, uyari: x.uyari }) })))] : [])); uyariKutusu.hidden = !(u && u.length); };
+  uyarilariGoster(l.uyarilar);
+  const kaydet = async () => { const r = await api('/api/liste', { isler, ajan: ajan.value }); uyarilariGoster(r.uyarilar); };
   const baslat = el('button', { class: 'dugme', 'data-eylem': 'baslat', metin: m('p_baslat') });
   const durdur = el('button', { class: 'dugme ikincil', metin: m('p_durdur'), onclick: () => api('/api/sur/durdur', {}) });
   baslat.onclick = async () => { try { await kaydet(); await api('/api/sur', {}); izle(); } catch (e) { ileti(sonuc, m('p_hata', { hata: e.message }), true); } };
@@ -123,6 +126,7 @@ async function listeCiz() {
   async function izle() { clearInterval(izleyici); const tur = async () => { const d = await api('/api/sur'); kayit.textContent = d.satirlar.join('\\n'); baslat.disabled = d.calisiyor; ileti(sonuc, d.calisiyor ? m('p_calisiyor') : d.satirlar.length ? m('p_bitti') : ''); if (!d.calisiyor) clearInterval(izleyici); }; await tur(); izleyici = setInterval(tur, 1500); }
   koy(s, 
     l.bozuk ? el('div', { class: 'kart uyari', metin: m('p_liste_bozuk') }) : null,
+    uyariKutusu,
     el('div', { class: 'kart' }, el('p', { class: 'soluk', metin: m('p_liste_aciklama') }), el('label', { class: 'alan' }, el('span', { metin: m('p_ajan_sec') }), ajan)),
     kutu,
     el('div', { class: 'kart' }, el('div', { class: 'satir' }, el('button', { class: 'dugme ikincil', metin: m('p_is_ekle'), onclick: () => { isler.push({ tur: 'hata_duzeltme', soru: '', beklenti: '', yanlissa: '', dogrulama_komutu: '' }); isleriCiz(); } }),
