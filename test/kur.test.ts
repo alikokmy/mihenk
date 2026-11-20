@@ -1,5 +1,5 @@
 // Kurulum komutunun denetimleri: paket bir projeye dogru yerlere kurulur, var olani ezmez, ikinci kosuda degisiklik yapmaz.
-// Yollar araclarin kendi belgelerinden dogrulandi (2026-11-19; kaynaklar IS_PLANI.md "Asama 2").
+// Yollar araclarin kendi belgelerinden dogrulandi (2026-11-19; kaynaklar docs/SONUCLAR.md "Asama 2").
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';

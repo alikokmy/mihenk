@@ -54,7 +54,7 @@ node <mihenk yolu>/dist/src/cli.js kur --hedef <proje dizini>
 Bu komut yedi skill'i (`.claude/skills` ve `.agents/skills`), her oturuma giren kısa kural bloğunu (`AGENTS.md`) ve defterin MCP kaydını
 (Claude Code, Codex CLI, Gemini CLI, Antigravity ve OpenCode için ayrı ayar dosyaları) yazar. Var olan içeriği ezmez; yalnız bir araç için
 `--arac claude` gibi daraltılır. Skill'lerin hangisinin testle zorlanan kural, hangisinin öneri olduğu
-[docs/IS_PLANI.md](docs/IS_PLANI.md) "Aşama 2" tablosundadır.
+[docs/SONUCLAR.md](docs/SONUCLAR.md) "Aşama 2" tablosundadır.
 
 Kurulum ayrıca proje klasörüne örnek bir iş listesi (`mihenk-isler.ornek.json`) ve Windows'ta çift tıklanır bir başlatma dosyası
 (`mihenk-baslat.cmd`) bırakır.

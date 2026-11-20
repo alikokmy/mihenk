@@ -1,6 +1,6 @@
 # mihenk: bu depoda çalışan ajanlar için
 
-- **Plan tek kaynaktır:** [docs/IS_PLANI.md](docs/IS_PLANI.md). Aşama sırası ve kabul ölçütleri oradadır; iş, sıradaki açık aşamadan sürer.
+- **Plan tek kaynaktır:** [docs/IS_PLANI.md](docs/IS_PLANI.md). Aşama sırası ve kabul ölçütleri oradadır; iş, sıradaki açık aşamadan sürer. Aşama sonuçları (kanıt, olumsuz notlar) [docs/SONUCLAR.md](docs/SONUCLAR.md) dosyasına yazılır.
 - **Dayanak:** [docs/ARASTIRMA.md](docs/ARASTIRMA.md). Hazır bir depo işi görüyorsa yeniden yazılmaz, bağımlılık olarak kullanılır.
 - **Dil:** belgeler, commit mesajları ve kullanıcıyla konuşma Türkçe. Kod tanımlayıcıları ASCII.
 - **Üç ilke bağlayıcıdır** (IS_PLANI "İlke 1", "İlke 2", "İlke 3"): her kuralın bir denetimi olur; işin sürekliliğini ajan değil sürücü

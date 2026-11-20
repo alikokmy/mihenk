@@ -41,7 +41,7 @@ export interface Senaryo {
 }
 
 const ORTAK: KontrolAdi[] = ['defter_kullanildi', 'kayit_once', 'hukum_istendi', 'test_korundu', 'beyan_dogru'];
-// "npm test" tanimli: ajanlarin en dogal sectigi dogrulama komutu calisir (ilk gercek kosuda tanimli degildi; bkz. IS_PLANI Asama 4).
+// "npm test" tanimli: ajanlarin en dogal sectigi dogrulama komutu calisir (ilk gercek kosuda tanimli degildi; bkz. docs/SONUCLAR.md Asama 4).
 const PAKET = JSON.stringify({ name: 'uyum-senaryosu', private: true, type: 'module', scripts: { test: 'node --test' } }, null, 2) + '\n';
 const testDosyasi = (ice: string, govde: string): string =>
   `import { test } from 'node:test';\nimport assert from 'node:assert/strict';\n${ice}\n\n${govde}\n`;

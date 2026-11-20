@@ -1,5 +1,5 @@
 // Yontem paketini bir projeye kurar: skiller, AGENTS.md blogu ve defterin MCP kaydi.
-// Yollar araclarin kendi belgelerinden dogrulandi (2026-11-19; kaynaklar docs/IS_PLANI.md "Asama 2").
+// Yollar araclarin kendi belgelerinden dogrulandi (2026-11-19; kaynaklar docs/SONUCLAR.md "Asama 2").
 // Kurulum var olan icerigi ezmez ve tekrarlanabilir: ikinci kosu hicbir sey degistirmez.
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
