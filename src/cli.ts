@@ -20,6 +20,7 @@ import { pencereAc, VARSAYILAN_PORT } from './pencere.js';
 import { doktor, doktorMetni, hataPaketi } from './doktor.js';
 import { elOturumlariniTopla } from './el-oturumu.js';
 import { paketle } from './paketle.js';
+import { TERCIH_SIRASI } from './kesif.js';
 import { listeDenetimi, listeDenetimMetni } from './liste-denetim.js';
 import { spawnSync } from 'node:child_process';
 import { ayarKomutu } from './ayar-cli.js';
@@ -110,6 +111,7 @@ function oneriKomutu(): number {
   }
   const ayarlar: Partial<OneriAyarlari> = {
     esik: oran('--esik', VARSAYILAN_ONERI_AYARLARI.esik), enAz: sayi('--en-az') ?? VARSAYILAN_ONERI_AYARLARI.enAz,
+    kurulu: Object.keys(AJANLAR).filter((a) => AJANLAR[a]!.komutBul() != null),
     ...(uyum ? { uyum } : {}),
   };
   const defter = new Defter(kok);
@@ -195,7 +197,7 @@ async function surKomutu(): Promise<number> {
   }
 
   // Ajan secimi: kullanici her zaman elle secebilir; secmediyse kurulu olan ilk arac (once ucretsiz calisabilenler).
-  const bulunan = ['codex', 'opencode', 'kilo', 'claude'].filter((ad) => AJANLAR[ad]?.komutBul() != null);
+  const bulunan = TERCIH_SIRASI.filter((ad) => AJANLAR[ad]?.komutBul() != null);
   const ajan = secenek('--ajan') ?? liste.ajan ?? bulunan[0];
   console.log(t('sur_proje', { kok }));
   console.log(t('sur_liste', { yol: listeYolu, sayi: liste.isler.length }));

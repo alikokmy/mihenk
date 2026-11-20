@@ -6,7 +6,7 @@ list without you watching, and measures which agent to give which kind of job. (
 The name: *mihenk taşı* is the touchstone used to test gold. The project tests two things: whether the work is actually correct,
 and how good each agent is at each kind of job (correctness, time, cost).
 
-**Status: version 0.4** (offline package and OpenCode with a local model). Double-click `mihenk-pencere.cmd` to manage everything from one window in your browser (project, job list, ledger, settings with notes, recommendation and cost); it only listens on 127.0.0.1 and is protected by a key that changes every time. Work plan (Turkish): [docs/IS_PLANI.md](docs/IS_PLANI.md).
+**Status: version 0.5** (the recommendation accounts for difficulty, quota share on subscriptions and exploration; 0.4: offline package and OpenCode with a local model). Double-click `mihenk-pencere.cmd` to manage everything from one window in your browser (project, job list, ledger, settings with notes, recommendation and cost); it only listens on 127.0.0.1 and is protected by a key that changes every time. Work plan (Turkish): [docs/IS_PLANI.md](docs/IS_PLANI.md).
 
 Messages are in Turkish by default. To switch to English: `mihenk ayar dil en` (or `sistem` to follow the computer's language).
 Texts sent to the agent (skills, ledger and gate messages) are in English or Turkish regardless of this setting.

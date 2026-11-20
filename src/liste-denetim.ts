@@ -78,7 +78,7 @@ export function listeDenetimi(kok: string, isler: DenetlenecekIs[], o: { ajan?: 
     }
     if (is.zorluk !== undefined && !['kolay', 'orta', 'zor'].includes(is.zorluk)) ekle(t('l_zorluk', { deger: String(is.zorluk) }));
     const ajan = is.ajan ?? o.ajan;
-    if (ajan) {
+    if (ajan && ajan !== 'oneri') {
       if (!bulunanAjan.has(ajan)) bulunanAjan.set(ajan, ajanlar[ajan]?.komutBul() != null);
       if (!bulunanAjan.get(ajan)) ekle(t('l_ajan_yok', { ajan }));
     }

@@ -17,6 +17,7 @@ import { depoDurumu, sakla, SAKLAMA_KIPLERI, type SaklamaKipi } from './saklama.
 import { ayarlariOku } from './ayar.js';
 import { t } from './dil.js';
 import { bildir } from './bildirim.js';
+import { ajanSec, ONERI_AJANI, VARSAYILAN_KESIF_ORANI } from './kesif.js';
 import { raporYaz } from './rapor.js';
 import { kisalt } from './sinir.js';
 
@@ -410,6 +411,8 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
     const bekciler = ayarlariOku(kok);
     const listeBasi = Date.now();
     const listeIsleri: number[] = [];
+    let kurulu: string[] | undefined;
+    const oneriSirasi = new Map<string, number>();
     const maliyet = (idler: number[]): number => idler.reduce((t, id) => t + (defter.rapor({ is_id: id }).is?.kullanim_toplami.maliyet_usd ?? 0), 0);
     if (s.liste.butce_usd !== undefined || s.liste.is_butce_usd !== undefined) {
       yaz(t('dolar_tavani_notu'));
@@ -424,8 +427,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
       if (durdu) break;
       const kimlik = isKimligi(listeIsi);
       const baslik = `[${sira + 1}/${s.liste.isler.length}]`;
-      const ajanAdi = listeIsi.ajan ?? s.liste.ajan ?? s.varsayilanAjan ?? '';
-      const tanim = ajanlar[ajanAdi];
+      let ajanAdi = listeIsi.ajan ?? s.liste.ajan ?? s.varsayilanAjan ?? '';
 
       let is = defter.etiketleBul(kimlik);
       if (is && is.durum !== 'acik') {
@@ -433,6 +435,24 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
         sonuclar.push({ kimlik, is_id: is.id, durum: is.durum, atlandi: true, deneme: 0, devir: 0, gecersiz: false, not: 'onceki kosuda kapanmis' });
         continue;
       }
+      // Kesif (Asama 29): "oneri" yazilmissa ajani oneri secer; her adimda bir is verisi en az kurulu ajana gider.
+      let secimNotu = '';
+      if (ajanAdi === ONERI_AJANI) {
+        if (is) ajanAdi = is.ajan; // yarida kalmis is: onceki kosuda secilen ajanla surer
+        else {
+          kurulu ??= Object.keys(ajanlar).filter((a) => ajanlar[a]!.komutBul() != null);
+          const sira = (oneriSirasi.get(listeIsi.tur) ?? 0) + 1;
+          oneriSirasi.set(listeIsi.tur, sira);
+          const secim = ajanSec({
+            tur: listeIsi.tur, olcumler: defter.olcumler(), kurulu, sira,
+            kesifOrani: typeof bekciler.kesif_orani === 'number' ? bekciler.kesif_orani : VARSAYILAN_KESIF_ORANI,
+          });
+          ajanAdi = secim?.ajan ?? '';
+          secimNotu = secim?.neden ?? t('k_kurulu_yok');
+          olay('ajan_secimi', { kimlik, tur: listeIsi.tur, ajan: ajanAdi, kesif: secim?.kesif ?? false, sira });
+        }
+      }
+      const tanim = ajanlar[ajanAdi];
       if (!is) {
         try {
           is = defter.isAc({
@@ -452,6 +472,10 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
         }
       }
       const isId = is.id;
+      if (secimNotu) {
+        surucuNotu(isId, secimNotu);
+        yaz(t('satir_not', { baslik, not: secimNotu }));
+      }
       yaz(t('is_basliyor', { baslik, id: isId, ajan: ajanAdi || t('yok'), soru: tekSatir(listeIsi.soru, 70) }));
       // Bos kanit bekcisi: ajan baslamadan dogrulama bir kez kosulur (yeniden baslatilan listede ikinci kez kosulmaz).
       const baslangic = await defter.baslangicDogrula(isId);

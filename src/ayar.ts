@@ -134,6 +134,13 @@ export const AYARLAR: readonly AyarTanimi[] = [
     varsayilan_aciklama: { tr: 'Son 5 kapanan isin fotografi tutulur, daha eskiler ve artik kullanilmayan icerikler silinir.', en: 'Snapshots of the last 5 closed jobs are kept; older ones and unused contents are deleted.' },
   },
   {
+    ad: 'kesif_orani', baslik: { tr: 'Keşif oranı (yüzde)', en: 'Exploration rate (percent)' }, varsayilan: 20, sayi: { en_az: 0, en_cok: 100 }, etki: 'calisma',
+    aciklama: { tr: 'Is listesinde "ajan": "oneri" secildiyse islerin yuzde kaci, bu is turunde verisi az olan kurulu ajana verilsin.', en: 'If the job list uses "ajan": "oneri", what percent of jobs go to the installed agent with the least data for that job type.' },
+    amac: { tr: 'Hep ayni ajan kullanilirsa otekiler hakkinda veri birikmez; oneri yalniz denenmis ajanlar arasindan secer.', en: 'If the same agent is always used, no data builds up on the others; the recommendation can only choose among agents that were tried.' },
+    sonuc: { tr: 'Oran buyudukce oneri daha hizli olgunlasir ama daha cok is onerilmeyen ajana gider. 0: kesif yok, hep oneri.', en: 'A higher rate makes the recommendation mature faster but sends more jobs to non-recommended agents. 0: no exploration, always the recommendation.' },
+    varsayilan_aciklama: { tr: 'Her 5 isten biri, bu turde 5 isten az verisi olan kurulu ajana gider; verisi yeterli ajan kalmayinca kesif durur.', en: 'One job in 5 goes to an installed agent with fewer than 5 jobs of that type; exploration stops once every agent has enough data.' },
+  },
+  {
     ad: 'bekci_test_kurcalama', baslik: { tr: 'Testlerle oynanmasını işaretle', en: 'Flag tampering with tests' }, varsayilan: true, etki: 'calisma',
     aciklama: { tr: 'Is sirasinda var olan testler degistiyse, silindiyse ya da test atlandiysa "gecti" hukmune supheli notu duser.', en: 'If existing tests were changed, deleted or skipped during the job, a pass is marked suspicious.' },
     amac: { tr: 'Ajanin isi duzeltmek yerine testi zayiflatarak "gecti" almasini gorunur kilmak icin.', en: 'To expose an agent that passes by weakening the test instead of fixing the work.' },

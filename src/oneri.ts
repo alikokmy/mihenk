@@ -25,6 +25,8 @@ export interface OneriAyarlari {
   uyumEsigi: number;
   /** Arac adina gore uyum testi sonucu (mihenk uyum). */
   uyum?: Record<string, UyumOlcumu>;
+  /** Kurulu ajan araclari: verisi az olanlar "kesif onerisi" olarak yazilir (Asama 29). */
+  kurulu?: readonly string[];
 }
 
 export const VARSAYILAN_ONERI_AYARLARI: OneriAyarlari = { esik: 0.5, enAz: 5, uyumEsigi: 0.8 };
@@ -93,6 +95,8 @@ export interface TurOnerisi {
   oneri: { ajan: string; model: string; gerekce: string } | null;
   /** Oneri yoksa neden; varsa ek notlar. */
   not: string;
+  /** Kurulu ama bu turde verisi az (en az is sayisindan az) ajanlar, azdan coga (Asama 29). */
+  kesif: Array<{ ajan: string; is_sayisi: number }>;
 }
 
 /** Basari oraninin %95 Wilson araligi. Hic veri yoksa [0, 1]. */
@@ -181,6 +185,10 @@ function secenekHesapla(isler: IsOlcumu[], a: OneriAyarlari, ref: ZorlukReferans
 export function oneriHesapla(olcumler: IsOlcumu[], ayarlar: Partial<OneriAyarlari> = {}): TurOnerisi[] {
   const a: OneriAyarlari = { ...VARSAYILAN_ONERI_AYARLARI, ...ayarlar };
   const turler = [...new Set(olcumler.map((o) => o.tur))].sort();
+  const kesifListesi = (kendi: IsOlcumu[]): TurOnerisi['kesif'] => (a.kurulu ?? [])
+    .map((ajan) => ({ ajan, is_sayisi: kendi.filter((o) => o.ajan === ajan).length }))
+    .filter((x) => x.is_sayisi < a.enAz)
+    .sort((x, y) => x.is_sayisi - y.is_sayisi || x.ajan.localeCompare(y.ajan));
   return turler.map((tur) => {
     const kendi = olcumler.filter((o) => o.tur === tur);
     const gruplar = new Map<string, IsOlcumu[]>();
@@ -198,7 +206,7 @@ export function oneriHesapla(olcumler: IsOlcumu[], ayarlar: Partial<OneriAyarlar
       const not = secenekler.every((s) => s.durum === 'veri_yetersiz')
         ? ileti('o_veri_yetersiz', { en_cok: enCok, en_az: a.enAz })
         : ileti('o_esik_yok', { esik: Math.round(a.esik * 100), uyum: secenekler.some((s) => s.durum === 'uyum_dusuk') ? ileti('o_esik_uyum') : '' });
-      return { tur, is_sayisi: kendi.length, secenekler, oneri: null, not };
+      return { tur, is_sayisi: kendi.length, secenekler, oneri: null, not, kesif: kesifListesi(kendi) };
     }
 
     const bilinen = adaylar.filter((s) => s.karsilastirma !== null);
@@ -230,7 +238,7 @@ export function oneriHesapla(olcumler: IsOlcumu[], ayarlar: Partial<OneriAyarlar
     const karsilastirilamayan = adaylar.filter((s) => s.karsilastirma === null && s !== secilen).map(ad);
     if (karsilastirilamayan.length > 0 && bilinen.length > 0) notlar.push(ileti('o_karsilastirilamadi', { liste: karsilastirilamayan.join(', ') }));
     const not = notlar.join(' ');
-    return { tur, is_sayisi: kendi.length, secenekler, oneri: { ajan: secilen.ajan, model: secilen.model, gerekce }, not };
+    return { tur, is_sayisi: kendi.length, secenekler, oneri: { ajan: secilen.ajan, model: secilen.model, gerekce }, not, kesif: kesifListesi(kendi) };
   });
 }
 
@@ -250,6 +258,7 @@ export function oneriMetni(turler: TurOnerisi[], ayarlar: Partial<OneriAyarlari>
     satirlar.push('', ileti('o_tur', { tur: t.tur, sayi: t.is_sayisi }));
     satirlar.push(t.oneri ? ileti('o_oneri', { ajan: t.oneri.ajan, model: t.oneri.model, gerekce: t.oneri.gerekce }) : ileti('o_oneri_yok', { not: t.not }));
     if (t.oneri && t.not) satirlar.push(ileti('o_not', { not: t.not }));
+    if (t.kesif.length > 0) satirlar.push(ileti('o_kesif', { liste: t.kesif.map((k) => `${k.ajan} (${k.is_sayisi})`).join(', ') }));
     for (const s of t.secenekler) {
       const maliyet = s.maliyet_metni;
       const sure = s.basari_basina_sure_sn !== null ? ileti('o_sure', { sn: s.basari_basina_sure_sn }) : ileti('o_sure_yok');

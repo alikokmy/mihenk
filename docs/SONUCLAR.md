@@ -830,7 +830,8 @@ yazılır. Geçersiz değer defterde reddedilir; liste denetimi bunun için uyar
 **Kanıt:** `test/zorluk.test.ts`.
 
 - Kolay işleri alan ajanın ham oranı %90, öteki ajanınki %85.
-- Düzeltilmiş oranlar elle hesapla aynı çıktı: 0,725 ve 0,91. Öneri ham hesapta öteki ajana dönüyor.
+- Düzeltilmiş oranlar elle hesapla aynı çıktı: 0,725 ve 0,91. Öneri düzeltilmiş hesapta zor işte iyi olan ajanı seçti. Ham hesapta
+  (elle, test etmeden) kolay işleri alan ajan başarı başına daha ucuz görünürdü: 0,111'e karşı 0,118 USD.
 - Çıktıdaki "zorluk: kolay 18, zor 2; başarı ham %90, düzeltilmiş %73" satırı da denendi.
 - Zorluk yazılmamış defterde düzeltme alanları boş, maliyet eskisiyle aynı (0,111111), öneri değişmiyor; eski öneri ve kota testleri
   aynen geçiyor.
@@ -841,3 +842,37 @@ Ters denetim: düzeltme kapatılınca ve ölçümden zorluk düşürülünce kab
 Artık okuma ve yazmada korunuyor. `test/pencere.test.ts` bunu gidiş-dönüşte denetliyor.
 
 **Denenmedi:** pencerenin yeni seçim kutusu tarayıcıda açılıp bakılmadı. Sayfa betiğinin sözdizimi testi ve API testleri geçti.
+## Aşama 29 sonucu (2026-11-20)
+
+**Seçim kuralı.** `src/kesif.ts` içinde saf bir işlev: `ajanSec`. İş listesinde ajan `"oneri"` ise sürücü her yeni işte bu
+işlevi çağırır:
+
+- O türde öneri sırasının her `round(100 / kesif_orani)`. işi, bu türde verisi en az olan kurulu ajana verilir. Verisi az demek,
+  öneri için gereken 5 işten az demek.
+- Öteki işler önerilen ajana gider. Öneri yoksa ya da önerilen ajan kurulu değilse yedek ajan kullanılır: kullanıcının varsayılanı,
+  yoksa `codex, opencode, kilo, claude` tercih sırası.
+- Yarıda kalmış iş, önceki koşuda seçilen ajanla sürer.
+
+**Seçimin izi.** Seçimin nedeni deftere sürücü notu olarak yazılır ("ajan seçimi: KEŞİF / ÖNERİ / öneri yok"), çıktıda gösterilir ve
+`surucu.jsonl` dosyasına `ajan_secimi` olayı olarak düşer.
+
+**Arayüzler.**
+
+- Öneri metni ve pencere, kurulu ama az denenen ajanları "Keşif önerisi" diye yazar.
+- Ayarlara `kesif_orani` eklendi: varsayılan 20, açıklama notlarıyla.
+- Pencerenin ajan seçimine "Öneriye göre" eklendi. Liste denetimi `"oneri"` için "araç bulunamadı" uyarısı vermiyor.
+
+**Kanıt:** `test/kesif.test.ts`, iki sahte ajan ve 10 işlik liste ile.
+
+- Varsayılan %20'de ajan sırası şöyle çıktı: `a a a a b a a a a b`. 5. işin notu "b_yeni bu türde yalnız 0 işte denendi",
+  10. işin notu "1 işte denendi". 1. iş "öneri yok", 7. iş "ÖNERİ - a_usta". Her işin bir seçim notu var.
+- İkinci koşu aynı sırayı verdi.
+- `kesif_orani` 0 iken on işin onu da `a_usta`'ya gitti.
+- Önerilen ajan kurulu değilken tercih sırasına düştü; kurulu ajan yokken seçim yapılmadı.
+
+Ters denetim: keşif adımı hiç tetiklenmeyince ve en az yerine en çok denenen seçilince test kaldı.
+
+Pencere tarayıcıda açılıp bakıldı: "Öneriye göre" seçili geldi; işte "Zorluk: Zor" göründü; `"oneri"` için uyarı çıkmadı; Ayarlar'da
+"Keşif oranı (yüzde)" 20 değeri ve notlarıyla göründü.
+
+**Sürüm 0.5:** Aşama 26-29 kapandı; `npm test` 237/237.

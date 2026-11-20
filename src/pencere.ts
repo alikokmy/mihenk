@@ -207,7 +207,7 @@ export function pencereAc(hedef: string, o: { port?: number; dosyaAcici?: (yol: 
         if (!existsSync(join(kok, '.mihenk', 'defter.db'))) return json(res, 200, { metin: METINLER.p_defter_bos[hangiDil()], turler: [] });
         const d = new Defter(kok);
         try {
-          const turler = oneriHesapla(d.olcumler());
+          const turler = oneriHesapla(d.olcumler(), { kurulu: Object.keys(AJANLAR).filter((a) => AJANLAR[a]!.komutBul() !== null) });
           return json(res, 200, { metin: oneriMetni(turler), turler, kullanim: d.rapor({}).kullanim });
         } finally {
           d.kapat();

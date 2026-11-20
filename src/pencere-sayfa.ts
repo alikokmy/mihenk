@@ -93,6 +93,7 @@ async function listeCiz() {
   const l = await api('/api/liste'); let isler = l.isler.length ? l.isler : [];
   const TURLER = [['hata_duzeltme', 'p_tur_hata'], ['ozellik', 'p_tur_ozellik'], ['belge', 'p_tur_belge'], ['diger', 'p_tur_diger']];
   const ajan = el('select', { id: 'ajan-sec' }); ajan.append(el('option', { value: '', metin: m('p_ajan_otomatik') }));
+  { const o = el('option', { value: 'oneri', metin: m('p_ajan_oneri') }); if (l.ajan === 'oneri') o.selected = true; ajan.append(o); }
   for (const a of l.araclar) { const o = el('option', { value: a, metin: a }); if (a === l.ajan) o.selected = true; ajan.append(o); }
   const kutu = el('div', { id: 'isler' });
   const alanlar = [['soru', 'p_alan_soru'], ['beklenti', 'p_alan_beklenti'], ['yanlissa', 'p_alan_yanlissa'], ['dogrulama_komutu', 'p_alan_komut']];
@@ -198,6 +199,7 @@ async function oneriCiz() {
   for (const t of o.turler) {
     const kart = el('div', { class: 'kart' }, el('b', { metin: m('p_oneri_tur', { tur: t.tur, sayi: t.is_sayisi }) }),
       el('p', { metin: t.oneri ? m('p_onerilen', { ajan: t.oneri.ajan }) : m('p_oneri_yok_veri') }));
+    if (t.kesif && t.kesif.length) kart.append(el('p', { class: 'soluk', metin: m('p_kesif', { liste: t.kesif.map((k) => k.ajan + ' (' + k.is_sayisi + ')').join(', ') }) }));
     for (const x of t.secenekler) kart.append(el('p', { class: 'soluk', metin: m('p_oneri_satir', { ajan: x.ajan, gecen: x.gecen, toplam: x.is_sayisi, maliyet: x.maliyet_metni ? ', ' + x.maliyet_metni : '' }) }));
     kartlar.push(kart);
   }

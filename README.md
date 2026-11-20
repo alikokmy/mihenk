@@ -6,7 +6,7 @@ Kodlama ajanlarının bağlandığı, işi kayda alan, kanıtı kendisi denetley
 Ad: mihenk taşı, altının ayarını sınamak için kullanılan taştır. Proje iki şeyi sınar: yapılan işin doğruluğunu ve işi yapan ajanın o iş türündeki
 değerini (doğruluk, süre, maliyet).
 
-**Durum: sürüm 0.4.** İnternetsiz ortam için tek zip paket (Node.js dahil, yönetici izni yok) ve OpenCode + yerel model uyumu eklendi. Defter, yöntem paketi, sürücü, uyum testleri, süre ve maliyet, öneri, kanıtsız "bitti"ye kapı ve temiz kaldırma
+**Durum: sürüm 0.5.** Öneri zorluğu, abonelikteki kota payını ve az denenen araçların keşfini hesaba katıyor. Sürüm 0.4: internetsiz ortam için tek zip paket ve OpenCode + yerel model uyumu. Defter, yöntem paketi, sürücü, uyum testleri, süre ve maliyet, öneri, kanıtsız "bitti"ye kapı ve temiz kaldırma
 yazıldı ve denendi. Açık kalemler ve sürüm 0.2 taslağı [docs/IS_PLANI.md](docs/IS_PLANI.md) içinde.
 
 | Araç | Kurulum | Gerçek denemede | Kapı (kanca) |
@@ -260,6 +260,17 @@ doğrulama komutunun geçmesidir; ajanın "bitti" demesi sayılmaz. Bir seçenek
 ucunun %50'yi geçmesi gerekir; yoksa "veri yetersiz" yazar ve öneri vermez. Uyum testi raporu varsa (`mihenk-uyum/uyum-raporu.json`)
 uyumu %80'in altındaki araç önerilmez.
 Öneri yalnız gösterir; aracı her zaman siz seçersiniz. Eşikler `--esik` ve `--en-az` ile değişir.
+
+**Keşif.** Hep aynı araç kullanılırsa öteki araçlar hakkında veri birikmez ve öneri onları hiç seçemez. Öneri bu yüzden, kurulu olup
+bu iş türünde az denenen araçları "Keşif önerisi" olarak yazar. İş listesinde (ya da pencerede) ajan olarak `"oneri"` ("Öneriye göre")
+seçilirse sürücü her iş için aracı kendisi seçer:
+
+- Öneri varsa önerilen araç kullanılır. Öneri yoksa (henüz yeterli veri yoksa) kurulu araçlardan biri kullanılır.
+- Her beş işten biri, o türde verisi en az olan kurulu araca gider. Oran **Ayarlar** sekmesindeki "Keşif oranı (yüzde)" ile değişir;
+  varsayılan 20'dir, 0 keşfi kapatır.
+- Seçim tekrarlanabilir: aynı defter ve aynı sıra, aynı seçimi verir.
+- Her işin neden o araca gittiği sürücünün çıktısında yazılır ve deftere işin notu olarak düşer (defterdeki `rapor` aracı, işin
+  ayrıntısında bunu gösterir).
 
 **Zorluk.** Kolay işleri alan bir araç, zor işte zayıf olsa bile iyi görünebilir. Bunu önlemek için işe isteğe bağlı `"zorluk"`
 (`kolay`, `orta`, `zor`) yazılır. Yazılabileceği yerler: iş listesi, pencerede işin "Zorluk" alanı, ya da ajanın `is_ac` çağrısı
