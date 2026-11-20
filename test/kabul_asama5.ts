@@ -32,8 +32,9 @@ function elleHesapla(ajan: string, metin: string): Elle {
       e.onbellek_yazma += n(u[3]);
       e.cikti += n(u[4]);
     }
-  } else if (ajan === 'opencode') {
-    for (const u of metin.matchAll(/"cost":([0-9.eE-]+),"tokens":\{"input":(\d+),"output":(\d+),"reasoning":(\d+),"cache":\{"read":(\d+),"write":(\d+)\}/g)) {
+  } else if (ajan === 'opencode' || ajan === 'kilo') {
+    // Kilo 7.8.27: tokens alani "total" ile baslar; geri kalani OpenCode'la ayni.
+    for (const u of metin.matchAll(/"cost":([0-9.eE-]+),"tokens":\{(?:"total":\d+,)?"input":(\d+),"output":(\d+),"reasoning":(\d+),"cache":\{"read":(\d+),"write":(\d+)\}/g)) {
       e.maliyet_usd = (e.maliyet_usd ?? 0) + n(u[1]);
       e.girdi += n(u[2]);
       e.cikti += n(u[3]) + n(u[4]);

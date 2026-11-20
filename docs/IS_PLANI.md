@@ -128,7 +128,7 @@ Her aşamanın kabul ölçütü işe başlamadan yazılıdır; aşama, ölçüt 
 | 5 | Maliyet ve süre: kullanım verisini işe bağlama | **tamam, bir notla** (2026-11-20; `npm test`: 101 test geçti). Sürücü kipinde kapanan her işte süre ve token dolu; dolar maliyeti araç bildirirse dolu, Codex'te "bilinmiyor" (abonelik, fiyat uydurulmaz). Bağımsız yeniden hesap üç araçta her alanda uyuştu (bkz. "Aşama 5 sonucu"). Ölçüt: kapanan her işte süre ve maliyet dolu; elle hesapla örneklemde uyuşuyor |
 | 6 | Öneri: iş türü × ajan / model başına doğrulanmış başarı, uyum, süre, maliyet; belirsizlikle birlikte | **tamam** (2026-11-20; `npm test`: 109 test geçti). `mihenk oneri`; sentetik defterlerde (biri elle, 50'si rastgele) bilinen en iyi seçenek bulundu; az veride "veri yetersiz". Gerçek veri henüz öneri için az (bkz. "Aşama 6 sonucu"). Ölçüt: sentetik defterde bilinen en iyi seçeneği buluyor; az veride "veri yetersiz" diyor |
 | 7 | Kanca uyarlamaları: etkileşimli oturumda mekanik kapı (önce Claude Code ve Codex) | **tamam** (2026-11-20; `npm test`: 121 test geçti). Gerçek Claude Code ve Codex oturumlarında kanıtsız bitirme ve commit reddedildi; atlama yolları aşağıda (bkz. "Aşama 7 sonucu"). Ölçüt: kanıtsız "bitti" denemesi reddediliyor; atlama yolları belgeli |
-| 8 | Öteki araçlar: Qwen Code, OpenCode, Antigravity, Kilo Code / Cline; **temiz kaldırma** (`mihenk kaldir`) | araç başına kurulum, duman testi ve uyum raporu; kaldırma ölçütü aşağıda ("Temiz kaldırma") |
+| 8 | Öteki araçlar: Qwen Code, OpenCode, Antigravity, Kilo Code / Cline; **temiz kaldırma** (`mihenk kaldir`) | **tamam, üç araç açık** (2026-11-20; `npm test`: 135 test geçti). Temiz kaldırma ölçütü sağlandı. Kilo Code tam denendi; Cline ve Qwen Code kuruluyor ama gerçek araçla denenmedi (oturum / ücretli hesap gerekiyor); Antigravity'de komut satırı yok (bkz. "Aşama 8 sonucu"). Ölçüt: araç başına kurulum, duman testi ve uyum raporu; kaldırma ölçütü aşağıda ("Temiz kaldırma") |
 
 **Sürüm 0.1 = Aşama 1-8.** Aşama 8 kapanınca sürüm 0.1 etiketlenir (`v0.1.0`; etiket yalnız yerelde ve bu gizli depoda). Sonraki
 özellikler sürüm 0.2 olarak aşağıdaki "Sürüm 0.2" tablosundadır.
@@ -512,6 +512,43 @@ Codex kancaları onaysız çalışmadığı için denemede yalnız o çağrı i�
 | Döngü koruması | aracın `stop_hook_active` alanı yerine kendi sayacım (3) | `stop_hook_active` ile ikinci denemede hep geçit verilirdi; bu, kapıyı tek bir ısrarla aşılır kılardı |
 | Kendi hatasında | geçit ver, kaydet | Kapanmak (fail-closed) daha güvenli ama kullanıcının oturumunu kilitleyebilir |
 | Codex onayı | kurulum uyarı verir, onayı kullanıcı yapar | Kurulum Codex'in küresel güven dosyasına yazabilirdi; kullanıcının küresel ayarına dokunulmaz |
+
+## Aşama 8 sonucu (2026-11-20)
+
+**Temiz kaldırma:** `mihenk kaldir` ve çift tıklanan `mihenk-kaldir.cmd`. `test/kaldir.test.ts` (9 test): kendi AGENTS.md, CLAUDE.md
+(sonda satır sonu yok), CRLF satırlar, kendi kancası, `.codex/config.toml`, `.gemini/settings.json`, `opencode.json`, `kilo.json` ve
+`.gitignore` bulunan git projesinde ve boş git'siz projede `kur` + `kaldir` sonrası her dosya bayt bayt aynı, `git status` temiz; kurulumdan
+sonra kullanıcının eklediği satır ve kanca korunuyor; iki kurulum arasındaki kullanıcı değişikliği yedeğe dönülerek silinmiyor; ikinci
+kaldırma hiçbir şey değiştirmiyor; yeniden kurulum çalışıyor; `.cmd` gerçek `cmd.exe` ile koşuyor, kendini siliyor, uyarı yazmıyor.
+Geri yükleme kasıtlı bozulunca 4 test kaldı. Yolda bulunan iki kusur düzeltildi: `.cmd` kendini silerken "batch file cannot be found"
+yazıyordu; kayıt yokken (ikinci kaldırma) mihenk izi olmayan JSON dosyaları yeniden biçimleniyordu.
+
+**Araçlar:**
+
+| Araç | Kurulum | Duman (gerçek araç defteri kullandı) | Uyum | Not |
+|---|---|---|---|---|
+| OpenCode 2.3.2 | `opencode.json` | Aşama 2 | 16/16 (Aşama 4) | |
+| Kilo Code CLI 7.8.27 | `kilo.json` (aracın kendi `kilo mcp add` biçimi) | evet | 16/16 (iki geçerli koşu: 11/11 ve tuzak 5/5) | oturumsuz, ücretsiz `kilo/kilo-auto/free`; sürücü 2/2; bağımsız maliyet yeniden hesabı uyuştu (0 USD) |
+| Antigravity 44.9.1 | `.agents/plugins/mihenk/` | Aşama 2 (4 ölçütten 3'ü) | yok | komut satırı (`agy`) yalnız Antigravity 2.0'da; bu sürüm kurulu değil |
+| Cline CLI 3.0.74 | `.cline/skills`, `.cline/mcp_settings.json` (sürücü `CLINE_MCP_SETTINGS_PATH` ile gösterir) | **denenmedi** | **denenmedi** | oturum açmadan model çağrılmıyor ("Unauthorized"); kullanım satırı biçimi o hatalı koşunun gerçek çıktısından |
+| Qwen Code 0.28.0 | `.qwen/settings.json` (MCP ve kapı kancası) | **denenmedi** | **denenmedi** | ücretsiz katman 2026-04-15'te kapandı; komut ve biçim yalnız belgeden; kurulu bile değil |
+
+Kilo'nun ilk uyum koşusu (9/16) ölçüm sayılmadı, nedenleri yazılı: tuzak senaryosunda ücretsiz model sağlayıcıda hız sınırına takıldı
+(HTTP 429). Uyum testi artık böyle koşuları "geçersiz" sayıyor (`saglayiciHatasi`, testli). Karar senaryosunda Kilo'nun ilk denemedeki
+`node -e "require(...)"` doğrulama komutu parantez yüzünden reddedildi ve ajan kayıtsız devam etti; bu gerçek bir uyumsuzluktu.
+İkinci koşuda aynı senaryoya uydu. İkinci koşunun tuzak senaryosu geçersiz sayıldı, çünkü koşu sırasında mihenk deposunu ben
+düzenledim (koruma doğru çalıştı); tuzak ayrıca yeniden koşuldu.
+
+**Olumsuz ve dikkat:**
+- Kilo'nun `kilo mcp add` komutu kaydı kullanıcının küresel ayarına (`~/.config/kilo/kilo.jsonc`) yazıyor. Biçimi öğrenmek için bir kez
+  koşuldu, oluşan dosya (yalnız bu kaydı taşıyordu) hemen silindi. Kurulum bu komutu kullanmaz.
+- Cline için tarayıcıdan oturum açma denendi: iç tarayıcıda Google oturumu yok (şifre istendi, girilmedi); Chrome eklentisi bağlı değildi.
+- Kararlar: Kilo'da varsayılan model ücretsiz yönlendirici (`MIHENK_KILO_MODEL` ile değişir). Karşı görüş: kullanıcının kendi Kilo
+  ayarındaki modeli ezer. Denenmeyen araçların kurulumu yine yazıldı ve "denenmedi" diye işaretlendi. Karşı görüş: denenmemiş kod
+  kullanıcıyı yanıltabilir; README tablosu ve kod yorumları bunu açıkça söylüyor.
+
+**Sürüm 0.1:** Aşama 1-8 kapandı; `v0.1.0` etiketi konuldu. Açık kalemler: Cline ve Qwen Code'un gerçek araçla denenmesi, Antigravity 2.0
+komut satırı, önceki aşamalardan kalanlar (uyanık tutmanın gözlenmesi, gerçek ajanla oturum devri, elle açılan oturumların maliyeti).
 
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 

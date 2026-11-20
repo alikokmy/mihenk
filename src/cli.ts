@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // mihenk komut satiri.
-//   mihenk kur [--hedef <proje>] [--arac claude,codex,gemini,antigravity,opencode]   paketi projeye kurar
+//   mihenk kur [--hedef <proje>] [--arac claude,codex,gemini,antigravity,opencode,kilo]   paketi projeye kurar
 //   mihenk sur [--hedef <proje>] [--liste <dosya>] [--ajan <ad>] [--saklama yok|yerel|yerel_gonder] [--uyanik-tut]
 //              [--deneme <n>] [--oturum-sn <n>] [--baglam-esigi <n>]                 is listesini yurutur
 // Iletiler kisa ve duzdur; Windows konsolunda bozulmamasi icin Turkce'ye ozgu harfler kullanilmaz.
@@ -31,10 +31,10 @@ const sayi = (ad: string): number | undefined => {
 
 function kullanim(): void {
   console.error('kullanim:');
-  console.error('  mihenk kur [--hedef <proje klasoru>] [--arac claude,codex,gemini,antigravity,opencode]');
-  console.error('  mihenk sur [--hedef <proje klasoru>] [--liste <dosya>] [--ajan claude|codex|opencode]');
+  console.error('  mihenk kur [--hedef <proje klasoru>] [--arac claude,codex,gemini,antigravity,opencode,kilo]');
+  console.error('  mihenk sur [--hedef <proje klasoru>] [--liste <dosya>] [--ajan claude|codex|opencode|kilo]');
   console.error('             [--saklama yok|yerel|yerel_gonder] [--uyanik-tut]');
-  console.error('  mihenk uyum [--arac claude,codex,opencode] [--senaryo duzeltme,tuzak,karar] [--cikis <klasor>]');
+  console.error('  mihenk uyum [--arac claude,codex,opencode,kilo] [--senaryo duzeltme,tuzak,karar] [--cikis <klasor>]');
   console.error('  mihenk kaldir [--hedef <proje klasoru>] [--defter-dahil]   kurulumun ekledigi her seyi geri alir');
   console.error('  mihenk oneri [--hedef <proje klasoru>] [--esik 0.5] [--en-az 5] [--uyum <uyum-raporu.json>] [--json]');
   console.error('Defter sunucusu ayri calisir: mihenk-defter [--kok <proje klasoru>]');
@@ -145,7 +145,7 @@ async function surKomutu(): Promise<number> {
   }
 
   // Ajan secimi: kullanici her zaman elle secebilir; secmediyse kurulu olan ilk arac (once ucretsiz calisabilenler).
-  const bulunan = ['codex', 'opencode', 'claude'].filter((ad) => AJANLAR[ad]?.komutBul() != null);
+  const bulunan = ['codex', 'opencode', 'kilo', 'claude'].filter((ad) => AJANLAR[ad]?.komutBul() != null);
   const ajan = secenek('--ajan') ?? liste.ajan ?? bulunan[0];
   console.log(`Proje: ${kok}`);
   console.log(`Is listesi: ${listeYolu} (${liste.isler.length} is)`);

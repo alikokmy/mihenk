@@ -148,6 +148,7 @@ export function ajaniKostur(
   // MIHENK_SURUCU: isi surucu kapatir ve dogrular; aracin kapi kancasi bu oturumda karismaz (kapi-bin.ts).
   const ortam: Record<string, string | undefined> = { ...process.env, PWD: o.cwd, MIHENK_SURUCU: '1' };
   if (o.surucuIsareti === false) delete ortam.MIHENK_SURUCU;
+  Object.assign(ortam, tanim.ortam?.(o.cwd) ?? {});
   delete ortam.OLDPWD;
   delete ortam.INIT_CWD;
   delete ortam.NODE_TEST_CONTEXT; // ajanin kostugu "node --test" cagiranin test kosucusuna baglanmasin

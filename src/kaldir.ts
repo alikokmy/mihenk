@@ -76,6 +76,8 @@ function jsonCikar(goreli: string, metin: string): string {
   const eski = JSON.stringify(n);
   if (n?.mcpServers?.mihenk) { delete n.mcpServers.mihenk; bosKaplariBuda(n, ['mcpServers']); }
   if (n?.mcp?.servers?.mihenk) { delete n.mcp.servers.mihenk; bosKaplariBuda(n, ['mcp', 'servers']); }
+  if (n?.mcp?.mihenk) { delete n.mcp.mihenk; bosKaplariBuda(n, ['mcp']); }
+  if (goreli === 'kilo.json' && Object.keys(n ?? {}).length === 1 && n.$schema === 'https://app.kilo.ai/config.json') delete n.$schema;
   if (n?.hooks && typeof n.hooks === 'object') {
     for (const olay of Object.keys(n.hooks)) {
       if (!Array.isArray(n.hooks[olay])) continue;
@@ -136,7 +138,7 @@ function varsayilanArsiv(): string {
 /** Kurulum kaydi olmayan eski kurulumlar icin: kurulumun bilinen dosyalari. */
 const BILINEN_OLUSTURULANLAR = ['mihenk-baslat.cmd', 'mihenk-kaldir.cmd', 'mihenk-isler.ornek.json'];
 const BILINEN_DUZENLENENLER = ['AGENTS.md', 'CLAUDE.md', '.gitignore', '.mcp.json', '.codex/config.toml', '.codex/hooks.json',
-  '.claude/settings.json', '.gemini/settings.json', 'opencode.json', '.agents/plugins/mihenk/plugin.json', '.agents/plugins/mihenk/mcp_config.json'];
+  '.claude/settings.json', '.gemini/settings.json', 'opencode.json', 'kilo.json', '.qwen/settings.json', '.cline/mcp_settings.json', '.agents/plugins/mihenk/plugin.json', '.agents/plugins/mihenk/mcp_config.json'];
 
 export function kaldir(hedefDizin: string, secenek: KaldirSecenekleri = {}): KaldirSonucu {
   const kok = resolve(hedefDizin);
@@ -185,13 +187,13 @@ export function kaldir(hedefDizin: string, secenek: KaldirSecenekleri = {}): Kal
 
   // Kayitsiz kurulum: paketten gelen skill dizinleri, icerikleri paketle ayniysa.
   if (!kayitVar) {
-    for (const ust of ['.claude/skills', '.agents/skills']) {
+    for (const ust of ['.claude/skills', '.agents/skills', '.cline/skills']) {
       if (!existsSync(join(kok, ust))) continue;
       for (const d of readdirSync(join(kok, ust))) {
         if (d.startsWith('mihenk-')) { rmSync(join(kok, ust, d), { recursive: true, force: true }); sonuc.silinen.push(`${ust}/${d}/`); }
       }
     }
-    kayit.dizinler.push('.agents/plugins/mihenk', '.agents/plugins', '.claude/skills', '.agents/skills', '.agents', '.claude', '.codex', '.gemini');
+    kayit.dizinler.push('.agents/plugins/mihenk', '.agents/plugins', '.claude/skills', '.agents/skills', '.cline/skills', '.agents', '.claude', '.codex', '.gemini', '.qwen', '.cline');
   }
 
   // Kurulumun olusturdugu ve artik bos olan dizinler (en derinden).

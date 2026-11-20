@@ -6,8 +6,8 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { kayitOku, kayitYaz, ozet, yedekYaz } from './kaldir.js';
 
-export type Arac = 'claude' | 'codex' | 'gemini' | 'antigravity' | 'opencode';
-export const ARACLAR: readonly Arac[] = ['claude', 'codex', 'gemini', 'antigravity', 'opencode'];
+export type Arac = 'claude' | 'codex' | 'gemini' | 'antigravity' | 'opencode' | 'kilo' | 'cline' | 'qwen';
+export const ARACLAR: readonly Arac[] = ['claude', 'codex', 'gemini', 'antigravity', 'opencode', 'kilo', 'cline', 'qwen'];
 
 export interface KurSecenekleri {
   araclar?: readonly Arac[];
@@ -210,6 +210,36 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
     jsonGuncelle('opencode.json', (n) => {
       const mcp = (n.mcp ??= {}) as Record<string, any>;
       mcp.servers = { ...(mcp.servers ?? {}), mihenk: { type: 'local', command: [mcpKaydi.command, ...mcpKaydi.args] } };
+    });
+  }
+
+  if (araclar.includes('kilo')) {
+    // Kilo Code CLI 7.8.27: bicim aracin kendi "kilo mcp add" komutunun yazdigi dosyadan okundu (mcp.<ad>, type local, command dizisi).
+    // O komut kullanicinin kuresel ayarina yazdigi icin kullanilmaz; kayit proje kokundeki kilo.json'a yazilir (belge: kilo.ai/docs/automate/mcp).
+    jsonGuncelle('kilo.json', (n) => {
+      n.$schema ??= 'https://app.kilo.ai/config.json';
+      n.mcp = { ...(n.mcp ?? {}), mihenk: { type: 'local', command: [mcpKaydi.command, ...mcpKaydi.args] } };
+    });
+  }
+
+  if (araclar.includes('cline')) {
+    // Cline 3.0.74 (docs.cline.bot): skill'leri .cline/skills ve .claude/skills'ten okur (.agents/skills'i okumaz); AGENTS.md'yi okur.
+    // MCP kaydi kullanici duzeyindedir; proje icindeki bu dosya CLINE_MCP_SETTINGS_PATH ile gosterilir (surucu bunu yapar).
+    skilleriKur('.cline/skills');
+    jsonGuncelle('.cline/mcp_settings.json', (n) => {
+      n.mcpServers = { ...(n.mcpServers ?? {}), mihenk: mcpKaydi };
+    });
+  }
+
+  if (araclar.includes('qwen')) {
+    // Qwen Code 0.28.0 (qwenlm.github.io/qwen-code-docs: mcp, hooks). DENENMEDI: ucretsiz katman kapali, bu bilgisayarda calistirilamadi.
+    // Proje ayari .qwen/settings.json; MCP ve kanca bicimi Claude Code'unkiyle ayni; kabuk araci adi "run_shell_command".
+    const k = (olay: string) => ({ type: 'command', command: `node --disable-warning=ExperimentalWarning "${kapiBin}" qwen ${olay} --kok "${egik(hedef)}"`, timeout: 30 });
+    jsonGuncelle('.qwen/settings.json', (n) => {
+      n.mcpServers = { ...(n.mcpServers ?? {}), mihenk: mcpKaydi };
+      kancaEkle(n, 'SessionStart', { hooks: [k('oturum')] });
+      kancaEkle(n, 'Stop', { hooks: [k('bitir')] });
+      kancaEkle(n, 'PreToolUse', { matcher: 'run_shell_command', hooks: [k('arac')] });
     });
   }
 

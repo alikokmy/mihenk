@@ -3,7 +3,30 @@
 // Arac surumu degisip alan adlari kayarsa bu test kalir.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CLAUDE, CODEX, OPENCODE } from '../src/ajanlar.js';
+import { CLAUDE, CLINE, CODEX, KILO, OPENCODE, QWEN } from '../src/ajanlar.js';
+
+test('Cline: run_result toplam kullanimi, maliyeti ve modeli verir (gercek satir, Cline 3.0.74); MCP dosyasi proje icinden', () => {
+  const satir = { type: 'run_result', finishReason: 'error', usage: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalCost: 0 },
+    aggregateUsage: { inputTokens: 1200, outputTokens: 80, cacheReadTokens: 300, cacheWriteTokens: 0, totalCost: 0.0123 }, durationMs: 268, text: 'Unauthorized', model: { id: 'anthropic/claude-sonnet-5.5', provider: 'cline' } };
+  assert.deepEqual(CLINE.kullanimKatkisi?.(satir), {
+    tur: 'toplam', girdi: 1200, onbellek_okuma: 300, onbellek_yazma: 0, cikti: 80, maliyet_usd: 0.0123, model: 'anthropic/claude-sonnet-5.5',
+  });
+  assert.equal(CLINE.metinOku(satir), 'Unauthorized');
+  assert.match(CLINE.ortam!('C:/proje').CLINE_MCP_SETTINGS_PATH!, /proje[\\/]\.cline[\\/]mcp_settings\.json$/);
+});
+
+test('Qwen Code (DENENMEDI, belgeye gore): bassiz komut', () => {
+  assert.deepEqual(QWEN.argumanlar('x'), ['-p', 'x', '--yolo', '--output-format', 'stream-json']);
+});
+
+test('Kilo Code: OpenCode bicimi; model adi step_finish icinden (gercek satir, Kilo CLI 7.8.27)', () => {
+  const satir = { type: 'step_finish', part: { type: 'step-finish', reason: 'stop', model: { providerID: 'kilo', modelID: 'nvidia/nemotron-3-ultra-550b-a55b:free' },
+    cost: 0, tokens: { total: 20474, input: 20448, output: 3, reasoning: 23, cache: { read: 0, write: 0 } } } };
+  assert.deepEqual(KILO.kullanimKatkisi?.(satir), {
+    tur: 'artis', girdi: 20448, onbellek_okuma: 0, onbellek_yazma: 0, cikti: 26, maliyet_usd: 0, model: 'nvidia/nemotron-3-ultra-550b-a55b:free',
+  });
+  assert.deepEqual(KILO.argumanlar('x').slice(0, 6), ['run', '--auto', '--format', 'json', '-m', 'kilo/kilo-auto/free']);
+});
 
 test('Claude Code: "result" olayi oturum toplamini, dolar maliyetini ve modeli verir', () => {
   const satir = {

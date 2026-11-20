@@ -38,6 +38,8 @@ export interface AjanTanimi {
   metinOku(satir: unknown): string | undefined;
   /** Ciktinin bir satirindan token ve maliyet katkisi (Asama 5). Tanimlanmamissa kullanim sifir ve maliyet bilinmiyor kalir. */
   kullanimKatkisi?(satir: unknown): KullanimKatkisi | undefined;
+  /** Ajana verilecek ek ortam degiskenleri (or. projedeki MCP ayar dosyasinin yolu). */
+  ortam?(cwd: string): Record<string, string>;
 }
 
 type Kayit = Record<string, any>;
@@ -178,4 +180,85 @@ export const OPENCODE: AjanTanimi = {
   },
 };
 
-export const AJANLAR: Readonly<Record<string, AjanTanimi>> = { claude: CLAUDE, codex: CODEX, opencode: OPENCODE };
+/**
+ * Kilo Code CLI 7.8.27 (OpenCode'dan catallanmis): cikti bicimi OpenCode'la ayni, ayrica step_finish'te model adi var.
+ * Oturum acmadan "kilo/kilo-auto/free" ucretsiz yonlendiricisiyle calisir (2026-11-20 denendi); varsayilan model odur.
+ */
+export const KILO: AjanTanimi = {
+  ...OPENCODE,
+  ad: 'kilo',
+  istemci: /^(kilo|opencode)/i,
+  komutBul() {
+    // npm, Windows'ta kilo.cmd / kilo.ps1 sarmalayicisi kurar; kabuga girmemek icin asil betik node ile kosulur.
+    const sarmalayici = yoldaBul(process.platform === 'win32' ? ['kilo.cmd'] : ['kilo']);
+    if (!sarmalayici) return null;
+    const betik = join(dirname(sarmalayici), 'node_modules', '@kilocode', 'cli', 'bin', 'kilo');
+    if (existsSync(betik)) return { program: process.execPath, onEk: [betik] };
+    return process.platform === 'win32' ? null : { program: sarmalayici, onEk: [] };
+  },
+  argumanlar: (istem) => ['run', '--auto', '--format', 'json', '-m', process.env.MIHENK_KILO_MODEL ?? 'kilo/kilo-auto/free', istem],
+  kullanimKatkisi(satir) {
+    const k = OPENCODE.kullanimKatkisi!(satir);
+    const model = nesne(nesne(nesne(satir)?.part)?.model)?.modelID;
+    return k && typeof model === 'string' ? { ...k, model } : k;
+  },
+};
+
+/** npm'in kurdugu sarmalayicinin yanindaki paketin asil betigi (Windows'ta .cmd kabugu atlanir). */
+function npmBetigi(sarmalayici: string, paketYolu: string[], betik: string): { program: string; onEk: string[] } | null {
+  const s = yoldaBul(process.platform === 'win32' ? [`${sarmalayici}.cmd`] : [sarmalayici]);
+  if (!s) return null;
+  const yol = join(dirname(s), 'node_modules', ...paketYolu, betik);
+  if (existsSync(yol)) return { program: process.execPath, onEk: [yol] };
+  return process.platform === 'win32' ? null : { program: s, onEk: [] };
+}
+
+/**
+ * Cline CLI 3.0.74. Komut ve "run_result" satiri (usage: inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, totalCost;
+ * model.id) gercek bir kosudan goruldu (2026-11-20, oturum acilmadan "Unauthorized" ile biten kosu). Istem verilince kendiliginden
+ * onayli kipte calisir. Cline'in proje duzeyinde MCP dosyasi yoktur: kayit proje icindeki .cline/mcp_settings.json'a yazilir ve
+ * CLINE_MCP_SETTINGS_PATH ile gosterilir (belgede gecen degisken; kullanicinin kuresel ayarina dokunulmaz).
+ */
+export const CLINE: AjanTanimi = {
+  ad: 'cline',
+  istemci: /cline/i,
+  komutBul: () => npmBetigi('cline', ['cline'], join('bin', 'cline')),
+  argumanlar: (istem) => ['--json', '--auto-approve', 'true', istem],
+  ortam: (cwd) => ({ CLINE_MCP_SETTINGS_PATH: join(cwd, '.cline', 'mcp_settings.json') }),
+  kullanimKatkisi(satir) {
+    const s = nesne(satir);
+    if (s?.type !== 'run_result') return undefined;
+    const k = nesne(s.aggregateUsage) ?? nesne(s.usage) ?? {};
+    const model = nesne(s.model)?.id;
+    return {
+      tur: 'toplam', girdi: sayi(k.inputTokens), onbellek_okuma: sayi(k.cacheReadTokens), onbellek_yazma: sayi(k.cacheWriteTokens),
+      cikti: sayi(k.outputTokens), ...(typeof k.totalCost === 'number' ? { maliyet_usd: k.totalCost } : {}),
+      ...(typeof model === 'string' ? { model } : {}),
+    };
+  },
+  kullanimOku(satir) {
+    const s = nesne(satir);
+    const k = s?.type === 'run_result' ? nesne(s.usage) : undefined;
+    return k ? { baglam: sayi(k.inputTokens) + sayi(k.cacheReadTokens), cikti: sayi(k.outputTokens) } : undefined;
+  },
+  metinOku(satir) {
+    const s = nesne(satir);
+    return s?.type === 'run_result' && typeof s.text === 'string' ? s.text : undefined;
+  },
+};
+
+/**
+ * Qwen Code 0.28.0. DENENMEDI: ucretsiz katmani 2026-04-15'te kapandigi icin bu bilgisayarda calistirilamadi. Komut ve cikti
+ * bicimi yalniz belgeden (qwenlm.github.io/qwen-code-docs .../headless): -p, --yolo, --output-format stream-json; olaylar Claude
+ * Code'unkiyle ayni adlarla (system/init, assistant, result) ve result.usage icinde token. Gercek kosuda dogrulanana dek
+ * kullanim okuyucusu Claude Code'unkidir.
+ */
+export const QWEN: AjanTanimi = {
+  ...CLAUDE,
+  ad: 'qwen',
+  istemci: /qwen/i,
+  komutBul: () => npmBetigi('qwen', ['@qwen-code', 'qwen-code'], 'cli-entry.js'),
+  argumanlar: (istem) => ['-p', istem, '--yolo', '--output-format', 'stream-json'],
+};
+
+export const AJANLAR: Readonly<Record<string, AjanTanimi>> = { claude: CLAUDE, codex: CODEX, opencode: OPENCODE, kilo: KILO, cline: CLINE, qwen: QWEN };

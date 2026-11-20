@@ -6,8 +6,19 @@ Kodlama ajanlarının bağlandığı, işi kayda alan, kanıtı kendisi denetley
 Ad: mihenk taşı, altının ayarını sınamak için kullanılan taştır. Proje iki şeyi sınar: yapılan işin doğruluğunu ve işi yapan ajanın o iş türündeki
 değerini (doğruluk, süre, maliyet).
 
-**Durum:** Aşama 1 (defter), Aşama 2 (yöntem paketi ve kurulum) ve Aşama 3 (sürücü) yazıldı. Sürücü on işlik bir listeyi Codex ve OpenCode ile
-girdisiz bitirdi. Aşama 4 (uyum testleri: `mihenk uyum`) üç araçta koşuldu. Açık kalemler planda yazılı. Aşama 5: sürücü her işin süresini, token kullanımını ve (araç bildiriyorsa) dolar maliyetini deftere yazıyor. Aşama 6: `mihenk oneri` iş türü başına araç önerisi veriyor (az veride "veri yetersiz"). Aşama 7: Claude Code ve Codex'te elle açılan oturumda kanıtsız "bitti" ve commit kancayla reddediliyor.
+**Durum: sürüm 0.1.** Defter, yöntem paketi, sürücü, uyum testleri, süre ve maliyet, öneri, kanıtsız "bitti"ye kapı ve temiz kaldırma
+yazıldı ve denendi. Açık kalemler ve sürüm 0.2 taslağı [docs/IS_PLANI.md](docs/IS_PLANI.md) içinde.
+
+| Araç | Kurulum | Gerçek denemede | Kapı (kanca) |
+|---|---|---|---|
+| Claude Code | var | defter, sürücü, uyum 16/16, maliyet | var, denendi |
+| Codex CLI | var | defter, sürücü, uyum 15/16, token (maliyet abonelikte bilinmiyor) | var, denendi (bir kez onay ister) |
+| OpenCode | var | defter, sürücü, uyum 16/16, maliyet | yok |
+| Kilo Code CLI | var | defter, sürücü, uyum 16/16, maliyet; ücretsiz modelle oturumsuz | yok |
+| Antigravity | var | masaüstünde defter (4 ölçütten 3'ü); komut satırı kipi olmadığı için sürücü ve uyum yok | yok |
+| Cline CLI | var | **denenmedi**: hesapla oturum açmak gerekiyor | yok |
+| Qwen Code | var | **denenmedi**: ücretsiz katmanı kapandı; kurulum belgeye göre yazıldı | belgeye göre yazıldı, denenmedi |
+| Gemini CLI | var | **denenmedi**: ücretsiz katmanda kaldırılmış | yok |
 
 - [docs/ARASTIRMA.md](docs/ARASTIRMA.md): benzer açık kaynak projelerin taraması ve hüküm.
 - [docs/IS_PLANI.md](docs/IS_PLANI.md): onaylı iş planı, iki bağlayıcı ilke, aşama sonuçları ve açık kararlar.
@@ -71,7 +82,7 @@ Bilmeniz gerekenler:
 - **İşin bittiğine ajan değil sürücü karar verir:** doğrulama komutunu kendisi koşar. Ajan "bitti" dese de komut geçmeden iş kapanmaz.
 - **Liste tek iş yüzünden durmaz:** bir iş üç denemede geçmezse "kaldı" diye kapanır, sıradakine geçilir. Yarıda kesilen liste yeniden
   başlatılınca biten işleri atlar.
-- **Hangi araç:** listede `ajan` yazarsınız (`codex`, `opencode`, `claude`); yazmazsanız kurulu olan ilk araç kullanılır. İş başına ayrı
+- **Hangi araç:** listede `ajan` yazarsınız (`codex`, `opencode`, `kilo`, `claude`; denenmemiş: `cline`, `qwen`); yazmazsanız kurulu olan ilk araç kullanılır. İş başına ayrı
   araç da seçilebilir.
 - **Saklama (`saklama`):** `yok` (yalnız kayıt tutulur), `yerel` (her geçen iş için yalnız bu bilgisayarda commit; varsayılan),
   `yerel_gonder` (commit ve uzak depoya gönderme). İnternet ya da GitHub gerekmez; siz açmadıkça hiçbir şey gönderilmez.

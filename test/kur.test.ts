@@ -2,7 +2,7 @@
 // Yollar araclarin kendi belgelerinden dogrulandi (2026-11-19; kaynaklar IS_PLANI.md "Asama 2").
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/client';
@@ -47,6 +47,30 @@ test('kur: kapi kancalari Claude Code ve Codex icin yazilir; baska kancalar koru
   assert.match(codex.hooks.Stop[0].hooks[0].command, /kapi-bin\.js" codex bitir --kok "/);
   assert.equal(codex.hooks.PreToolUse[0].matcher, '^Bash$');
   assert.ok(sonuc.uyarilar.some((u) => u.includes('/hooks')));
+});
+
+test('kur: Kilo Code kaydi proje icindeki kilo.json\'a, aracin kendi bicimiyle (mcp.<ad>, command dizisi) yazilir', () => {
+  const h = hedef();
+  kur(h, { araclar: ['kilo'] });
+  const n = JSON.parse(oku(h, 'kilo.json'));
+  assert.equal(n.mcp.mihenk.type, 'local');
+  assert.equal(n.mcp.mihenk.command[0], 'node');
+  assert.match(n.mcp.mihenk.command[1], /bin\.js$/);
+  assert.ok(existsSync(join(h, '.agents', 'skills', 'mihenk-is-kaydi', 'SKILL.md')));
+});
+
+test('kur: Cline (skill .cline/skills, MCP proje icinde) ve Qwen Code (.qwen/settings.json: MCP ve kapi kancasi) kurulur ve temiz kaldirilir', async () => {
+  const h = hedef();
+  kur(h, { araclar: ['cline', 'qwen'] });
+  assert.ok(existsSync(join(h, '.cline', 'skills', 'mihenk-is-kaydi', 'SKILL.md')));
+  assert.match(JSON.parse(oku(h, '.cline', 'mcp_settings.json')).mcpServers.mihenk.args[0], /bin\.js$/);
+  const q = JSON.parse(oku(h, '.qwen', 'settings.json'));
+  assert.equal(q.mcpServers.mihenk.command, 'node');
+  assert.match(q.hooks.Stop[0].hooks[0].command, /kapi-bin\.js" qwen bitir/);
+  assert.equal(q.hooks.PreToolUse[0].matcher, 'run_shell_command');
+  const { kaldir } = await import('../src/kaldir.js');
+  kaldir(h, { arsivDizini: hedef() });
+  assert.deepEqual(readdirSync(h), []);
 });
 
 test('kur: her aracin MCP ayari kendi dosyasina, kendi biciminde yazilir', () => {

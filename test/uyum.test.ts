@@ -8,7 +8,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { AjanTanimi } from '../src/ajanlar.js';
-import { raporMetni, SENARYOLAR, senaryoKostur, uyumOzeti, type KontrolAdi, type SenaryoSonucu } from '../src/uyum.js';
+import { raporMetni, saglayiciHatasi, SENARYOLAR, senaryoKostur, uyumOzeti, type KontrolAdi, type SenaryoSonucu } from '../src/uyum.js';
+
+test('model saglayicisinin hatasi (Kilo ucretsiz modelinin gercek 429 satiri) taninir; ajanin metnindeki soz taninmaz', () => {
+  const gercek = '{"type":"error","timestamp":1795159946928,"sessionID":"ses_x","error":{"name":"APIError","data":{"message":"[Particle AI] particle-ai/particle-1:free is temporarily rate-limited upstream. Please retry shortly","statusCode":429,"isRetryable":true}}}';
+  assert.match(saglayiciHatasi('{"type":"text"}\n' + gercek) ?? '', /rate-limited upstream/);
+  assert.equal(saglayiciHatasi('{"type":"text","part":{"text":"rate limit kontrolunu ekledim"}}'), undefined);
+  assert.equal(saglayiciHatasi('{"type":"error","error":{"message":"dosya bulunamadi"}}'), undefined);
+});
 
 const DEFTER_URL = pathToFileURL(join(import.meta.dirname, '..', 'src', 'defter.js')).href;
 const BETIKLER = mkdtempSync(join(tmpdir(), 'mihenk-uyum-taklit-'));

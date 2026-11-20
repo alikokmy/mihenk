@@ -43,6 +43,7 @@ function doluProje(): string {
   yaz('.codex/config.toml', 'model = "gpt"\n\n[mcp_servers.baska]\ncommand = "x"\n');
   yaz('.gemini/settings.json', '{\n    "theme": "koyu"\n}\n');
   yaz('opencode.json', '{"$schema":"https://opencode.ai/config.json"}');
+  yaz('kilo.json', '{"model": "kilo/kilo-auto/free"}');
   yaz('src/kod.js', 'module.exports = 1;\n');
   for (const a of [['init', '-q'], ['config', 'user.email', 'k@ornek.test'], ['config', 'user.name', 'k'], ['config', 'core.autocrlf', 'false'], ['add', '-A'], ['commit', '-q', '-m', 'ilk']]) {
     spawnSync('git', a, { cwd: kok, windowsHide: true });
