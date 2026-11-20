@@ -27,6 +27,28 @@ test('kur: skiller iki dizine kurulur ve resmi denetleyiciden gecer', async () =
   }
 });
 
+test('kur: kapi kancalari Claude Code ve Codex icin yazilir; baska kancalar korunur; ikinci kurulum cogaltmaz', () => {
+  const h = hedef();
+  mkdirSync(join(h, '.claude'));
+  const baska = { matcher: 'Write', hooks: [{ type: 'command', command: 'echo baska' }] };
+  writeFileSync(join(h, '.claude', 'settings.json'), JSON.stringify({ model: 'x', hooks: { PreToolUse: [baska] } }));
+  kur(h, { araclar: ['claude', 'codex'] });
+  const sonuc = kur(h, { araclar: ['claude', 'codex'] });
+  assert.ok(sonuc.degismeyen.includes('.claude/settings.json') && sonuc.degismeyen.includes('.codex/hooks.json'));
+  const claude = JSON.parse(oku(h, '.claude', 'settings.json'));
+  assert.equal(claude.model, 'x');
+  assert.deepEqual(claude.hooks.PreToolUse[0], baska);
+  assert.equal(claude.hooks.PreToolUse.length, 2);
+  for (const olay of ['SessionStart', 'Stop']) assert.equal(claude.hooks[olay].length, 1);
+  const stop = claude.hooks.Stop[0].hooks[0];
+  assert.equal(stop.command, 'node');
+  assert.deepEqual(stop.args.slice(2, 4), ['claude', 'bitir']);
+  const codex = JSON.parse(oku(h, '.codex', 'hooks.json'));
+  assert.match(codex.hooks.Stop[0].hooks[0].command, /kapi-bin\.js" codex bitir --kok "/);
+  assert.equal(codex.hooks.PreToolUse[0].matcher, '^Bash$');
+  assert.ok(sonuc.uyarilar.some((u) => u.includes('/hooks')));
+});
+
 test('kur: her aracin MCP ayari kendi dosyasina, kendi biciminde yazilir', () => {
   const h = hedef();
   kur(h);

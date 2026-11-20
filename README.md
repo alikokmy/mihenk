@@ -7,7 +7,7 @@ Ad: mihenk taşı, altının ayarını sınamak için kullanılan taştır. Proj
 değerini (doğruluk, süre, maliyet).
 
 **Durum:** Aşama 1 (defter), Aşama 2 (yöntem paketi ve kurulum) ve Aşama 3 (sürücü) yazıldı. Sürücü on işlik bir listeyi Codex ve OpenCode ile
-girdisiz bitirdi. Aşama 4 (uyum testleri: `mihenk uyum`) üç araçta koşuldu. Açık kalemler planda yazılı. Aşama 5: sürücü her işin süresini, token kullanımını ve (araç bildiriyorsa) dolar maliyetini deftere yazıyor. Aşama 6: `mihenk oneri` iş türü başına araç önerisi veriyor (az veride "veri yetersiz").
+girdisiz bitirdi. Aşama 4 (uyum testleri: `mihenk uyum`) üç araçta koşuldu. Açık kalemler planda yazılı. Aşama 5: sürücü her işin süresini, token kullanımını ve (araç bildiriyorsa) dolar maliyetini deftere yazıyor. Aşama 6: `mihenk oneri` iş türü başına araç önerisi veriyor (az veride "veri yetersiz"). Aşama 7: Claude Code ve Codex'te elle açılan oturumda kanıtsız "bitti" ve commit kancayla reddediliyor.
 
 - [docs/ARASTIRMA.md](docs/ARASTIRMA.md): benzer açık kaynak projelerin taraması ve hüküm.
 - [docs/IS_PLANI.md](docs/IS_PLANI.md): onaylı iş planı, iki bağlayıcı ilke, aşama sonuçları ve açık kararlar.
@@ -72,6 +72,19 @@ Bilmeniz gerekenler:
   size bildirilir.
 - Sınır: Antigravity'nin komut satırı kipi olmadığı için sürücü onu kullanamaz. Ajan araçlarını kurmak ve onlarda oturum açmak sizin
   işinizdir.
+
+## Kendi açtığınız oturumda kapı (Claude Code ve Codex)
+
+`mihenk kur` Claude Code (`.claude/settings.json`) ve Codex (`.codex/hooks.json`) için kanca yazar. Ajan bir oturumda proje dosyası
+değiştirdiyse, son değişiklikten sonra defterde `hukum_ver` ile kapanmış bir kayıt olmadan **işi bitiremez ve commit atamaz**; kapı ona ne
+yapması gerektiğini söyler. Hükmün "kaldı" olması da yeter: istenen başarı değil, kanıtlı ve dürüst kapanıştır. Değişiklik yapmayan
+(yalnız soru yanıtlayan) oturuma kapı karışmaz. Her geçiş ve engel `.mihenk/kapi.jsonl` dosyasına yazılır.
+
+- **Codex'te bir kez onay gerekir:** Codex'i proje klasöründe açın, `/hooks` ekranında mihenk kancalarını onaylayın. Onaylanmamış kanca
+  çalışmaz (mihenk kurulumu değişirse yeniden onay ister).
+- **Kapıyı kapatmak:** proje kökündeki `mihenk.json` dosyasına `"kapi": false` yazın. Kapalıyken her geçiş yine kaydedilir.
+- **Sonsuz döngü olmaz:** ajan üst üste üç kez engellenip yine uymazsa kapı geçit verir ve bunu `kapi_atlandi` diye kaydeder.
+- Sürücü (`mihenk sur`) kendi işlerinde kapıyı kullanmaz: orada işi sürücünün kendisi doğrular ve kapatır.
 
 ## Hangi işe hangi ajan (öneri)
 

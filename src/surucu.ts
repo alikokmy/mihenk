@@ -134,7 +134,7 @@ export interface AjanKosusu {
 export function ajaniKostur(
   tanim: AjanTanimi,
   istem: string,
-  o: { cwd: string; zamanAsimiMs: number; baglamEsigi: number; ciktiDosyasi: string },
+  o: { cwd: string; zamanAsimiMs: number; baglamEsigi: number; ciktiDosyasi: string; surucuIsareti?: boolean },
 ): Promise<AjanKosusu> {
   const t0 = Date.now();
   const sonuc: AjanKosusu = {
@@ -145,7 +145,9 @@ export function ajaniKostur(
   if (!komut) return Promise.resolve({ ...sonuc, baslatma_hatasi: `"${tanim.ad}" araci bu bilgisayarda bulunamadi` });
 
   // cwd tek basina yetmez: bazi araclar calisma klasorunu miras kalan PWD degiskeninden alir (OpenCode'da yasandi).
-  const ortam: Record<string, string | undefined> = { ...process.env, PWD: o.cwd };
+  // MIHENK_SURUCU: isi surucu kapatir ve dogrular; aracin kapi kancasi bu oturumda karismaz (kapi-bin.ts).
+  const ortam: Record<string, string | undefined> = { ...process.env, PWD: o.cwd, MIHENK_SURUCU: '1' };
+  if (o.surucuIsareti === false) delete ortam.MIHENK_SURUCU;
   delete ortam.OLDPWD;
   delete ortam.INIT_CWD;
   delete ortam.NODE_TEST_CONTEXT; // ajanin kostugu "node --test" cagiranin test kosucusuna baglanmasin

@@ -124,6 +124,38 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
     }
   }
 
+  // Mekanik kapi (Asama 7): oturum basi, "bitti" (Stop) ve git commit oncesi (PreToolUse) kancalari. Bicim iki aracin belgesinden:
+  // Claude Code https://code.claude.com/docs/en/hooks , Codex https://developers.openai.com/codex/hooks (2026-11-20).
+  // Var olan baska kancalara dokunulmaz; yalniz kapi-bin.js'i cagiran grup yenilenir.
+  const kapiBin = egik(join(BURASI, 'kapi-bin.js'));
+  const kancaEkle = (n: Record<string, any>, olay: string, grup: Record<string, any>): void => {
+    const kancalar = (n.hooks ??= {}) as Record<string, any[]>;
+    const eski = (kancalar[olay] ?? []).filter((g) => !JSON.stringify(g).includes('kapi-bin.js'));
+    kancalar[olay] = [...eski, grup];
+  };
+  if (araclar.includes('claude')) {
+    // Claude Code: kabuksuz (exec) bicim; node.exe dogrudan calisir, tirnak sorunu olmaz.
+    const k = (olay: string) => ({ type: 'command', command: 'node', args: ['--disable-warning=ExperimentalWarning', kapiBin, 'claude', olay, '--kok', egik(hedef)], timeout: 30 });
+    jsonGuncelle('.claude/settings.json', (n) => {
+      kancaEkle(n, 'SessionStart', { hooks: [k('oturum')] });
+      kancaEkle(n, 'Stop', { hooks: [k('bitir')] });
+      kancaEkle(n, 'PreToolUse', { matcher: 'Bash|PowerShell', hooks: [k('arac')] });
+    });
+  }
+  if (araclar.includes('codex')) {
+    // Codex: komut kabukta (Windows'ta PowerShell ya da cmd) kosar; yalniz cift tirnakli yollar her ikisinde de calisir.
+    const k = (olay: string) => {
+      const komut = `node --disable-warning=ExperimentalWarning "${kapiBin}" codex ${olay} --kok "${egik(hedef)}"`;
+      return { type: 'command', command: komut, commandWindows: komut, timeout: 30 };
+    };
+    jsonGuncelle('.codex/hooks.json', (n) => {
+      kancaEkle(n, 'SessionStart', { hooks: [k('oturum')] });
+      kancaEkle(n, 'Stop', { hooks: [k('bitir')] });
+      kancaEkle(n, 'PreToolUse', { matcher: '^Bash$', hooks: [k('arac')] });
+    });
+    sonuc.uyarilar.push('Codex kancalari ancak siz onaylayinca calisir: Codex\'i bu klasorde acip /hooks ekraninda mihenk kancalarini onaylayin (kanca degisirse yeniden).');
+  }
+
   if (araclar.includes('gemini')) {
     jsonGuncelle('.gemini/settings.json', (n) => {
       n.mcpServers = { ...(n.mcpServers ?? {}), mihenk: mcpKaydi };
