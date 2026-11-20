@@ -24,6 +24,18 @@ export interface Ayarlar {
   en_fazla_zaman_asimi_sn: number;
   /** Deftere yazilan dogrulama ciktisi ozetinin ust siniri (karakter). */
   ozet_siniri: number;
+  /**
+   * Arac maliyet bildirmiyorsa kullanilacak fiyatlar: model adi (ya da ajan adi) -> milyon token basina USD.
+   * Varsayilan bos: fiyat uydurulmaz; abonelikle calisan aracta maliyet "bilinmiyor" kalir.
+   */
+  fiyatlar: Record<string, Fiyat>;
+}
+
+export interface Fiyat {
+  girdi: number;
+  cikti: number;
+  onbellek_okuma?: number;
+  onbellek_yazma?: number;
 }
 
 const VARSAYILAN_AYARLAR: Ayarlar = {
@@ -31,6 +43,7 @@ const VARSAYILAN_AYARLAR: Ayarlar = {
   zaman_asimi_sn: 120,
   en_fazla_zaman_asimi_sn: 1800,
   ozet_siniri: 2000,
+  fiyatlar: {},
 };
 
 /** Ayarlar surec baslarken bir kez okunur: oturum icinde mihenk.json'u degistirmek calisan sunucuyu etkilemez. */
@@ -43,6 +56,11 @@ export function ayarlariOku(kok: string): Ayarlar {
   if (Number.isInteger(ham.zaman_asimi_sn)) a.zaman_asimi_sn = ham.zaman_asimi_sn as number;
   if (Number.isInteger(ham.en_fazla_zaman_asimi_sn)) a.en_fazla_zaman_asimi_sn = ham.en_fazla_zaman_asimi_sn as number;
   if (Number.isInteger(ham.ozet_siniri)) a.ozet_siniri = ham.ozet_siniri as number;
+  if (ham.fiyatlar && typeof ham.fiyatlar === 'object') {
+    for (const [ad, f] of Object.entries(ham.fiyatlar)) {
+      if (f && Number.isFinite(f.girdi) && Number.isFinite(f.cikti)) a.fiyatlar[ad] = f;
+    }
+  }
   return a;
 }
 
@@ -124,12 +142,50 @@ export interface HukumSonucu {
   mesaj: string;
 }
 
+/** Bir ajan oturumunun kullanimi. Token sayilari aracin bildirdigidir; girdi, onbellekten okunani icermez. */
+export interface KullanimGirdisi {
+  is_id: number;
+  ajan: string;
+  model?: string | null;
+  oturum: number;
+  sure_ms: number;
+  girdi: number;
+  onbellek_okuma: number;
+  onbellek_yazma: number;
+  cikti: number;
+  /** Aracin bildirdigi maliyet; bildirmiyorsa null (fiyat tablosu varsa defter hesaplar). */
+  maliyet_usd: number | null;
+}
+
+export interface KullanimKaydi extends Required<Omit<KullanimGirdisi, 'model'>> {
+  id: number;
+  zaman: string;
+  model: string | null;
+  maliyet_kaynagi: 'arac' | 'fiyat_tablosu' | null;
+}
+
+export interface KullanimToplami {
+  oturum: number;
+  ajan_sure_sn: number;
+  girdi: number;
+  onbellek_okuma: number;
+  onbellek_yazma: number;
+  cikti: number;
+  /** Bilinen maliyetlerin toplami; hicbir oturumun maliyeti bilinmiyorsa null. */
+  maliyet_usd: number | null;
+  /** Maliyeti bilinmeyen oturum sayisi: 0 degilse maliyet_usd eksiktir. */
+  maliyeti_bilinmeyen_oturum: number;
+}
+
 export interface Rapor {
   ozet: { toplam: number; acik: number; gecti: number; kaldi: number; belirsiz: number };
-  is?: IsKaydi & { sure_sn: number | null };
+  /** Butun defterin kullanim toplami. */
+  kullanim: KullanimToplami;
+  is?: IsKaydi & { sure_sn: number | null; kullanim_toplami: KullanimToplami };
   kanitlar?: KanitKaydi[];
   kararlar?: KararKaydi[];
-  isler?: Array<Pick<IsKaydi, 'id' | 'tur' | 'durum' | 'ajan' | 'model' | 'deneme_sayisi'> & { soru: string; sure_sn: number | null }>;
+  kullanimlar?: KullanimKaydi[];
+  isler?: Array<Pick<IsKaydi, 'id' | 'tur' | 'durum' | 'ajan' | 'model' | 'deneme_sayisi'> & { soru: string; sure_sn: number | null; maliyet_usd: number | null }>;
 }
 
 const SEMA = `
@@ -164,6 +220,23 @@ CREATE TABLE IF NOT EXISTS kanitlar (
   cikti_ozeti TEXT,
   cikti_dosyasi TEXT
 );
+CREATE TABLE IF NOT EXISTS kullanim (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  is_id INTEGER NOT NULL REFERENCES isler(id),
+  zaman TEXT NOT NULL,
+  ajan TEXT NOT NULL,
+  model TEXT,
+  oturum INTEGER NOT NULL,
+  sure_ms INTEGER NOT NULL CHECK (sure_ms >= 0),
+  girdi INTEGER NOT NULL CHECK (girdi >= 0),
+  onbellek_okuma INTEGER NOT NULL CHECK (onbellek_okuma >= 0),
+  onbellek_yazma INTEGER NOT NULL CHECK (onbellek_yazma >= 0),
+  cikti INTEGER NOT NULL CHECK (cikti >= 0),
+  maliyet_usd REAL CHECK (maliyet_usd IS NULL OR maliyet_usd >= 0),
+  maliyet_kaynagi TEXT CHECK (maliyet_kaynagi IS NULL OR maliyet_kaynagi IN ('arac', 'fiyat_tablosu'))
+);
+CREATE TRIGGER IF NOT EXISTS kullanim_degismez BEFORE UPDATE ON kullanim
+BEGIN SELECT RAISE(ABORT, 'mihenk: kullanim kaydi degismez'); END;
 CREATE TABLE IF NOT EXISTS kararlar (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   is_id INTEGER NOT NULL REFERENCES isler(id),
@@ -439,9 +512,14 @@ export class Defter {
         ozet[s.durum] = s.n;
         ozet.toplam += s.n;
       }
+      const kullanim = this.kullanimToplami(null);
       if (g.is_id !== undefined) {
         const is = this.isGetir(g.is_id);
-        return { ozet, is: { ...is, sure_sn: sureSn(is) }, kanitlar: this.kanitlar(is.id), kararlar: this.kararlar(is.id) };
+        return {
+          ozet, kullanim,
+          is: { ...is, sure_sn: sureSn(is), kullanim_toplami: this.kullanimToplami(is.id) },
+          kanitlar: this.kanitlar(is.id), kararlar: this.kararlar(is.id), kullanimlar: this.kullanimlar(is.id),
+        };
       }
       if (g.durum !== undefined && !DURUMLAR.includes(g.durum)) {
         throw new Ret('GECERSIZ_DEGER', `durum su degerlerden biridir: ${DURUMLAR.join(', ')}.`);
@@ -453,10 +531,10 @@ export class Defter {
           : this.db.prepare('SELECT * FROM isler ORDER BY id DESC LIMIT ?').all(sinir)
       ) as unknown as IsKaydi[];
       return {
-        ozet,
+        ozet, kullanim,
         isler: satirlar.map((is) => ({
           id: is.id, tur: is.tur, durum: is.durum, ajan: is.ajan, model: is.model, deneme_sayisi: is.deneme_sayisi,
-          sure_sn: sureSn(is), soru: kisalt(is.soru, 120).metin,
+          sure_sn: sureSn(is), maliyet_usd: this.kullanimToplami(is.id).maliyet_usd, soru: kisalt(is.soru, 120).metin,
         })),
       };
     }, (r) => r.ozet);
@@ -479,6 +557,63 @@ export class Defter {
     return is;
   }
 
+  /**
+   * Bir ajan oturumunun kullanimini ise baglar (surucu yazar; MCP araci degildir). Olcumdur, beyan degil: is kapali olsa da yazilir.
+   * Arac maliyet bildirmediyse ve fiyat tablosunda model (ya da ajan) varsa maliyet hesaplanir ve kaynagi "fiyat_tablosu" yazilir.
+   */
+  kullanimEkle(g: KullanimGirdisi): KullanimKaydi {
+    return this.log.sar('kullanim_ekle', g, () => {
+      this.isGetir(g.is_id);
+      for (const alan of ['oturum', 'sure_ms', 'girdi', 'onbellek_okuma', 'onbellek_yazma', 'cikti'] as const) {
+        if (!Number.isInteger(g[alan]) || g[alan] < 0) throw new Ret('GECERSIZ_DEGER', `${alan} sifir ya da pozitif tam sayi olmalidir.`);
+      }
+      if (g.maliyet_usd !== null && (!Number.isFinite(g.maliyet_usd) || g.maliyet_usd < 0)) {
+        throw new Ret('GECERSIZ_DEGER', 'maliyet_usd sifir ya da pozitif bir sayi ya da null olmalidir.');
+      }
+      const ajan = dolu('ajan', g.ajan, SINIRLAR.kisa);
+      const model = g.model ? kisalt(g.model, SINIRLAR.kisa).metin : null;
+      let maliyet = g.maliyet_usd;
+      let kaynak: KullanimKaydi['maliyet_kaynagi'] = maliyet === null ? null : 'arac';
+      const fiyat = maliyet === null ? (model ? this.ayarlar.fiyatlar[model] : undefined) ?? this.ayarlar.fiyatlar[ajan] : undefined;
+      if (fiyat) {
+        maliyet =
+          (g.girdi * fiyat.girdi + g.cikti * fiyat.cikti +
+            g.onbellek_okuma * (fiyat.onbellek_okuma ?? fiyat.girdi) + g.onbellek_yazma * (fiyat.onbellek_yazma ?? fiyat.girdi)) / 1_000_000;
+        kaynak = 'fiyat_tablosu';
+      }
+      const sonuc = this.db
+        .prepare(
+          `INSERT INTO kullanim (is_id, zaman, ajan, model, oturum, sure_ms, girdi, onbellek_okuma, onbellek_yazma, cikti, maliyet_usd, maliyet_kaynagi)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(g.is_id, new Date().toISOString(), ajan, model, g.oturum, g.sure_ms, g.girdi, g.onbellek_okuma, g.onbellek_yazma, g.cikti, maliyet, kaynak);
+      this.dokumYaz();
+      return this.db.prepare('SELECT * FROM kullanim WHERE id = ?').get(Number(sonuc.lastInsertRowid)) as unknown as KullanimKaydi;
+    }, (k) => ({ is_id: k.is_id, maliyet_usd: k.maliyet_usd }));
+  }
+
+  private kullanimlar(isId: number): KullanimKaydi[] {
+    return this.db.prepare('SELECT * FROM kullanim WHERE is_id = ? ORDER BY id').all(isId) as unknown as KullanimKaydi[];
+  }
+
+  private kullanimToplami(isId: number | null): KullanimToplami {
+    const t = this.db
+      .prepare(
+        `SELECT count(*) AS oturum, coalesce(sum(sure_ms), 0) AS sure_ms, coalesce(sum(girdi), 0) AS girdi,
+                coalesce(sum(onbellek_okuma), 0) AS onbellek_okuma, coalesce(sum(onbellek_yazma), 0) AS onbellek_yazma,
+                coalesce(sum(cikti), 0) AS cikti, sum(maliyet_usd) AS maliyet_usd,
+                sum(CASE WHEN maliyet_usd IS NULL THEN 1 ELSE 0 END) AS bilinmeyen
+         FROM kullanim ${isId === null ? '' : 'WHERE is_id = ?'}`,
+      )
+      .get(...(isId === null ? [] : [isId])) as Record<string, number | null>;
+    return {
+      oturum: Number(t.oturum), ajan_sure_sn: Math.round(Number(t.sure_ms) / 100) / 10,
+      girdi: Number(t.girdi), onbellek_okuma: Number(t.onbellek_okuma), onbellek_yazma: Number(t.onbellek_yazma), cikti: Number(t.cikti),
+      maliyet_usd: t.maliyet_usd === null ? null : Math.round(Number(t.maliyet_usd) * 1e6) / 1e6,
+      maliyeti_bilinmeyen_oturum: Number(t.bilinmeyen ?? 0),
+    };
+  }
+
   private kanitlar(isId: number): KanitKaydi[] {
     return this.db.prepare('SELECT * FROM kanitlar WHERE is_id = ? ORDER BY id').all(isId) as unknown as KanitKaydi[];
   }
@@ -494,7 +629,7 @@ export class Defter {
   private dokumYaz(): void {
     try {
       const isler = this.db.prepare('SELECT * FROM isler ORDER BY id').all() as unknown as IsKaydi[];
-      const metin = isler.map((is) => JSON.stringify({ ...is, kanitlar: this.kanitlar(is.id), kararlar: this.kararlar(is.id) })).join('\n');
+      const metin = isler.map((is) => JSON.stringify({ ...is, kanitlar: this.kanitlar(is.id), kararlar: this.kararlar(is.id), kullanim_toplami: this.kullanimToplami(is.id), kullanimlar: this.kullanimlar(is.id) })).join('\n');
       const gecici = join(this.dizin, `defter.jsonl.${process.pid}.tmp`);
       writeFileSync(gecici, metin === '' ? '' : metin + '\n');
       renameSync(gecici, join(this.dizin, 'defter.jsonl'));

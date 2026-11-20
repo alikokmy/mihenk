@@ -124,6 +124,8 @@ export interface AjanKosusu {
   esik_asildi: boolean;
   baglam: number;
   son_metin: string;
+  /** Oturumun kullanimi (aracin bildirdigi); maliyet_usd null: arac bildirmedi. */
+  kullanim: { girdi: number; onbellek_okuma: number; onbellek_yazma: number; cikti: number; maliyet_usd: number | null; model: string | null };
   sure_ms: number;
   baslatma_hatasi?: string;
 }
@@ -135,7 +137,10 @@ export function ajaniKostur(
   o: { cwd: string; zamanAsimiMs: number; baglamEsigi: number; ciktiDosyasi: string },
 ): Promise<AjanKosusu> {
   const t0 = Date.now();
-  const sonuc: AjanKosusu = { cikis_kodu: null, zaman_asimi: false, esik_asildi: false, baglam: 0, son_metin: '', sure_ms: 0 };
+  const sonuc: AjanKosusu = {
+    cikis_kodu: null, zaman_asimi: false, esik_asildi: false, baglam: 0, son_metin: '', sure_ms: 0,
+    kullanim: { girdi: 0, onbellek_okuma: 0, onbellek_yazma: 0, cikti: 0, maliyet_usd: null, model: null },
+  };
   const komut = tanim.komutBul();
   if (!komut) return Promise.resolve({ ...sonuc, baslatma_hatasi: `"${tanim.ad}" araci bu bilgisayarda bulunamadi` });
 
@@ -180,6 +185,19 @@ export function ajaniKostur(
         cozulmus = JSON.parse(satir);
       } catch {
         // JSON olmayan satir ham metin olarak kalir.
+      }
+      const katki = tanim.kullanimKatkisi?.(cozulmus);
+      if (katki) {
+        const k = sonuc.kullanim;
+        const alanlar = ['girdi', 'onbellek_okuma', 'onbellek_yazma', 'cikti'] as const;
+        if (katki.tur === 'toplam') {
+          for (const a of alanlar) k[a] = katki[a] ?? 0;
+          if (katki.maliyet_usd !== undefined) k.maliyet_usd = katki.maliyet_usd;
+        } else {
+          for (const a of alanlar) k[a] += katki[a] ?? 0;
+          if (katki.maliyet_usd !== undefined) k.maliyet_usd = (k.maliyet_usd ?? 0) + katki.maliyet_usd;
+        }
+        if (katki.model) k.model = katki.model;
       }
       const kullanim = tanim.kullanimOku(cozulmus);
       if (kullanim?.baglam !== undefined) olculenBaglam = kullanim.baglam;
@@ -317,6 +335,10 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
         olay('oturum_bitti', { is_id: isId, ajan: tanim.ad, cikis_kodu: kosu.cikis_kodu, zaman_asimi: kosu.zaman_asimi, esik_asildi: kosu.esik_asildi, baglam: kosu.baglam, sure_ms: kosu.sure_ms, hata: kosu.baslatma_hatasi ?? null });
 
         // Ajan proje disinda bir sey degistirdi mi?
+        if (!kosu.baslatma_hatasi) {
+          // Oturumun kullanimi ise baglanir (Asama 5): her oturum, devir ve basarisiz deneme dahil.
+          defter.kullanimEkle({ is_id: isId, ajan: tanim.ad, ...kosu.kullanim, oturum: deneme + devir + 1, sure_ms: kosu.sure_ms });
+        }
         const degisen = korunan.filter((d, i) => once[i] !== null && depoDurumu(d) !== once[i]);
         if (degisen.length > 0) {
           gecersiz = true;

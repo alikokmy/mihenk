@@ -225,6 +225,63 @@ test('ret: surucunun actigi iste hukmu ajan veremez; surucu verir (ajan not ekle
   defter.kapat();
 });
 
+// ---- kullanim ve maliyet (Asama 5) ----
+
+const oturum = (isId: number, ek: Record<string, unknown> = {}) => ({
+  is_id: isId, ajan: 'claude', model: 'model-a', oturum: 1, sure_ms: 2000, girdi: 100, onbellek_okuma: 1000, onbellek_yazma: 50, cikti: 20,
+  maliyet_usd: 0.05 as number | null, ...ek,
+});
+
+test('kullanim: oturumlar ise baglanir, toplamlari is ve defter duzeyinde dogru', () => {
+  const { defter } = ortam();
+  const a = defter.isAc(girdi());
+  const b = defter.isAc(girdi());
+  defter.kullanimEkle(oturum(a.id));
+  defter.kullanimEkle(oturum(a.id, { oturum: 2, sure_ms: 3000, girdi: 10, cikti: 5, maliyet_usd: 0.02 }));
+  defter.kullanimEkle(oturum(b.id, { maliyet_usd: 0.1 }));
+  const r = defter.rapor({ is_id: a.id });
+  assert.deepEqual(r.is?.kullanim_toplami, {
+    oturum: 2, ajan_sure_sn: 5, girdi: 110, onbellek_okuma: 2000, onbellek_yazma: 100, cikti: 25, maliyet_usd: 0.07, maliyeti_bilinmeyen_oturum: 0,
+  });
+  assert.equal(r.kullanimlar?.[0]?.maliyet_kaynagi, 'arac');
+  assert.equal(r.kullanim.maliyet_usd, 0.17);
+  assert.equal(defter.rapor({}).isler?.find((i) => i.id === b.id)?.maliyet_usd, 0.1);
+  defter.kapat();
+});
+
+test('kullanim: arac maliyet bildirmezse uydurulmaz; fiyat tablosu varsa hesaplanir ve kaynagi yazilir', () => {
+  const kok = mkdtempSync(join(tmpdir(), 'mihenk-fiyat-'));
+  writeFileSync(join(kok, 'gecer.js'), 'process.exit(0);');
+  writeFileSync(join(kok, 'mihenk.json'), JSON.stringify({ fiyatlar: { 'model-a': { girdi: 3, cikti: 15, onbellek_okuma: 0.3, onbellek_yazma: 3.75 } } }));
+  const defter = new Defter(kok);
+  const is = defter.isAc(girdi());
+  defter.kullanimEkle(oturum(is.id, { model: 'bilinmeyen-model', maliyet_usd: null }));
+  let t = defter.rapor({ is_id: is.id }).is?.kullanim_toplami;
+  assert.equal(t?.maliyet_usd, null);
+  assert.equal(t?.maliyeti_bilinmeyen_oturum, 1);
+  const k = defter.kullanimEkle(oturum(is.id, { oturum: 2, maliyet_usd: null }));
+  // Elle: (100*3 + 20*15 + 1000*0.3 + 50*3.75) / 1e6 = (300 + 300 + 300 + 187.5) / 1e6 = 0.0010875
+  assert.equal(k.maliyet_kaynagi, 'fiyat_tablosu');
+  assert.ok(Math.abs((k.maliyet_usd ?? 0) - 0.0010875) < 1e-12, String(k.maliyet_usd));
+  t = defter.rapor({ is_id: is.id }).is?.kullanim_toplami;
+  assert.equal(t?.maliyeti_bilinmeyen_oturum, 1, 'bilinmeyen oturum gizlenmez');
+  defter.kapat();
+});
+
+test('ret: kullanim kaydi kayitsiz ise yazilmaz, eksi ya da kesirli token kabul etmez; veritabaninda degistirilemez', () => {
+  const { kok, defter } = ortam();
+  retBekle(() => defter.kullanimEkle(oturum(999)), 'KAYIT_YOK');
+  const is = defter.isAc(girdi());
+  retBekle(() => defter.kullanimEkle(oturum(is.id, { girdi: -1 })), 'GECERSIZ_DEGER');
+  retBekle(() => defter.kullanimEkle(oturum(is.id, { cikti: 1.5 })), 'GECERSIZ_DEGER');
+  retBekle(() => defter.kullanimEkle(oturum(is.id, { maliyet_usd: -0.01 })), 'GECERSIZ_DEGER');
+  defter.kullanimEkle(oturum(is.id));
+  const ham = new DatabaseSync(join(kok, '.mihenk', 'defter.db'));
+  assert.throws(() => ham.exec('UPDATE kullanim SET maliyet_usd = 0'), /degismez/);
+  ham.close();
+  defter.kapat();
+});
+
 // ---- kapali is degismez ----
 
 test('ret: kapali ise kanit eklenmez, karar yazilmaz, yeniden hukum verilmez', async () => {

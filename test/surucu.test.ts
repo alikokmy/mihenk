@@ -37,6 +37,7 @@ const sahte = (ad: string, govde: string): AjanTanimi => {
     argumanlar: (istem) => [istem],
     kullanimOku: (s) => (s && typeof s === 'object' && 'baglam' in s ? { baglam: Number((s as { baglam: unknown }).baglam) } : undefined),
     metinOku: (s) => (s && typeof s === 'object' && 'metin' in s ? String((s as { metin: unknown }).metin) : undefined),
+    kullanimKatkisi: (s) => (s && typeof s === 'object' && 'kullanim' in s ? { tur: 'artis' as const, ...(s as { kullanim: object }).kullanim } : undefined),
   };
 };
 
@@ -50,6 +51,8 @@ else { de('cok cikti uretiyorum'); let n = 0; setInterval(() => { n += 400; cons
   ikincide: sahte('ikincide', `if (istem.includes('daha once denendi')) { yap(); de('ikinci denemede yaptim'); } else { de('ilk denemede yapmadim'); }`),
   disari: sahte('disari', `writeFileSync(join(process.env.MIHENK_TEST_DISARI, 'ajan-buraya-yazdi.txt'), 'x'); yap(); de('yaptim');`),
   neredeyim: sahte('neredeyim', `writeFileSync('neredeyim.txt', JSON.stringify({ cwd: process.cwd(), pwd: process.env.PWD })); yap();`),
+  // Iki adimda kullanim ve maliyet bildirir (Asama 5).
+  olculu: sahte('olculu', `console.log(JSON.stringify({ kullanim: { girdi: 120, onbellek_okuma: 900, onbellek_yazma: 30, cikti: 40, maliyet_usd: 0.012, model: 'sahte-model' } })); yap(); console.log(JSON.stringify({ kullanim: { girdi: 80, onbellek_okuma: 100, cikti: 10, maliyet_usd: 0.003 } }));`),
 };
 
 function proje(git = false): string {
@@ -146,6 +149,30 @@ test('KABUL: ajan proje disinda degisiklik yaparsa is gecersiz sayilir; liste su
   assert.match(r.isler[0]?.not ?? '', /proje disinda degisiklik/);
   assert.equal(r.isler[1]?.durum, 'gecti');
   assert.ok(existsSync(join(disari, 'ajan-buraya-yazdi.txt')), 'surucu korunan klasore dokunmaz, yalniz bildirir');
+});
+
+test('KABUL (Asama 5): kapanan her iste sure ve kullanim dolu; adimlar toplanir, maliyet bilinmiyorsa uydurulmaz', async () => {
+  const kok = proje();
+  const liste = { isler: [is('m1.txt', { ajan: 'olculu' }), is('m2.txt', { ajan: 'yapan' }), is('m3.txt', { ajan: 'takilan' })] };
+  const r = await listeyiYurut({ kok, liste, saklama: 'yok', ajanZamanAsimiSn: 1, denemeSiniri: 1, ...sessiz });
+  const defter = new Defter(kok);
+  const ayrinti = r.isler.map((i) => defter.rapor({ is_id: i.is_id }).is!);
+  defter.kapat();
+  for (const is of ayrinti) {
+    assert.notEqual(is.durum, 'acik');
+    assert.ok(is.sure_sn !== null && is.sure_sn >= 0, `is ${is.id}: sure bos`);
+    assert.ok(is.kullanim_toplami.oturum >= 1, `is ${is.id}: kullanim kaydi yok`);
+    assert.ok(is.kullanim_toplami.ajan_sure_sn >= 0);
+  }
+  // olculu: iki adim toplanir. Elle: girdi 120+80, okuma 900+100, yazma 30+0, cikti 40+10, maliyet 0.012+0.003.
+  assert.deepEqual(ayrinti[0]?.kullanim_toplami && { ...ayrinti[0].kullanim_toplami, ajan_sure_sn: 0 }, {
+    oturum: 1, ajan_sure_sn: 0, girdi: 200, onbellek_okuma: 1000, onbellek_yazma: 30, cikti: 50, maliyet_usd: 0.015, maliyeti_bilinmeyen_oturum: 0,
+  });
+  // yapan ve takilan maliyet bildirmez: maliyet null ve "bilinmeyen" olarak sayilir, sifir yazilmaz.
+  assert.equal(ayrinti[1]?.kullanim_toplami.maliyet_usd, null);
+  assert.equal(ayrinti[1]?.kullanim_toplami.maliyeti_bilinmeyen_oturum, 1);
+  assert.equal(ayrinti[2]?.durum, 'kaldi');
+  assert.equal(ayrinti[2]?.kullanim_toplami.oturum, 1, 'takilan oturumun suresi de kayda girer');
 });
 
 test('ajan dogru klasorde baslar: calisma dizini ve PWD proje klasorudur', async () => {

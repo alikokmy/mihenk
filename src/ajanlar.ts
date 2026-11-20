@@ -4,6 +4,20 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { delimiter, dirname, join } from 'node:path';
 
+/**
+ * Bir cikti satirinin oturum kullanimina katkisi. "artis": toplama eklenir (adim ya da tur basina bildiren araclar);
+ * "toplam": oturumun nihai toplamidir, oncekilerin yerine gecer. girdi, onbellekten okunan tokenlari icermez.
+ */
+export interface KullanimKatkisi {
+  tur: 'artis' | 'toplam';
+  girdi?: number;
+  onbellek_okuma?: number;
+  onbellek_yazma?: number;
+  cikti?: number;
+  maliyet_usd?: number;
+  model?: string;
+}
+
 export interface Kullanim {
   /** O andaki baglam buyuklugu (token): son adimin girdisi + onbellekten okunan. */
   baglam?: number;
@@ -22,6 +36,8 @@ export interface AjanTanimi {
   kullanimOku(satir: unknown): Kullanim | undefined;
   /** Ciktinin bir satirindan ajanin yazdigi metin (devir notu icin). */
   metinOku(satir: unknown): string | undefined;
+  /** Ciktinin bir satirindan token ve maliyet katkisi (Asama 5). Tanimlanmamissa kullanim sifir ve maliyet bilinmiyor kalir. */
+  kullanimKatkisi?(satir: unknown): KullanimKatkisi | undefined;
 }
 
 type Kayit = Record<string, any>;
@@ -44,6 +60,7 @@ function enYeniAltDizin(kok: string): string | null {
   return adlar[0] ? join(kok, adlar[0]) : null;
 }
 
+const sayi = (x: unknown): number => (typeof x === 'number' && Number.isFinite(x) && x > 0 ? Math.round(x) : 0);
 const DEFTER_ARACLARI = ['is_ac', 'hukum_ver', 'kanit_ekle', 'karar_yaz', 'rapor'].map((a) => `mcp__mihenk__${a}`);
 
 export const CLAUDE: AjanTanimi = {
@@ -64,6 +81,19 @@ export const CLAUDE: AjanTanimi = {
   },
   argumanlar: (istem) => ['-p', istem, '--max-budget-usd', '1', '--output-format', 'stream-json', '--verbose', '--permission-mode', 'acceptEdits',
     '--no-session-persistence', '--allowedTools', ...DEFTER_ARACLARI, 'Read', 'Edit', 'Write', 'Glob', 'Grep'],
+  kullanimKatkisi(satir) {
+    const s = nesne(satir);
+    if (s?.type === 'system' && s.subtype === 'init' && typeof s.model === 'string') return { tur: 'artis', model: s.model };
+    if (s?.type !== 'result') return undefined;
+    const k = nesne(s.usage) ?? {};
+    const modeller = Object.keys(nesne(s.modelUsage) ?? {});
+    return {
+      tur: 'toplam', girdi: sayi(k.input_tokens), onbellek_okuma: sayi(k.cache_read_input_tokens),
+      onbellek_yazma: sayi(k.cache_creation_input_tokens), cikti: sayi(k.output_tokens),
+      ...(typeof s.total_cost_usd === 'number' ? { maliyet_usd: s.total_cost_usd } : {}),
+      ...(modeller[0] ? { model: modeller[0] } : {}),
+    };
+  },
   kullanimOku(satir) {
     const k = nesne(nesne(nesne(satir)?.message)?.usage);
     if (!k) return undefined;
@@ -95,6 +125,13 @@ export const CODEX: AjanTanimi = {
   },
   // --trust olmadan projedeki MCP kaydi okunmaz; --approve-for-me olmadan bassiz kipte arac cagrisi reddedilir.
   argumanlar: (istem) => ['exec', '--trust', '--approve-for-me', '--json', istem],
+  kullanimKatkisi(satir) {
+    const s = nesne(satir);
+    const k = s?.type === 'turn.completed' ? nesne(s.usage) : undefined;
+    if (!k) return undefined;
+    const okuma = sayi(k.cached_input_tokens);
+    return { tur: 'artis', girdi: Math.max(0, sayi(k.input_tokens) - okuma), onbellek_okuma: okuma, onbellek_yazma: sayi(k.cache_write_input_tokens), cikti: sayi(k.output_tokens) };
+  },
   kullanimOku(satir) {
     // Codex kullanimi yalniz tur sonunda ve toplam olarak verir; canli baglam olcumu yoktur (surucu cikti hacminden tahmin eder).
     const s = nesne(satir);
@@ -118,6 +155,16 @@ export const OPENCODE: AjanTanimi = {
     return existsSync(paketli) ? { program: paketli, onEk: [] } : null;
   },
   argumanlar: (istem) => ['run', '--standalone', '--auto', '--format', 'json', istem],
+  kullanimKatkisi(satir) {
+    const s = nesne(satir);
+    const p = s?.type === 'step_finish' ? nesne(s.part) : undefined;
+    const t = nesne(p?.tokens);
+    if (!p || !t) return undefined;
+    return {
+      tur: 'artis', girdi: sayi(t.input), onbellek_okuma: sayi(nesne(t.cache)?.read), onbellek_yazma: sayi(nesne(t.cache)?.write),
+      cikti: sayi(t.output) + sayi(t.reasoning), ...(typeof p.cost === 'number' ? { maliyet_usd: p.cost } : {}),
+    };
+  },
   kullanimOku(satir) {
     const s = nesne(satir);
     const t = s?.type === 'step_finish' ? nesne(nesne(s.part)?.tokens) : undefined;
