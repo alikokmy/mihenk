@@ -141,7 +141,7 @@ async function defterCiz() {
   const kartlar = isler.length === 0 ? [el('div', { class: 'kart' }, el('p', { metin: m('p_defter_bos') }))] : isler.map((i) => {
     const sonuc = el('div', { class: 'ileti' }); const onizleme = el('div', { class: 'onizleme', 'data-onizleme': String(i.id) });
     return el('div', { class: 'kart is ' + i.durum, 'data-is': String(i.id) },
-      el('div', {}, el('span', { class: 'rozet', metin: m('p_durum_' + i.durum) }), document.createTextNode(' · ' + m('p_is', { id: i.id }))),
+      el('div', {}, el('span', { class: 'rozet', metin: m('p_durum_' + i.durum) }), document.createTextNode(' · ' + m('p_is', { id: i.id }) + (i.geri_alindi ? ' · ' + m('p_geri_alindi_rozet') : ''))),
       el('p', { metin: i.soru }),
       i.supheler.length ? el('p', { class: 'soluk', metin: m('p_supheli') + ': ' + i.supheler.join('; ') }) : null,
       el('p', { class: 'soluk', metin: m('p_ayrinti', { sure: i.sure_sn === null ? '-' : i.sure_sn + ' s', maliyet: i.maliyet_usd === null ? m('p_bilinmiyor') : i.maliyet_usd + ' USD', ajan: i.ajan, deneme: i.deneme }) }),

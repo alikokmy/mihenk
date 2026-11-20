@@ -70,7 +70,8 @@ const yuvarla = (x: number, b = 6): number => Math.round(x * 10 ** b) / 10 ** b;
 function secenekHesapla(isler: IsOlcumu[], a: OneriAyarlari): Secenek {
   const { ajan, model } = isler[0]!;
   const n = isler.length;
-  const gecen = isler.filter((i) => i.durum === 'gecti').length;
+  // Sonradan geri alinan "gecti" isi basari sayilmaz: kullanici sonucu begenmemistir (Asama 21; CodeBurn'deki "reverted" sinifi).
+  const gecen = isler.filter((i) => i.durum === 'gecti' && !i.geri_alindi).length;
   const bilinmeyen = isler.filter((i) => i.maliyet_usd === null).length;
   const maliyetler = isler.map((i) => i.maliyet_usd).filter((m): m is number => m !== null);
   const toplamMaliyet = maliyetler.reduce((t, m) => t + m, 0);

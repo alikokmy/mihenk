@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { gectiMi, komutuCalistir, komutuCoz, VARSAYILAN_IZINLI } from './dogrulama.js';
 import { kurcalamaFarki, testOzeti, type TestDosyasi } from './bekci.js';
-import { fotografCek, fotograflariBuda } from './geri.js';
+import { fotografCek, fotograflariBuda, geriAlinanIsler } from './geri.js';
 import { ayarlariOku as ozellikleriOku } from './ayar.js';
 import { Ret } from './hata.js';
 import { Log } from './log.js';
@@ -199,6 +199,8 @@ export interface IsOlcumu {
   deneme_sayisi: number;
   /** Isin butun oturumlarinin maliyeti; biri bile bilinmiyorsa null. */
   maliyet_usd: number | null;
+  /** Is kapandiktan sonra degisiklikleri geri alindi mi (Asama 21): "gecti" ise oneri bunu basari saymaz. */
+  geri_alindi?: boolean;
 }
 
 /** Raporun ve dokumun gosterdigi is (test ozeti cikmis, supheler dizi). */
@@ -717,6 +719,7 @@ export class Defter {
    * Maliyet ancak butun oturumlarinki biliniyorsa yazilir (kismi toplam yaniltir); hic oturum olcumu yoksa da bilinmez.
    */
   olcumler(): IsOlcumu[] {
+    const geriAlinan = geriAlinanIsler(this.kok);
     const isler = this.db.prepare("SELECT * FROM isler WHERE durum <> 'acik' ORDER BY id").all() as unknown as IsKaydi[];
     const modelSorgusu = this.db.prepare('SELECT DISTINCT model FROM kullanim WHERE is_id = ? AND model IS NOT NULL');
     return isler.map((is) => {
@@ -726,6 +729,7 @@ export class Defter {
         id: is.id, tur: is.tur, ajan: is.ajan, model: modeller.length === 1 ? modeller[0]! : is.model,
         durum: is.durum as Exclude<Durum, 'acik'>, sure_sn: sureSn(is), deneme_sayisi: is.deneme_sayisi,
         maliyet_usd: k.oturum > 0 && k.maliyeti_bilinmeyen_oturum === 0 ? k.maliyet_usd : null,
+        geri_alindi: geriAlinan.has(is.id),
       };
     });
   }

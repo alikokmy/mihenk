@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { Defter, type IsGorunumu } from './defter.js';
 import { hangiDil, t } from './dil.js';
+import { geriAlinanIsler } from './geri.js';
 
 const kacis = (s: string): string => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
@@ -45,19 +46,22 @@ export function raporHtml(kok: string, zaman = new Date()): { html: string; ozet
   try {
     const r = defter.rapor({ sinir: 100 });
     const isler = (r.isler ?? []).map((x) => defter.rapor({ is_id: x.id }).is!).reverse();
+    const geriAlinan = geriAlinanIsler(kok);
     const o = r.ozet;
     const k = r.kullanim;
     const satirlar = isler.map((is) => {
       const s = SONUC[is.durum]!;
       const supheler = is.supheler.length > 0
         ? `<p class="uyari">${kacis(t('r_dikkat', { metin: is.supheler.join('; ') }))}</p>` : '';
-      const geriAl = is.durum !== 'gecti' && is.durum !== 'acik'
+      const geriAlindi = geriAlinan.has(is.id) ? `<p class="uyari" data-geri-alindi="${is.id}">${kacis(t('r_geri_alindi'))}</p>` : '';
+      const geriAl = !geriAlinan.has(is.id) && is.durum !== 'gecti' && is.durum !== 'acik'
         ? `<p class="ipucu">${kacis(t('r_geri'))} <code>mihenk geri-al ${is.id}</code></p>` : '';
       return `<section class="is ${s.sinif}">
   <h2><span class="rozet">${kacis(t(s.anahtar))}</span> ${kacis(t('r_is', { id: is.id }))}</h2>
   <p class="soru">${kacis(is.soru)}</p>
   <p><b>${kacis(t('r_neden'))}:</b> ${kacis(neden(is))}</p>
   ${supheler}
+  ${geriAlindi}
   <p class="kucuk">${kacis(t('r_satir', { sure: sure(is.sure_sn), maliyet: para(is.kullanim_toplami.maliyet_usd, is.kullanim_toplami.maliyeti_bilinmeyen_oturum), ajan: is.ajan, deneme: is.deneme_sayisi }))}</p>
   ${geriAl}
 </section>`;

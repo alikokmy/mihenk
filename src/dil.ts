@@ -237,6 +237,8 @@ export const METINLER = {
   r_sn: { tr: '{sn} sn', en: '{sn} s' },
   r_maliyet_bilinmiyor: { tr: 'bilinmiyor (araç maliyet bildirmiyor)', en: 'unknown (the tool does not report cost)' },
   r_maliyet_kismen: { tr: ' (bir kısmı bilinmiyor)', en: ' (partly unknown)' },
+  r_geri_alindi: { tr: 'Bu işin değişiklikleri sonradan geri alındı; öneri hesabında başarılı sayılmaz.', en: 'This job\'s changes were undone later; it does not count as a success in the recommendation.' },
+  p_geri_alindi_rozet: { tr: 'Geri alındı', en: 'Undone' },
   r_n_gecti: { tr: 'İşin kendi denetimi geçti; bunu yapay zekâ değil, mihenk kendisi doğruladı.', en: 'The job\'s own check passed; mihenk itself verified this, not the AI.' },
   r_n_butce: { tr: 'Harcama ya da süre sınırına ulaşıldı ({ayrinti}).', en: 'The spending or time limit was reached ({ayrinti}).' },
   r_n_kota: { tr: 'Yapay zekâ hizmeti bir süre isteği kabul etmedi (kullanım sınırı); iş tamamlanamadı.', en: 'The AI service refused requests for a while (usage limit); the job could not be completed.' },

@@ -116,6 +116,27 @@ export function fotograflariBuda(kok: string, sakla: number): number[] {
   return silinecek;
 }
 
+/**
+ * Degisiklikleri gercekten geri alinmis isler (Asama 21). Kapanmis is kaydi degistirilemez; bilgi geri almanin biraktigi kayittan okunur.
+ * Fotograf temizligi bu kayitlara dokunmaz.
+ */
+export function geriAlinanIsler(kok: string): Set<number> {
+  const d = dizin(kok);
+  const s = new Set<number>();
+  if (!existsSync(d)) return s;
+  for (const ad of readdirSync(d)) {
+    const m = /^is-(\d+)-geri-alindi-\d+\.json$/.exec(ad);
+    if (!m) continue;
+    try {
+      const r = JSON.parse(readFileSync(join(d, ad), 'utf8')) as GeriAlmaSonucu;
+      if (r.geri_yuklenen.length + r.silinen.length + r.geri_getirilen.length > 0) s.add(Number(m[1]));
+    } catch {
+      // bozuk kayit sayilmaz
+    }
+  }
+  return s;
+}
+
 function mevcutOzet(kok: string, g: string): string | null {
   const tam = join(kok, g);
   try {

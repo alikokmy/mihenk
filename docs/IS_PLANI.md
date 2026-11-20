@@ -182,7 +182,7 @@ Kaynak: superpowers ve CodeBurn depolarının README, sürüm notları, belgeler
 | 18 | **tamam** (2026-11-20; `npm test`: 199 test geçti; bkz. "Aşama 18 sonucu"). **Geri almada önizleme ve onay** (pencerede bugün tek tık): önce hangi dosyaların geri alınacağı gösterilir, sonra onaylanır | onaysız `/api/geri-al` 400 veriyor ve dosya değişmiyor; önizleme listesi `--deneme` çıktısıyla aynı; tarayıcıda denendi |
 | 19 | **tamam** (2026-11-20; `npm test`: 204 test geçti; bkz. "Aşama 19 sonucu"). **Doktor ve hata paketi:** `mihenk doktor` ve pencerede "Durum": Node sürümü, bulunan araçlar, MCP kaydı okunuyor mu, kancanın son çalışması, Codex kanca onayı, uyku; her satırda TAMAM ya da SORUN ve ne yapılacağı. Kişisel yol ve anahtarları temizlenmiş tek dosyalık hata paketi | kasıtlı bozulan dört kurulum (MCP kaydı silinmiş, kanca silinmiş, ajan yok, eski Node) doğru satırda SORUN veriyor; temiz kurulumda hepsi TAMAM; komut dosya yazmıyor; pakette ev dizini yolu ve gizli anahtar deseni yok |
 | 20 | **tamam** (2026-11-20; `npm test`: 208 test geçti; bkz. "Aşama 20 sonucu"). **Başlatmadan önce liste denetimi ("yapıcı denetimi"):** her işte eksik alan, izinsiz program, projede tanımlı olmayan betik (ör. `npm test` yok) için anlaşılır uyarı; pencerede ve komut satırında | tanımsız betik ve izinsiz program içeren liste başlamadan iş başına uyarı veriyor; temiz liste uyarısız |
-| 21 | **Öneride geri alma sinyali:** sonradan geri alınan "geçti" işi öneri hesabında başarı sayılmaz; rapor onu "geri alındı" gösterir | sentetik defterde geri alınan işin seçeneğinin başarı oranı düşüyor, öteki işler etkilenmiyor |
+| 21 | **tamam** (2026-11-20; `npm test`: 210 test geçti; bkz. "Aşama 21 sonucu"). **Öneride geri alma sinyali:** sonradan geri alınan "geçti" işi öneri hesabında başarı sayılmaz; rapor onu "geri alındı" gösterir | sentetik defterde geri alınan işin seçeneğinin başarı oranı düşüyor, öteki işler etkilenmiyor |
 | 22 | **Elle açılan oturumda döngü bekçisi (Claude Code, Codex):** aynı araç çağrısı ya da aynı başarısız komut tekrarlanınca önce uyarır, sonra durdurur; tek oturumluk izin | taklit kanca girdisiyle eşikte uyarı, sonra ret; farklı çağrı sayacı sıfırlıyor; anahtar kapalıyken etkisiz; bekçi kendisi bozulursa geçit verip kaydediyor |
 | 23 | **Elle açılan oturumların maliyeti** (Aşama 5'ten açık): CodeBurn ya da ccusage çıktısı zaman aralığıyla işe bağlanır; README'ye kullanıcı sorularıyla "Sorular" bölümü | kayıtlı CodeBurn çıktısı örneğinde iş aralığına düşen maliyet elle hesapla uyuşuyor; araç yoksa "bilinmiyor"; her soru bir komuta ya da sekmeye bağlı |
 
@@ -850,6 +850,17 @@ kaydedilince "Başlamadan önce dikkat" kutusunda görünür.
 **Kanıt:** `test/liste-denetim.test.ts` (4 test): temiz liste uyarısız; yedi sorunlu iş, her biri kendi numarası ve anlaşılır metniyle;
 `package.json` yokken ve yarn / pnpm betiklerinde uyarı; pencere kaydetme ve açma yanıtında uyarılar. Betik denetimi kasıtlı
 kaldırılınca 3 test kaldı.
+
+## Aşama 21 sonucu (2026-11-20)
+
+Değişiklikleri sonradan gerçekten geri alınan iş (`geriAlinanIsler`: geri almanın bıraktığı, en az bir dosya değiştirmiş kayıt; önizleme
+sayılmaz) ölçüme `geri_alindi` olarak girer. Kapanmış iş kaydı değiştirilmez. Öneri hesabı bu "geçti" işi başarı saymaz (CodeBurn'deki
+"reverted" sınıfının karşılığı); rapor "sonradan geri alındı" notunu, pencere "Geri alındı" etiketini gösterir ve geri alma düğmesini
+kaldırır.
+
+**Kanıt:** `test/geri-sinyal.test.ts` (2 test): sentetik veride geri alınan üç iş başarı sayılmadı, öteki seçenek etkilenmedi ve öneri ona
+döndü; gerçek defterde önizleme işaretlemedi, gerçek geri alma işaretledi, öteki iş etkilenmedi, öneri ve rapor yansıttı. Öneri
+hesabındaki koşul kaldırılınca iki test de kaldı.
 
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 

@@ -14,7 +14,7 @@ import { ayarDegistir, baglamYuku } from './ayar-cli.js';
 import { Defter } from './defter.js';
 import { dilAyarla, hangiDil, METINLER, sec, sistemDili } from './dil.js';
 import { agaciOldur } from './dogrulama.js';
-import { geriAl } from './geri.js';
+import { geriAl, geriAlinanIsler } from './geri.js';
 import { kaldir } from './kaldir.js';
 import { kur } from './kur.js';
 import { oneriHesapla, oneriMetni } from './oneri.js';
@@ -76,13 +76,15 @@ function pencereMetinleri(): Record<string, string> {
 function isler(kok: string) {
   if (!existsSync(join(kok, '.mihenk', 'defter.db'))) return [];
   const defter = new Defter(kok);
+  const geriAlinan = geriAlinanIsler(kok);
   try {
     return (defter.rapor({ sinir: 100 }).isler ?? []).map((x) => {
       const is = defter.rapor({ is_id: x.id }).is!;
       return {
         id: is.id, tur: is.tur, soru: is.soru, durum: is.durum, ajan: is.ajan, sure_sn: is.sure_sn, deneme: is.deneme_sayisi,
         gerekce: is.gerekce, supheler: is.supheler, maliyet_usd: is.kullanim_toplami.maliyet_usd,
-        geri_alinabilir: is.durum !== 'acik' && existsSync(join(kok, '.mihenk', 'geri', `is-${is.id}-son.json`)),
+        geri_alindi: geriAlinan.has(is.id),
+        geri_alinabilir: !geriAlinan.has(is.id) && is.durum !== 'acik' && existsSync(join(kok, '.mihenk', 'geri', `is-${is.id}-son.json`)),
       };
     });
   } finally {
