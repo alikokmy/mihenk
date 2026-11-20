@@ -260,8 +260,13 @@ try {
     console.log(t('pk_sonuc', { klasor: p.klasor, zip: p.zip ?? '-', paket: p.paket_sayisi, mb: p.boyut_mb }));
   }
   else if (komut === 'hata-paketi') console.log(t('hp_yazildi', { yol: hataPaketi(resolve(secenek('--hedef') ?? process.cwd())) }));
-  else if (komut === 'pencere') {
-    const p = await pencereAc(resolve(secenek('--hedef') ?? process.cwd()), { port: sayi('--port') ?? VARSAYILAN_PORT });
+  else if (komut === 'pencere' || komut === 'ac') {
+    // "ac": proje secmeden baslangic ekrani (Asama 31; paketteki Mihenk-Ac.cmd). Ikisi de sayfa kapaninca kendiliginden kapanir
+    // (liste calisiyorsa kapanmaz).
+    const hedef = komut === 'ac' ? (secenek('--hedef') ?? null) : resolve(secenek('--hedef') ?? process.cwd());
+    const p = await pencereAc(hedef === null ? null : resolve(hedef), {
+      port: sayi('--port') ?? VARSAYILAN_PORT, otomatikKapan: { sureMs: 180_000 }, kapaninca: () => process.exit(0),
+    });
     console.log(t('pencere_acildi', { url: p.url }));
     console.log(t('pencere_kapat'));
     if (!gerisi.includes('--acma')) {

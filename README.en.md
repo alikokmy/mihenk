@@ -37,7 +37,7 @@ For a machine with no internet, a self-hosted model (Qwen, DeepSeek...) behind a
 **Install on the offline machine.** No internet, `npm install`, Node.js install or admin rights are needed.
 
 1. Unzip the package to a permanent folder.
-2. Drag your project folder onto `Projeye-kur.cmd`.
+2. Double-click `Mihenk-Ac.cmd`. The mihenk window opens in your browser; choose your project there (folder picker or pasted path) or open a new project for your idea. Every setting is in the window; no command line or file editing is needed.
 
 The settings that mihenk writes call the bundled `node.exe` by its full path, so do not move the folder after you install.
 

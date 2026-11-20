@@ -34,10 +34,10 @@ pre{white-space:pre-wrap;font:12.5px/1.45 ui-monospace,Consolas,monospace;margin
 .baglanti{background:none;border:0;padding:2px 0;margin-top:4px;color:var(--vurgu);font:inherit;font-size:.85rem;cursor:pointer;text-decoration:underline}
 details summary{cursor:pointer;color:var(--soluk)}
 </style></head><body>
-<header><h1 id="baslik">mihenk</h1><div class="klasor" id="klasor"></div>
+<header><div class="satir arasi"><h1 id="baslik">mihenk</h1><button class="dugme ikincil kucuk" id="proje-degistir" hidden></button></div><div class="klasor" id="klasor"></div>
 <nav role="tablist" id="sekmeler"></nav></header>
 <main>
-<section id="proje"></section><section id="liste" hidden></section><section id="defter" hidden></section>
+<section id="baslangic" hidden></section><section id="proje"></section><section id="liste" hidden></section><section id="defter" hidden></section>
 <section id="ayarlar" hidden></section><section id="oneri" hidden></section>
 </main>
 <script>
@@ -62,7 +62,48 @@ function sekmeleriCiz() {
   for (const [id, k] of SEKMELER) n.append(el('button', { role: 'tab', 'aria-selected': String(id === secili), 'data-sekme': id, metin: m(k), onclick: () => sekmeAc(id) }));
 }
 function sekmeAc(id) { secili = id; for (const [s] of SEKMELER) $(s).hidden = s !== id; sekmeleriCiz(); ciz(id); }
-async function yukle() { D = await api('/api/durum'); M = D.metinler; document.documentElement.lang = D.dil; $('klasor').textContent = m('p_proje_klasoru') + ': ' + D.proje.kok; sekmeleriCiz(); ciz(secili); }
+async function yukle() {
+  D = await api('/api/durum'); M = D.metinler; document.documentElement.lang = D.dil;
+  // Baslangic ekrani (Asama 31): proje secilmemisse sekmeler gizlenir.
+  const secim = D.secim === true; $('baslangic').hidden = !secim; $('sekmeler').hidden = secim; for (const [s] of SEKMELER) $(s).hidden = secim || s !== secili;
+  const pd = $('proje-degistir'); pd.hidden = secim; pd.textContent = m('p_bs_proje_degistir');
+  pd.onclick = async () => { try { await api('/api/proje', { kok: null }); await yukle(); } catch (e) { alert(e.message); } };
+  if (secim) { $('klasor').textContent = ''; baslangicCiz(); return; }
+  $('klasor').textContent = m('p_proje_klasoru') + ': ' + D.proje.kok; sekmeleriCiz(); ciz(secili);
+}
+// Sayfa acik oldukca sunucuya nabiz: sayfa kapaninca sunucu kendiliginden kapanir (liste calisirken kapanmaz).
+setInterval(() => { api('/api/nabiz', {}).catch(() => {}); }, 15000);
+
+function baslangicCiz() {
+  const s = $('baslangic'); const sonuc = el('div', { class: 'ileti', id: 'baslangic-iletisi' }); const onay = el('div', { class: 'kart uyari', hidden: '' });
+  const projeAc = async (kok, kur) => {
+    try {
+      const r = await api('/api/proje', { kok, kur: kur === true });
+      if (!r.kurulu) {
+        koy(onay, el('p', { metin: m('p_bs_kur_soru', { kok: r.kok }) }), el('div', { class: 'satir' },
+          el('button', { class: 'dugme', 'data-eylem': 'kur-ve-ac', metin: m('p_bs_kur_ve_ac'), onclick: () => projeAc(r.kok, true) }),
+          el('button', { class: 'dugme ikincil', metin: m('p_vazgec'), onclick: () => { onay.hidden = true; } })));
+        onay.hidden = false; return;
+      }
+      secili = 'liste'; await yukle();
+    } catch (e) { ileti(sonuc, m('p_hata', { hata: e.message }), true); }
+  };
+  const son = el('div', { class: 'kart' }, el('b', { metin: m('p_bs_son') }));
+  for (const p of D.son_projeler) son.append(el('div', { class: 'satir arasi', 'data-son-proje': p.kok },
+    el('div', {}, el('div', { metin: p.ad + (p.kurulu ? '' : ' (' + m('p_bs_kurulmadi') + ')') }), el('div', { class: 'soluk', metin: p.kok })),
+    el('div', { class: 'satir' }, el('button', { class: 'dugme kucuk', metin: m('p_bs_ac'), onclick: () => projeAc(p.kok) }),
+      el('button', { class: 'dugme ikincil kucuk', metin: m('p_bs_cikar'), onclick: async () => { await api('/api/son-proje-cikar', { kok: p.kok }); await yukle(); } }))));
+  const yolKutusu = el('input', { id: 'proje-yolu', placeholder: m('p_bs_yol') });
+  const var_olan = el('div', { class: 'kart' }, el('b', { metin: m('p_bs_var_olan') }), el('div', { class: 'satir' },
+    el('button', { class: 'dugme', 'data-eylem': 'klasor-sec', metin: m('p_bs_klasor_sec'), onclick: async () => { ileti(sonuc, m('p_bs_secici_bekle')); try { const r = await api('/api/klasor-sec', {}); ileti(sonuc, ''); if (r.kok) projeAc(r.kok); } catch (e) { ileti(sonuc, m('p_hata', { hata: e.message }), true); } } })),
+    el('label', { class: 'alan' }, yolKutusu), el('button', { class: 'dugme ikincil', 'data-eylem': 'yolu-ac', metin: m('p_bs_ac'), onclick: () => { if (yolKutusu.value.trim()) projeAc(yolKutusu.value.trim().replace(/^"|"$/g, '')); } }));
+  const ad = el('input', { id: 'yeni-proje-adi', placeholder: m('p_bs_yeni_ad') });
+  const yeni = el('div', { class: 'kart' }, el('b', { metin: m('p_bs_yeni') }), el('p', { class: 'soluk', metin: m('p_bs_yeni_yer', { yol: D.projeler_koku }) }), el('label', { class: 'alan' }, ad),
+    el('button', { class: 'dugme', 'data-eylem': 'yeni-proje', metin: m('p_bs_olustur'), onclick: async () => { try { const r = await api('/api/yeni-proje', { ad: ad.value }); await projeAc(r.kok); } catch (e) { ileti(sonuc, m('p_hata', { hata: e.message }), true); } } }));
+  const kisayol = D.kisayol ? el('button', { class: 'dugme ikincil kucuk', 'data-eylem': 'kisayol', metin: m('p_bs_kisayol'), onclick: async () => { try { await api('/api/kisayol', {}); ileti(sonuc, m('p_bs_kisayol_tamam')); } catch (e) { ileti(sonuc, m('p_hata', { hata: e.message }), true); } } }) : null;
+  koy(s, el('div', { class: 'kart' }, el('h2', { metin: m('p_bs_baslik') }), el('p', { class: 'soluk', metin: m('p_bs_aciklama') })), onay, sonuc,
+    D.son_projeler.length ? son : null, yeni, var_olan, kisayol);
+}
 function ciz(id) { ({ proje: projeCiz, liste: listeCiz, defter: defterCiz, ayarlar: ayarlarCiz, oneri: oneriCiz })[id](); }
 
 async function durumCiz(yer) {

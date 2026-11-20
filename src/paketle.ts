@@ -2,8 +2,9 @@
 //   node\node.exe            tasinabilir Node.js (paketi yapan bilgisayardaki surum; ayrica Node kurulmasi gerekmez)
 //   app\dist\src, app\paket   mihenk
 //   app\node_modules          yalniz uretim bagimliliklari (package-lock.json'dan; npm install gerekmez)
-//   mihenk.cmd                komut satiri:   mihenk.cmd kur --hedef <proje>
-//   Projeye-kur.cmd           cift tikla ya da proje klasorunu ustune surukle-birak
+//   Mihenk-Ac.cmd             TEK GIRIS (Asama 31): cift tiklayinca pencere acilir; proje orada secilir ya da yeni proje acilir
+//   mihenk.cmd                komut satiri:   mihenk.cmd kur --hedef <proje>   (gelistirici icin)
+//   Projeye-kur.cmd           proje klasorunu ustune surukle-birak (istege bagli)
 //   KURULUM.txt               duz dille kurulum
 // Kurulumun yazdigi ayarlar (MCP, kanca, .cmd) paketin node.exe'sini mutlak yolla cagirir: paket acildigi yerde kalmalidir.
 import { spawnSync } from 'node:child_process';
@@ -69,6 +70,13 @@ export function paketle(cikis: string, o: { zip?: boolean; depo?: string } = {})
   // 4. Cift tiklanan dosyalar (yonetici izni yok; paket nereye acildiysa oradan calisir).
   const nodeYolu = '"%~dp0node\\node.exe" --disable-warning=ExperimentalWarning "%~dp0app\\dist\\src\\cli.js"';
   writeFileSync(join(klasor, 'mihenk.cmd'), ['@echo off', `${nodeYolu} %*`, ''].join('\r\n'));
+  // Tek giris: sunucu kucultulmus ayri bir konsolda calisir, bu dosya hemen kapanir; tarayici kapaninca sunucu kendiliginden kapanir.
+  writeFileSync(join(klasor, 'Mihenk-Ac.cmd'), [
+    '@echo off',
+    'rem mihenk: cift tiklayin. Tarayicida mihenk penceresi acilir; projenizi orada secin ya da yeni proje acin.',
+    'start "mihenk (pencereyi kapatinca kendiliginden kapanir)" /min "%~dp0node\\node.exe" --disable-warning=ExperimentalWarning "%~dp0app\\dist\\src\\cli.js" ac',
+    '',
+  ].join('\r\n'));
   writeFileSync(join(klasor, 'Projeye-kur.cmd'), [
     '@echo off',
     'rem mihenk: bir projeye kurar. Proje klasorunu bu dosyanin ustune surukleyip birakin ya da cift tiklayip klasoru yazin.',
@@ -83,19 +91,22 @@ export function paketle(cikis: string, o: { zip?: boolean; depo?: string } = {})
     '',
   ].join('\r\n'));
   writeFileSync(join(klasor, 'KURULUM.txt'), [
-    `mihenk ${surum} - cevrimdisi kurulum paketi`,
+    `mihenk ${surum}`,
     '',
-    'Bu klasorde mihenk icin gereken her sey var: Node.js dahil. Internet ve yonetici izni gerekmez; Node.js ayrica kurulmaz.',
+    'Bu klasorde mihenk icin gereken her sey var (Node.js dahil). Internet, kurulum programi ve yonetici izni gerekmez.',
     '',
-    '1. Bu klasoru kalici bir yere tasiyin (or. Belgeler\\mihenk). Kurulumdan sonra yerini degistirmeyin: projeler buradaki',
-    '   programi tam yoluyla cagirir. Tasirsaniz projede "mihenk-pencere.cmd" yerine bu klasordeki "Projeye-kur.cmd" ile yeniden kurun.',
-    '2. Projenizin klasorunu "Projeye-kur.cmd" dosyasinin ustune surukleyip birakin (ya da cift tiklayip klasoru yazin).',
-    '3. Proje klasorunde "mihenk-pencere.cmd" ile pencereyi acin: is listesi, ayarlar, defter, rapor oradadir.',
+    '1. Bu klasoru kalici bir yere tasiyin (or. Belgeler\\mihenk) ve sonra yerini degistirmeyin.',
+    '2. "Mihenk-Ac.cmd" dosyasina cift tiklayin. Tarayicinizda mihenk penceresi acilir.',
+    '3. Pencerede projenizi secin ya da fikriniz icin yeni bir proje acin. Isleri orada yazar, orada takip edersiniz.',
+    '   Bir dahaki sefere kolay acmak icin pencerede "Masaustune kisayol koy" dugmesine basabilirsiniz.',
+    '',
+    'Tarayici penceresini kapatinca mihenk birkac dakika icinde kendiliginden kapanir (is listesi calisiyorsa bitmesini bekler).',
     '',
     'OpenCode ve yerel model (Qwen, DeepSeek): kurulum projedeki opencode.json dosyasina yalniz "mihenk" kaydini ekler;',
     'sizin saglayici (provider) ve model ayarlariniza dokunmaz. Ayrinti: app\\README.md, "Internetsiz ortam ve yerel model".',
     '',
-    'Kaldirmak: proje klasorunde "mihenk-kaldir.cmd". Bu klasoru silmek mihenk\'i bilgisayardan kaldirir.',
+    'Kaldirmak: penceredeki Proje sekmesinde "Kaldir" (ya da proje klasorunde "mihenk-kaldir.cmd"). Bu klasoru silmek mihenk\'i',
+    'bilgisayardan kaldirir; son projeler listesi %LOCALAPPDATA%\\mihenk klasorundedir.',
     '',
   ].join('\r\n'));
 

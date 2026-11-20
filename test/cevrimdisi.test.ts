@@ -3,7 +3,7 @@
 // giden cagri yoktur.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -38,7 +38,7 @@ test('KABUL: zip baska klasore acilinca PATH\'te Node yokken kurulum, doktor ve 
   const acilan = mkdtempSync(join(tmpdir(), 'mihenk-acilan-'));
   assert.equal(spawnSync('tar', ['-x', '-f', p.zip!, '-C', acilan]).status, 0);
   const kok = join(acilan, readdirSync(acilan)[0]!);
-  for (const g of ['node/node.exe', 'mihenk.cmd', 'Projeye-kur.cmd', 'KURULUM.txt', 'app/dist/src/cli.js', 'app/paket/AGENTS.md', 'app/node_modules/@modelcontextprotocol/server/package.json']) {
+  for (const g of ['node/node.exe', 'Mihenk-Ac.cmd', 'mihenk.cmd', 'Projeye-kur.cmd', 'KURULUM.txt', 'app/dist/src/cli.js', 'app/paket/AGENTS.md', 'app/node_modules/@modelcontextprotocol/server/package.json']) {
     assert.ok(existsSync(join(kok, g)), g);
   }
   // PATH'te node yok; Claude Code gibi ortamlarin koydugu arama degiskeni de yok (gercek kullanici ortami).
@@ -61,5 +61,33 @@ test('KABUL: zip baska klasore acilinca PATH\'te Node yokken kurulum, doktor ve 
     assert.deepEqual((await istemci.listTools()).tools.map((x) => x.name).sort(), ['hukum_ver', 'is_ac', 'kanit_ekle', 'karar_yaz', 'rapor']);
   } finally {
     await istemci.close();
+  }
+
+  // Asama 31: tek giris dosyasi. Mihenk-Ac.cmd paketin node'u ile "ac" calistirir; baslangic ekranindan bos klasore kurulup acilir.
+  const giris = readFileSync(join(kok, 'Mihenk-Ac.cmd'), 'utf8');
+  assert.match(giris, /start "[^"]*" \/min "%~dp0node\\node\.exe" .*"%~dp0app\\dist\\src\\cli\.js" ac/);
+  const veri = mkdtempSync(join(tmpdir(), 'mihenk-paket-veri-'));
+  const sunucu = spawn(join(kok, 'node', 'node.exe'), ['--disable-warning=ExperimentalWarning', join(kok, 'app', 'dist', 'src', 'cli.js'), 'ac', '--acma', '--port', '47830'],
+    { env: { ...env, MIHENK_VERI_DIZINI: veri }, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+  try {
+    const url = await new Promise<URL>((ok, red) => {
+      let s = '';
+      sunucu.stdout.on('data', (p: Buffer) => { s += p.toString(); const m = /(http:\/\/127\.0\.0\.1:\d+\/\?anahtar=[0-9a-f]+)/.exec(s); if (m) ok(new URL(m[1]!)); });
+      sunucu.on('exit', () => red(new Error('sunucu kapandi: ' + s)));
+    });
+    const api = async (yol: string, govde?: unknown) => {
+      const r = await fetch(new URL(yol, url), { method: govde === undefined ? 'GET' : 'POST', headers: { 'x-mihenk-anahtar': url.searchParams.get('anahtar')!, 'content-type': 'application/json' }, ...(govde === undefined ? {} : { body: JSON.stringify(govde) }) });
+      return r.json() as Promise<any>;
+    };
+    assert.equal((await api('/api/durum')).secim, true, 'baslangic ekrani');
+    const yeni = join(acilan, 'fikrim');
+    mkdirSync(yeni);
+    assert.equal((await api('/api/proje', { kok: yeni, kur: true })).kurulu, true);
+    assert.equal((await api('/api/durum')).proje.kok, yeni);
+    const oc2 = JSON.parse(readFileSync(join(yeni, 'opencode.json'), 'utf8'));
+    assert.ok(oc2.mcp.servers.mihenk.command[0].toLowerCase().startsWith(kok.replace(/\\/g, '/').toLowerCase()), 'paketin node.exe si');
+    assert.ok(existsSync(join(veri, 'son-projeler.json')), 'son projeler kullanicinin uygulama verisinde');
+  } finally {
+    sunucu.kill();
   }
 });

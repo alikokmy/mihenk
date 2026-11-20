@@ -11,6 +11,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AYARLAR, ayarlariOku, ayarTanimi, degerCoz, ekAlanYaz, type AyarDegeri } from './ayar.js';
 import { ayarDegistir, baglamYuku } from './ayar-cli.js';
+import { kapanmaliMi, kisayolKoy, klasorSec, projelerKoku, projeUygunMu, sonProjeCikar, sonProjeEkle, sonProjeler, yeniProjeKlasoru } from './baslangic.js';
 import { ayarlariOku as defterAyarlari, Defter, VARSAYILAN_AYARLAR } from './defter.js';
 import { dilAyarla, hangiDil, METINLER, sec, sistemDili } from './dil.js';
 import { agaciOldur, PROGRAM_ADI, VARSAYILAN_IZINLI } from './dogrulama.js';
@@ -72,6 +73,7 @@ export const PENCERE_ESLEME: Record<string, { sekme: string; api: string } | { y
   'maliyet-topla': { sekme: 'oneri', api: 'POST /api/maliyet-topla' },
   uyum: { yok: 'gelistirici araci: araclarin yonteme uyumunu olcer; uzun surer ve sonucu dosyaya yazar' },
   pencere: { yok: 'pencerenin kendisi' },
+  ac: { yok: 'pencerenin kendisi: proje secmeden acar (baslangic ekrani)' },
   paketle: { yok: 'gelistirici araci: cevrimdisi kurulum paketini uretir' },
 };
 
@@ -108,6 +110,7 @@ export const SECENEK_ESLEME: Record<string, SecenekKarsiligi[]> = {
 export const IS_ALANLARI = ['tur', 'soru', 'beklenti', 'yanlissa', 'dogrulama_komutu', 'zorluk', 'ajan', 'zaman_asimi_sn'] as const;
 
 function dilKur(kok: string): void {
+  if (!kok) { dilAyarla('tr'); return; } // baslangic ekrani: proje yok, varsayilan dil
   const d = ayarlariOku(kok).dil;
   dilAyarla(d === 'en' || d === 'tr' ? d : sistemDili());
 }
@@ -149,7 +152,7 @@ function durum(kok: string) {
     }
   }
   return {
-    dil: hangiDil(), metinler: pencereMetinleri(),
+    secim: false, dil: hangiDil(), metinler: pencereMetinleri(),
     proje: { kok, ad: basename(kok), kurulu: existsSync(join(kok, '.mihenk', 'kurulum.json')), liste_var: existsSync(join(kok, 'mihenk-isler.json')) },
     ozet, baglam: baglamYuku(kok),
     ayarlar: AYARLAR.map((t) => ({
@@ -226,12 +229,37 @@ export interface PencereSunucusu {
   kapat(): Promise<void>;
 }
 
-/** Sunucuyu baslatir (port 0: bos bir port). Yalniz 127.0.0.1'e baglanir. */
-export function pencereAc(hedef: string, o: { port?: number; dosyaAcici?: (yol: string) => void } = {}): Promise<PencereSunucusu> {
-  const kok = resolve(hedef);
+export interface PencereSecenekleri {
+  port?: number;
+  dosyaAcici?: (yol: string) => void;
+  /** Klasor secici (varsayilan: Windows'un kendi secicisi); testler sahtesini verir. */
+  klasorSecici?: (aciklama: string) => Promise<string | null>;
+  /** Masaustu kisayolu yapan islev; testler sahtesini verir. */
+  kisayolYapici?: () => Promise<string | null>;
+  /** Yeni projelerin acildigi klasor (varsayilan Belgeler\mihenk-projeleri). */
+  projelerKoku?: string;
+  /** Sayfa kapaninca kendiliginden kapanma (Asama 31): nabiz bu kadar gelmezse ve liste calismiyorsa. */
+  otomatikKapan?: { sureMs: number; denetimMs?: number };
+  /** Kendiliginden kapandiktan sonra cagrilir (komut satiri sureci bitirir). */
+  kapaninca?: () => void;
+}
+
+/**
+ * Sunucuyu baslatir (port 0: bos bir port). Yalniz 127.0.0.1'e baglanir. hedef null ise baslangic ekrani acilir (Asama 31): proje
+ * secilene dek yalniz baslangic uclari calisir. Liste calismiyorken proje degistirilebilir.
+ */
+export function pencereAc(hedef: string | null, o: PencereSecenekleri = {}): Promise<PencereSunucusu> {
+  let kok = hedef ? resolve(hedef) : '';
   const anahtar = randomBytes(24).toString('hex');
   let surucu: { cocuk: ChildProcess; satirlar: string[]; bitti: boolean; cikis: number | null } | null = null;
   let port = 0;
+  let sonNabiz = 0;
+  let zamanlayici: NodeJS.Timeout | undefined;
+  const listeCalisiyor = (): boolean => surucu !== null && !surucu.bitti;
+  const baslangicDurumu = () => ({
+    secim: true, dil: hangiDil(), metinler: pencereMetinleri(), son_projeler: sonProjeler(), projeler_koku: o.projelerKoku ?? projelerKoku(),
+    kisayol: process.platform === 'win32',
+  });
 
   const json = (res: ServerResponse, kod: number, veri: unknown): void => {
     res.writeHead(kod, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
@@ -258,10 +286,50 @@ export function pencereAc(hedef: string, o: { port?: number; dosyaAcici?: (yol: 
       }
       if (!anahtarGecerli) return json(res, 403, { hata: 'anahtar' });
       if (u.pathname === '/rapor' && req.method === 'GET') {
+        if (!kok) return json(res, 409, { hata: 'proje' });
         res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
         return res.end(existsSync(join(kok, '.mihenk', 'defter.db')) ? raporHtml(kok).html : `<p>${METINLER.p_defter_bos[hangiDil()]}</p>`);
       }
       const yol = `${req.method} ${u.pathname}`;
+      sonNabiz = Date.now(); // sayfadan gelen her istek nabizdir
+      // --- Baslangic ekrani (Asama 31): proje secmek, yeni proje, klasor secici, kisayol. Proje acikken de calisir.
+      if (yol === 'POST /api/nabiz') return json(res, 200, { tamam: true });
+      if (yol === 'GET /api/durum' && !kok) return json(res, 200, baslangicDurumu());
+      if (yol === 'POST /api/proje') {
+        const g = await govde(req);
+        if (listeCalisiyor()) return json(res, 409, { hata: METINLER.p_bs_liste_calisiyor[hangiDil()] });
+        if (g.kok === null) { kok = ''; return json(res, 200, { secim: true }); }
+        const u2 = projeUygunMu(String(g.kok ?? ''));
+        if (!u2.tamam) return json(res, 400, { hata: METINLER[`p_bs_${u2.neden}`][hangiDil()] });
+        const kurulu = existsSync(join(u2.kok, '.mihenk', 'kurulum.json'));
+        if (!kurulu && g.kur !== true) return json(res, 200, { kurulu: false, kok: u2.kok });
+        if (!kurulu) kur(u2.kok, { esitle: true });
+        kok = u2.kok;
+        surucu = null;
+        sonProjeEkle(kok);
+        return json(res, 200, { kurulu: true, kok });
+      }
+      if (yol === 'POST /api/yeni-proje') {
+        const g = await govde(req);
+        const y = yeniProjeKlasoru(String(g.ad ?? ''), o.projelerKoku);
+        if (!y.tamam) return json(res, 400, { hata: METINLER.p_bs_ad_gecersiz[hangiDil()] });
+        return json(res, 200, { kok: y.kok });
+      }
+      if (yol === 'POST /api/klasor-sec') {
+        const secilen = await (o.klasorSecici ?? klasorSec)(METINLER.p_bs_secici_aciklama[hangiDil()]);
+        return json(res, 200, { kok: secilen });
+      }
+      if (yol === 'POST /api/son-proje-cikar') {
+        const g = await govde(req);
+        sonProjeCikar(String(g.kok ?? ''));
+        return json(res, 200, { son_projeler: sonProjeler() });
+      }
+      if (yol === 'POST /api/kisayol') {
+        const y = await (o.kisayolYapici ?? kisayolKoy)();
+        if (!y) return json(res, 400, { hata: METINLER.p_bs_kisayol_olmadi[hangiDil()] });
+        return json(res, 200, { yol: y });
+      }
+      if (!kok) return json(res, 409, { hata: METINLER.p_bs_proje_sec[hangiDil()] });
       if (yol === 'GET /api/durum') return json(res, 200, durum(kok));
       if (yol === 'GET /api/isler') return json(res, 200, isler(kok));
       if (yol === 'GET /api/doktor') return json(res, 200, doktor(kok));
@@ -434,9 +502,20 @@ export function pencereAc(hedef: string, o: { port?: number; dosyaAcici?: (yol: 
     dene(0, () => {
       const adres = sunucu.address();
       port = typeof adres === 'object' && adres ? adres.port : 0;
+      if (o.otomatikKapan) {
+        const { sureMs, denetimMs = 10_000 } = o.otomatikKapan;
+        zamanlayici = setInterval(() => {
+          if (!kapanmaliMi({ sonNabiz, simdi: Date.now(), sureMs, listeCalisiyor: listeCalisiyor() })) return;
+          clearInterval(zamanlayici);
+          sunucu.close(() => o.kapaninca?.());
+          sunucu.closeAllConnections?.();
+        }, denetimMs);
+        zamanlayici.unref();
+      }
       ok({
         url: `http://127.0.0.1:${port}/?anahtar=${anahtar}`, anahtar, port,
         kapat: () => new Promise((k) => {
+          clearInterval(zamanlayici);
           if (surucu && !surucu.bitti) agaciOldur(surucu.cocuk);
           sunucu.close(() => k());
           sunucu.closeAllConnections?.();

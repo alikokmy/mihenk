@@ -20,6 +20,18 @@ yazıldı ve denendi. Açık kalemler ve sürüm 0.2 taslağı [docs/IS_PLANI.md
 | Qwen Code | var | **denenmedi**: ücretsiz katmanı kapandı; kurulum belgeye göre yazıldı | belgeye göre yazıldı, denenmedi |
 | Gemini CLI | var | **denenmedi**: ücretsiz katmanda kaldırılmış | yok |
 
+## Başlamak (kodlama bilmeyen kullanıcı için)
+
+1. mihenk klasörünü (zip'ten açılmış haliyle) kalıcı bir yere koyun, örneğin Belgeler.
+2. İçindeki **`Mihenk-Ac.cmd`** dosyasına çift tıklayın. Tarayıcıda mihenk penceresi açılır.
+3. Pencerede var olan bir projeyi seçin (Windows'un klasör seçicisiyle ya da yolu yapıştırarak) ya da fikriniz için **yeni proje**
+   açın. Proje kurulu değilse mihenk önce sorar, sonra kurar.
+4. İşleri pencerede yazar ve takip edersiniz. "Masaüstüne kısayol koy" ile bir dahaki sefere masaüstünden açabilirsiniz.
+
+Komut satırı, `npm install` ya da ayar dosyası düzenlemek gerekmez; yönetici izni istenmez. Tarayıcıdaki sayfayı kapatınca mihenk
+birkaç dakika içinde kendiliğinden kapanır (iş listesi çalışıyorsa bitmesini bekler). Paket, internetli bir bilgisayarda
+`npm run paketle` ile üretilir (bkz. "İnternetsiz ortam ve yerel model").
+
 - [README.en.md](README.en.md): English. İletileri İngilizce yapmak için: `mihenk ayar dil en`.
 - [docs/ARASTIRMA.md](docs/ARASTIRMA.md): benzer açık kaynak projelerin taraması ve hüküm.
 - [docs/IS_PLANI.md](docs/IS_PLANI.md): onaylı iş planı, iki bağlayıcı ilke, aşama sonuçları ve açık kararlar.
@@ -66,7 +78,7 @@ Kurulum ayrıca proje klasörüne örnek bir iş listesi (`mihenk-isler.ornek.js
 **Paket.** İnternetli bir bilgisayarda depodan `npm run paketle` çalıştırılır. Sonuç `cikti/mihenk-<sürüm>-win32-x64.zip` dosyasıdır
 (yaklaşık 100 MB). İçinde Node.js (`node\node.exe`), mihenk ve bütün bağımlılıkları bulunur. Hedef bilgisayarda internet, `npm install`,
 Node.js kurulumu ya da yönetici izni gerekmez. Zip kalıcı bir klasöre açılır (ör. `Belgeler\mihenk`). Ardından proje klasörü
-`Projeye-kur.cmd` dosyasının üstüne sürüklenir; ayrıntılı adımlar paketteki `KURULUM.txt` içindedir. Kurulumun yazdığı ayarlar
+`Mihenk-Ac.cmd` dosyasına çift tıklanır ve proje pencerede seçilir (ya da yeni proje açılır); ayrıntılı adımlar paketteki `KURULUM.txt` içindedir. Kurulumun yazdığı ayarlar
 paketteki `node.exe` dosyasını tam yoluyla çağırır, bu yüzden klasörün yeri sonradan değiştirilmemelidir.
 
 **OpenCode.** Kurulum `opencode.json` içine yalnız mihenk kaydını ekler. Sizin sağlayıcı (`provider`), model ve öteki MCP

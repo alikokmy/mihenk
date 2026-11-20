@@ -924,3 +924,59 @@ Bir bozma girişimi derlenmediği için sayılmadı ve başka biçimde yeniden y
 - Bu denemede "Kaydedildi" iletisinin, bölüm yeniden çizilince kaybolduğu görüldü ve düzeltildi.
 
 `npm test` 243/243.
+## Aşama 31 sonucu (2026-11-20)
+
+**Tek giriş.** Pakette tek giriş dosyası var: `Mihenk-Ac.cmd`. Dosya, paketin kendi `node.exe`'si ile `mihenk ac` komutunu
+küçültülmüş ayrı bir konsolda başlatır ve kendisi hemen kapanır. `ac`, pencereyi proje seçmeden açar.
+
+**Başlangıç ekranı:**
+
+- son projeler (aç, listeden çıkar);
+- yeni proje (`Belgeler\mihenk-projeleri\<ad>`);
+- var olan klasör: Windows'un kendi klasör seçicisi ya da yolu yapıştırmak;
+- masaüstü kısayolu.
+
+Kurulu olmayan klasörde önce onay sorulur ("Kur ve aç"). Proje açıkken başlıktaki "Proje değiştir" başlangıca döner; liste
+çalışırken proje değiştirilemez.
+
+**Reddedilen klasörler.** Sürücü kökü, kullanıcı klasörünün kendisi, Windows, Program Files ve uygulama verisi klasörleri proje olarak
+kabul edilmez.
+
+**Kendiliğinden kapanma.** Sayfa 15 saniyede bir nabız gönderir. Nabız 3 dakika gelmezse ve liste çalışmıyorsa sunucu kapanır.
+Sayfa hiç açılmadıysa kapanmaz.
+
+**Son projeler.** Liste `%LOCALAPPDATA%\mihenk\son-projeler.json` dosyasında tutulur; en çok 10 proje, silinmiş klasörler
+gösterilmez.
+
+**Kanıt.** `test/baslangic.test.ts` (5 test):
+
+- Başlangıç ekranı açılıyor; proje seçilmeden proje uçları 409 veriyor.
+- Boş klasör önce soruluyor ve kurulmuyor; "kur" ile kurulup proje ekranına geçiliyor. Son projeler kalıcı; proje değiştirince
+  listede "kurulu" olarak görünüyor.
+- Dört uygunsuz klasör ve bir dosya reddediliyor (kullanıcı klasörü, sürücü kökü, Windows, olmayan klasör). Kaçış içeren proje adı
+  reddediliyor.
+- Yeni proje verilen kökte açılıyor. Klasör seçici ve kısayol (sahte) bağlanıyor.
+- 5 saniyelik doğrulaması olan liste çalışırken proje değiştirme isteği 409 aldı.
+- Kendiliğinden kapanma: nabız hiç gelmeyince açık kaldı; nabızdan sonra kesilince kapandı. Karar işlevi, liste çalışırken
+  kapanmıyor.
+
+`test/cevrimdisi.test.ts`: zip başka klasöre açıldı ve PATH'te Node yoktu. Paketin node'u ile `ac` başladı ve başlangıç ekranı
+geldi. Boş bir klasöre kurulup açıldı; OpenCode kaydı paketin `node.exe`'sini gösteriyor; son projeler verilen uygulama verisi
+klasörüne yazıldı.
+
+`Mihenk-Ac.cmd`'nin kendisi de denendi: yalnız `--acma` eklenmiş bir kopyası, PATH'te Node yokken `cmd /c` ile çalıştırıldı.
+Komut hemen döndü ve paketin `node.exe`'si dinlemeye başladı.
+
+Ters denetim: liste çalışırken kapanma kuralı ve sistem klasörü reddi kaldırılınca testler kaldı.
+
+**Tarayıcıda denendi:** başlangıç ekranı → yol yapıştırma → "Kur ve aç" onayı → İş listesi ekranı → "Proje değiştir" → son
+projelerde görünüm.
+
+**Not (denenmedi):**
+
+- Windows'un gerçek klasör seçicisi ve gerçek masaüstü kısayolu bu oturumda açılmadı. Biri kullanıcının masaüstünde yerel bir
+  pencere açar, öteki masaüstüne dosya yazar. İkisi de sahteleriyle sınandı; PowerShell betikleri yazıldı ama çalıştırılmadı.
+- Yeni proje akışı tarayıcıda denenmedi, çünkü kullanıcının gerçek Belgeler klasörüne yazardı; API testinde geçici bir kökle sınandı.
+- Arka plandaki sekmelerde tarayıcıların zamanlayıcıları dakikada bire indirmesi, 3 dakikalık kapanma süresiyle denenmedi.
+
+`npm test` 248/248.
