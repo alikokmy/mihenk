@@ -29,8 +29,8 @@ function arayuzAlanlari(dosya: string, ad: string): string[] {
 
 test('KABUL esleme: komut satirinin her secenegi pencerede karsilikli ya da nedeni yazili', () => {
   const cli = readFileSync(join(KAYNAK, 'cli.ts'), 'utf8');
-  const secenekler = new Set([...cli.matchAll(/(?:secenek|sayi)\('(--[a-z-]+)'\)|gerisi\.includes\('(--[a-z-]+)'\)/g)].map((m) => m[1] ?? m[2]!));
-  assert.ok(secenekler.size >= 15, String(secenekler.size));
+  const secenekler = new Set([...cli.matchAll(/(?:secenek|sayi|oran)\('(--[a-z-]+)'|gerisi\.includes\('(--[a-z-]+)'\)/g)].map((m) => m[1] ?? m[2]!));
+  assert.ok(secenekler.size >= 21 && secenekler.has('--esik'), String(secenekler.size));
   const ayarlar = new Set(AYARLAR.map((a) => a.ad));
   for (const s of secenekler) {
     const k = SECENEK_ESLEME[s];

@@ -895,7 +895,8 @@ kullanıyor (`projeOneriAyarlari`). Raporda sürücünün araç seçim notu da g
 **Kanıt:** `test/pencere-tam.test.ts` (6 test).
 
 - Komut satırındaki 21 seçeneğin her biri `SECENEK_ESLEME` içinde ve karşılığı gerçekten var (ayar, liste alanı, iş alanı ya da
-  sayfadaki öğe). Karşılığı olmayanlar için nedeni yazılı.
+  sayfadaki öğe). Karşılığı olmayanlar için nedeni yazılı. Testin ilk hali `oran(...)` yardımcısıyla okunan `--esik` seçeneğini
+  görmüyordu (20 saydı); elle sayımla karşılaştırınca bulundu ve desen düzeltildi.
 - Defterin her `mihenk.json` alanı, `IsListesi` ve `ListeIsi` arayüzlerinin her alanı (kaynak koddan okunuyor) pencerede.
   Her liste alanının iki dilde başlığı ve açıklaması var.
 - Liste ayarları ve işe özel alanlar gidiş-dönüşte korunuyor. Beş geçersiz değer 400 aldı ve dosya bayt bayt aynı kaldı. Dosyanın
