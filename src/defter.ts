@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { gectiMi, komutuCalistir, komutuCoz, VARSAYILAN_IZINLI } from './dogrulama.js';
 import { kurcalamaFarki, testOzeti, type TestDosyasi } from './bekci.js';
+import { fotografCek } from './geri.js';
 import { ayarlariOku as ozellikleriOku } from './ayar.js';
 import { Ret } from './hata.js';
 import { Log } from './log.js';
@@ -406,6 +407,7 @@ export class Defter {
         .run(tur, soru, beklenti, yanlissa, komut, zamanAsimi, ajan, model, g.istemci ?? null, etiket, new Date().toISOString(),
           ozellikleriOku(this.kok).bekci_test_kurcalama === false ? null : JSON.stringify(testOzeti(this.kok)));
       const is = this.isGetir(Number(sonuc.lastInsertRowid));
+      this.fotograf(is.id, 'bas');
       this.dokumYaz();
       return is;
     }, (is) => ({ is_id: is.id }));
@@ -439,6 +441,16 @@ export class Defter {
       this.dokumYaz();
       return { karar_id: Number(sonuc.lastInsertRowid), is_id: g.is_id };
     });
+  }
+
+  /** Geri alma fotografi (Asama 13). Alinamamasi isi durdurmaz; loga yazilir. Ayarla kapatilabilir. */
+  private fotograf(isId: number, an: 'bas' | 'son'): void {
+    if (ozellikleriOku(this.kok).geri_alma === false) return;
+    try {
+      fotografCek(this.kok, isId, an);
+    } catch (e) {
+      this.log.olay('fotograf_alinamadi', { is_id: isId, an, hata: e instanceof Error ? e.message : String(e) });
+    }
   }
 
   /** Dogrulama komutunu bir kez kosar (hukum disi kosular: baslangic ve tekrar). */
@@ -569,6 +581,7 @@ export class Defter {
         this.db.exec('ROLLBACK');
         throw e;
       }
+      if (yeniDurum !== 'acik') this.fotograf(is.id, 'son');
       this.dokumYaz();
 
       if (celiski) {

@@ -595,6 +595,9 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
       }
       if (son.supheler.length > 0) not = `SUPHELI: ${son.supheler.join('; ')}. ${not}`;
       yaz(`${baslik} ${son.durum.toUpperCase()}${gecersiz ? ' (GECERSIZ)' : ''}: ${not}`);
+      if (son.durum !== 'gecti' && existsSync(join(defter.dizin, 'geri', `is-${isId}-son.json`))) {
+        yaz(`${baslik}   Bu isin yarim kalan degisikliklerini geri almak icin: mihenk geri-al ${isId}`);
+      }
       olay('is_bitti', { is_id: isId, kimlik, durum: son.durum, deneme, devir, gecersiz });
       sonuclar.push({ kimlik, is_id: isId, durum: son.durum, atlandi: false, deneme, devir, gecersiz, not });
     }

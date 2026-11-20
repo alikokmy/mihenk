@@ -14,6 +14,7 @@ import { KONTROL_ACIKLAMASI, raporMetni, SENARYOLAR, senaryoKostur, uyumOzeti, t
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { Defter } from './defter.js';
 import { kaldir } from './kaldir.js';
+import { geriAl } from './geri.js';
 import { ayarKomutu } from './ayar-cli.js';
 import { oneriHesapla, oneriMetni, VARSAYILAN_ONERI_AYARLARI, type OneriAyarlari } from './oneri.js';
 
@@ -37,6 +38,7 @@ function kullanim(): void {
   console.error('             [--saklama yok|yerel|yerel_gonder] [--uyanik-tut]');
   console.error('  mihenk uyum [--arac claude,codex,opencode,kilo] [--senaryo duzeltme,tuzak,karar] [--cikis <klasor>]');
   console.error('  mihenk ayar [--hedef <proje klasoru>] [<ayar> ac|kapa|<deger>] [--menu]   ozellikleri acip kapatir');
+  console.error('  mihenk geri-al <is> [--hedef <proje klasoru>] [--deneme]   bir isin dosya degisikliklerini geri alir');
   console.error('  mihenk kaldir [--hedef <proje klasoru>] [--defter-dahil]   kurulumun ekledigi her seyi geri alir');
   console.error('  mihenk oneri [--hedef <proje klasoru>] [--esik 0.5] [--en-az 5] [--uyum <uyum-raporu.json>] [--json]');
   console.error('Defter sunucusu ayri calisir: mihenk-defter [--kok <proje klasoru>]');
@@ -111,6 +113,24 @@ function oneriKomutu(): number {
     console.log(oneriMetni(turler, ayarlar));
   }
   return 0;
+}
+
+/** Bir isin dosya degisikliklerini geri alir; is bittikten sonra degisen dosyalara dokunmaz. */
+function geriAlKomutu(): number {
+  const kok = resolve(secenek('--hedef') ?? process.cwd());
+  const id = Number(gerisi.find((x) => /^\d+$/.test(x)));
+  if (!Number.isInteger(id) || id < 1) throw new Error('kullanim: mihenk geri-al <is numarasi> [--hedef <proje>] [--deneme]');
+  const s = geriAl(kok, id, { deneme: gerisi.includes('--deneme') });
+  const on = s.deneme ? '(deneme: hicbir sey degismedi) ' : '';
+  for (const d of s.geri_yuklenen) console.log(`${on}eski haline dondu   ${d}`);
+  for (const d of s.silinen) console.log(`${on}silindi (iste eklenmisti)  ${d}`);
+  for (const d of s.geri_getirilen) console.log(`${on}geri getirildi (iste silinmisti)  ${d}`);
+  for (const d of s.cakisan) console.log(`DOKUNULMADI (is bittikten sonra degismis)  ${d}`);
+  for (const d of s.atlanan) console.log(`geri alinamadi (fotografa alinmamis, cok buyuk)  ${d}`);
+  const toplam = s.geri_yuklenen.length + s.silinen.length + s.geri_getirilen.length;
+  console.log(toplam === 0 && s.cakisan.length === 0 ? `is ${id}: geri alinacak degisiklik yok.` : `is ${id}: ${toplam} dosya ${s.deneme ? 'geri alinacak' : 'geri alindi'}${s.cakisan.length ? `, ${s.cakisan.length} dosyaya dokunulmadi` : ''}.`);
+  if (!s.deneme && toplam > 0) console.log('Git kullaniyorsaniz bu bir calisma degisikligidir; isterseniz commit edin.');
+  return s.cakisan.length > 0 ? 1 : 0;
 }
 
 function kaldirKomutu(): number {
@@ -196,6 +216,7 @@ try {
   else if (komut === 'uyum') process.exitCode = await uyumKomutu();
   else if (komut === 'oneri') process.exitCode = oneriKomutu();
   else if (komut === 'kaldir') process.exitCode = kaldirKomutu();
+  else if (komut === 'geri-al') process.exitCode = geriAlKomutu();
   else if (komut === 'ayar') process.exitCode = await ayarKomutu();
   else {
     kullanim();

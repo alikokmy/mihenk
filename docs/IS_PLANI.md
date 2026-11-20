@@ -162,7 +162,7 @@ Sıra ölçütü: önce işin doğruluğu, sonra kullanıcı deneyiminin basitli
 | 10 | **tamam** (2026-11-20; `npm test`: 152 test geçti; bkz. "Aşama 10 sonucu"). **Doğruluk bekçileri:** (a) test kurcalama: iş sırasında test dosyası, beklenen çıktı değiştiyse ya da `skip` eklendiyse hüküm "şüpheli" notu taşır; (b) boş kanıt: doğrulama komutu iş başlamadan zaten geçiyorsa kayıtta not; (c) kararsız test: geçen doğrulama bir kez daha koşulur, sonuç değişirse "belirsiz (kararsız)" | her bekçi için kasıtlı bozuk ajan taklidi yakalanıyor; uyumlu taklit takılmıyor |
 | 11 | **tamam, bir sınırla** (2026-11-20; `npm test`: 156 test geçti; bkz. "Aşama 11 sonucu"). **Gerileme tabanı:** listenin başında projenin bütün test takımı bir kez koşulur; iş kapanırken önceden geçen bir şey kalırsa hüküm "geçti" olmaz | taklit bir ajanın kendi testini geçirip başka testi bozduğu iş "geçti" kapanmıyor |
 | 12 | **tamam** (2026-11-20; `npm test`: 162 test geçti; bkz. "Aşama 12 sonucu"). **Gözetimsiz koşu emniyeti:** liste / iş başına dolar ve süre tavanı; aynı hatayı tekrarlayan denemeyi erken kesme; abonelik limitine takılınca güvenli duraklama ve sonra kaldığı yerden sürme; yıkıcı komut bekçisi (`rm -rf`, `git reset --hard`, `push --force`, proje dışına yazma) kancaya eklenir | tavan aşılınca iş "bütçe" gerekçesiyle kapanıyor ve liste duruyor; döngü taklidi erken kesiliyor; yıkıcı komut taklidi reddediliyor |
-| 13 | **İş başına geri alma:** her işin başında bir geri dönüş noktası (git varsa geçici dal / stash, yoksa gölge kopya); `mihenk geri-al <iş>` o işin değişikliklerini geri alır | "kaldı" kapanan işin değişiklikleri tek komutla geri alınıyor; başka işlerin değişikliklerine dokunulmuyor; git'siz projede de çalışıyor |
+| 13 | **tamam** (2026-11-20; `npm test`: 167 test geçti; bkz. "Aşama 13 sonucu"). **İş başına geri alma:** her işin başında bir geri dönüş noktası (git varsa geçici dal / stash, yoksa gölge kopya); `mihenk geri-al <iş>` o işin değişikliklerini geri alır | "kaldı" kapanan işin değişiklikleri tek komutla geri alınıyor; başka işlerin değişikliklerine dokunulmuyor; git'siz projede de çalışıyor |
 | 14 | **Kullanıcıya ulaşan yüz:** liste bitince ya da durunca Windows bildirimi; çift tıklanan tek sayfalık düz dil raporu (ne yapıldı, ne kaldı ve neden, süre, maliyet) | bildirim yönetici izni istemeden çıkıyor; rapor kodlama terimi bilmeyen birinin okuyacağı dilde ve defterle sayıca uyuşuyor |
 
 Sonraya bırakılanlar (0.3 adayları): ajanın yazdığı testlere mutasyon denetimi (değerli ama dile bağlı ve büyük); yalnız not yazan
@@ -646,6 +646,24 @@ bozulunca 6 testin 5'i kaldı. Yolda bulunan kusur: liste tavanı dolunca sırad
   oralarda yalnız sürücünün proje dışı değişiklik denetimi var (iş geçersiz sayılır, ama silinen geri gelmez).
 - Tanıyıcı metin kalıplarıyla çalışır: komutu bir betik dosyasına yazıp çalıştırmak, takma ad (alias) ya da `xargs` ile silmek onu atlatır.
 - Döngü kesici iki denemeyle sınırlı tutar; ajan farklı ama aynı derecede yanlış çıktılar üretirse yakalanmaz.
+
+## Aşama 13 sonucu (2026-11-20)
+
+Git'ten bağımsız gölge kopya (`src/geri.ts`): iş açılınca ve kapanınca projenin fotoğrafı alınır (yol → sha256; içerikler
+`.mihenk/nesneler/` altında içerik adıyla bir kez). `mihenk geri-al <iş>` iki fotoğraf arasındaki farkı tersine çevirir: değişen dosya
+işten önceki haline, eklenen silinir, silinen geri gelir; işin oluşturduğu boş dizinler silinir. **Kural:** dosya ancak şimdiki hali
+işin bıraktığı halle aynıysa geri alınır; değilse "çakışma" (sonraki iş ya da kullanıcı değiştirmiş) ve dokunulmaz. Git geçmişine
+dokunulmaz; geri alma bir çalışma değişikliğidir. Anahtar: `geri_alma` (varsayılan açık).
+
+**Kanıt:** `test/geri.test.ts` (5 test): git'siz ve git deposunda "kaldı" kapanan işin değiştirdiği, eklediği (iç içe dizinle) ve sildiği
+dosyalar geri alındı, proje bayt bayt işten önceki haline döndü (git deposunda `git status` temiz); ilk iş geri alınınca ikinci işin
+değişikliği ve sonradan değişen dosya korundu; deneme kipi hiçbir şeyi değiştirmedi; ikinci geri alma boş; açık iş ve kapalı ayar
+anlaşılır hata verdi; komut satırı düz dille yazdı. Çakışma kuralı kaldırılınca "başka işe dokunmama" testi kaldı. Yolda bulunan kusur:
+git deposunda iş sırasında silinen dosya git listesinde kaldığı için "atlanan" sayılıyor ve geri getirilmiyordu.
+
+**Sınırlar:** 5 MB'tan büyük dosya fotoğrafa girmez. İlk fotoğraf bütün projeyi okur; çok büyük projede iş açılışı yavaşlar (aynı
+içerik bir kez saklandığı için disk kullanımı değişen dosyalarla sınırlı). Git'in yok saydığı dosyalar (ör. `dist/`) git deposunda
+fotoğrafa girmez. Nesneler hiç silinmez; temizlik sonraki iş.
 
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 

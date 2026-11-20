@@ -20,7 +20,8 @@ export interface TestDosyasi {
   atla: number;
 }
 
-function projeDosyalari(kok: string): string[] {
+/** Projenin dosyalari (git deposunda git'in yok saydiklari haric; degilse nokta ile baslayanlar ve node_modules haric). */
+export function projeDosyalari(kok: string): string[] {
   const git = spawnSync('git', ['ls-files', '-z', '-c', '-o', '--exclude-standard'], { cwd: kok, encoding: 'utf8', windowsHide: true, maxBuffer: 64 * 1024 * 1024 });
   if (git.status === 0 && typeof git.stdout === 'string') return git.stdout.split('\0').filter(Boolean);
   const sonuc: string[] = [];

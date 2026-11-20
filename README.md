@@ -71,6 +71,7 @@ açılır ya da kapanır ve hemen uygulanır, yalnız Enter çıkar. (Komut sat�
 | `arac_<araç>` | o araç için defter bağlantısı (ve varsa kapı kancası) | açık |
 | `saklama` | geçen işten sonra: `yerel` commit, `yok`, `yerel_gonder` | `yerel` |
 | `uyanik_tut` | liste yürürken bilgisayarı uyanık tut | kapalı |
+| `geri_alma` | her işin başında ve sonunda fotoğraf; `geri-al` bunu kullanır | açık |
 | `bekci_test_kurcalama` | iş sırasında var olan test değişti, silindi ya da atlandıysa "geçti"ye şüpheli notu | açık |
 | `bekci_bos_kanit` | doğrulama iş başlamadan zaten geçiyorsa "geçti"ye şüpheli notu | açık |
 | `bekci_gerileme` | iş listesinde, önceden geçen bütün testleri bozan iş "geçti" sayılmaz | açık |
@@ -80,6 +81,19 @@ açılır ya da kapanır ve hemen uygulanır, yalnız Enter çıkar. (Komut sat�
 
 Kapatılan özelliğin dosyaları kaldırmadaki gibi geri alınır; yeniden açınca dosyalar bayt bayt önceki haline döner. Ayarlar `mihenk.json`'da
 durur ve yalnız varsayılandan farklı olanlar yazılır. Liste, kurulumun her oturumda ajana eklediği yaklaşık metin yükünü de gösterir (token).
+
+## Bir işi geri almak
+
+Her işin başında ve sonunda projenin bir fotoğrafı alınır (git gerekmez). Beğenmediğiniz ya da yarım kalan bir işin değişikliklerini
+geri almak için:
+
+```
+node <mihenk yolu>/dist/src/cli.js geri-al <iş numarası> --hedef <proje>
+```
+
+İşin değiştirdiği dosyalar eski haline döner, eklediği dosyalar silinir, sildiği dosyalar geri gelir. İş bittikten sonra başka bir işin
+ya da sizin değiştirdiğiniz dosyalara dokunulmaz; bunlar "dokunulmadı" diye yazılır. Önce ne olacağını görmek için `--deneme` ekleyin.
+5 MB'tan büyük dosyalar fotoğrafa girmez ve geri alınamaz. Sürücü "kaldı" kapanan işte bu komutu kendisi hatırlatır.
 
 ## Kaldırmak
 
