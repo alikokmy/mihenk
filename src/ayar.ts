@@ -134,6 +134,20 @@ export const AYARLAR: readonly AyarTanimi[] = [
     varsayilan_aciklama: { tr: 'Son 5 kapanan isin fotografi tutulur, daha eskiler ve artik kullanilmayan icerikler silinir.', en: 'Snapshots of the last 5 closed jobs are kept; older ones and unused contents are deleted.' },
   },
   {
+    ad: 'oneri_esik', baslik: { tr: 'Öneri için en düşük başarı (yüzde)', en: 'Minimum success for a recommendation (percent)' }, varsayilan: 50, sayi: { en_az: 0, en_cok: 100 }, etki: 'calisma',
+    aciklama: { tr: 'Bir aracin onerilebilmesi icin basari oraninin guvenle en az bu kadar olmasi gerekir.', en: 'A tool can be recommended only if its success rate is confidently at least this high.' },
+    amac: { tr: 'Az ama sansli sonuclarla zayif bir aracin onerilmesini onlemek.', en: 'To avoid recommending a weak tool on a few lucky results.' },
+    sonuc: { tr: 'Yukseltince oneri daha secici olur ve daha gec gelir; dusurunce daha erken ama daha az guvenilir gelir.', en: 'Higher makes recommendations stricter and later; lower makes them earlier but less reliable.' },
+    varsayilan_aciklama: { tr: 'Basari oraninin %95 guven araliginin alt ucu en az %50 olmali.', en: 'The lower end of the 95% confidence interval of the success rate must be at least 50%.' },
+  },
+  {
+    ad: 'oneri_en_az', baslik: { tr: 'Öneri için en az iş', en: 'Minimum jobs for a recommendation' }, varsayilan: 5, sayi: { en_az: 1, en_cok: 100 }, etki: 'calisma',
+    aciklama: { tr: 'Bir arac bu is turunde en az bu kadar is bitirmeden onerilmez; keşif de bu sayiya bakar.', en: 'A tool is not recommended for a job type before it finished at least this many jobs of it; exploration uses this number too.' },
+    amac: { tr: 'Tek iki isle karar vermemek.', en: 'Not to decide on one or two jobs.' },
+    sonuc: { tr: 'Buyudukce oneri daha gec ama daha saglam gelir ve kesif daha uzun surer.', en: 'Larger means later but sounder recommendations and longer exploration.' },
+    varsayilan_aciklama: { tr: 'Her arac her is turunde en az 5 is bitirmeli.', en: 'Each tool must finish at least 5 jobs of a type.' },
+  },
+  {
     ad: 'kesif_orani', baslik: { tr: 'Keşif oranı (yüzde)', en: 'Exploration rate (percent)' }, varsayilan: 20, sayi: { en_az: 0, en_cok: 100 }, etki: 'calisma',
     aciklama: { tr: 'Is listesinde "ajan": "oneri" secildiyse islerin yuzde kaci, bu is turunde verisi az olan kurulu ajana verilsin.', en: 'If the job list uses "ajan": "oneri", what percent of jobs go to the installed agent with the least data for that job type.' },
     amac: { tr: 'Hep ayni ajan kullanilirsa otekiler hakkinda veri birikmez; oneri yalniz denenmis ajanlar arasindan secer.', en: 'If the same agent is always used, no data builds up on the others; the recommendation can only choose among agents that were tried.' },
@@ -255,6 +269,24 @@ export function ayarYaz(kok: string, degisiklik: Record<string, AyarDegeri>): vo
     if (deger === t.varsayilan) delete ham[ad];
     else ham[ad] = deger;
   }
+  hamYaz(kok, ham);
+}
+
+/**
+ * mihenk.json'un ayar disi alanlarini yazar (izinli_programlar, fiyatlar, kota, zaman_asimi_sn...; Asama 30, pencerenin "Gelismis"
+ * bolumu). null alani dosyadan cikarir. Dogrulama cagiranin isidir; ayar adlari burada reddedilir (onlar ayarYaz ile yazilir).
+ */
+export function ekAlanYaz(kok: string, degisiklik: Record<string, unknown>): void {
+  const ham = hamOku(kok);
+  for (const [ad, deger] of Object.entries(degisiklik)) {
+    if (AYARLAR.some((t) => t.ad === ad)) throw new Error(ileti('ayar_ek_alan_degil', { ad }));
+    if (deger === null || deger === undefined) delete ham[ad];
+    else ham[ad] = deger;
+  }
+  hamYaz(kok, ham);
+}
+
+function hamYaz(kok: string, ham: Record<string, unknown>): void {
   const yol = join(kok, DOSYA);
   const kayit = kayitOku(kok);
   let k = kayit.dosyalar[DOSYA];

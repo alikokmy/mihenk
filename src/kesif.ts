@@ -4,7 +4,7 @@
 // Karsi gorus: Thompson orneklemesi gibi rastgele yontemler kuramsal olarak daha iyi; belirlenimci kural tekrarlanabilir ve aciklanabilir.
 import type { IsOlcumu } from './defter.js';
 import { t } from './dil.js';
-import { oneriHesapla, VARSAYILAN_ONERI_AYARLARI } from './oneri.js';
+import { oneriHesapla, VARSAYILAN_ONERI_AYARLARI, type OneriAyarlari } from './oneri.js';
 
 /** Iste "ajan" yerine yazilan ozel ad: ajani oneri secer. */
 export const ONERI_AJANI = 'oneri';
@@ -31,15 +31,16 @@ export function kesifAdaylari(olcumler: readonly IsOlcumu[], tur: string, kurulu
  * sira: bu kosuda bu turden oneriyle secilen kacinci is (1'den baslar). kesifOrani: yuzde (0 kapatir).
  * varsayilan: oneri yokken kullanilacak ajan (kuruluysa).
  */
-export function ajanSec(o: { tur: string; olcumler: readonly IsOlcumu[]; kurulu: readonly string[]; sira: number; kesifOrani: number; varsayilan?: string }): AjanSecimi | null {
+export function ajanSec(o: { tur: string; olcumler: readonly IsOlcumu[]; kurulu: readonly string[]; sira: number; kesifOrani: number; varsayilan?: string; oneriAyarlari?: Partial<OneriAyarlari> }): AjanSecimi | null {
   if (o.kurulu.length === 0) return null;
-  const az = kesifAdaylari(o.olcumler, o.tur, o.kurulu);
+  const enAz = o.oneriAyarlari?.enAz ?? VARSAYILAN_ONERI_AYARLARI.enAz;
+  const az = kesifAdaylari(o.olcumler, o.tur, o.kurulu, enAz);
   const adim = o.kesifOrani > 0 ? Math.max(1, Math.round(100 / o.kesifOrani)) : 0;
   if (adim > 0 && az.length > 0 && o.sira % adim === 0) {
     const a = az[0]!;
-    return { ajan: a.ajan, kesif: true, neden: t('k_kesif', { ajan: a.ajan, sayi: a.is_sayisi, en_az: VARSAYILAN_ONERI_AYARLARI.enAz, adim }) };
+    return { ajan: a.ajan, kesif: true, neden: t('k_kesif', { ajan: a.ajan, sayi: a.is_sayisi, en_az: enAz, adim }) };
   }
-  const tur = oneriHesapla(o.olcumler.filter((x) => x.tur === o.tur))[0];
+  const tur = oneriHesapla(o.olcumler.filter((x) => x.tur === o.tur), o.oneriAyarlari ?? {})[0];
   if (tur?.oneri && o.kurulu.includes(tur.oneri.ajan)) {
     return { ajan: tur.oneri.ajan, kesif: false, neden: t('k_oneri', { ajan: tur.oneri.ajan, gerekce: tur.oneri.gerekce }) };
   }

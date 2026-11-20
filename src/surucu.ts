@@ -18,6 +18,7 @@ import { ayarlariOku } from './ayar.js';
 import { t } from './dil.js';
 import { bildir } from './bildirim.js';
 import { ajanSec, ONERI_AJANI, VARSAYILAN_KESIF_ORANI } from './kesif.js';
+import { projeOneriAyarlari } from './oneri.js';
 import { raporYaz } from './rapor.js';
 import { kisalt } from './sinir.js';
 
@@ -53,7 +54,51 @@ export interface IsListesi {
   /** Model saglayicisi hiz siniri / kota hatasi verince bekleme (dakika, varsayilan 15) ve en cok kac kez beklenecegi (varsayilan 4). */
   kota_bekleme_dk?: number;
   kota_bekleme_sayisi?: number;
+  /** Bir is icin en fazla kac ajan oturumu (dogrulama kaldikca); varsayilan 3. Komut satirinda --deneme. */
+  deneme_siniri?: number;
+  /** Baglam esigi yuzunden en fazla kac devir; varsayilan 3. */
+  devir_siniri?: number;
+  /** Tek ajan oturumunun en uzun suresi (dakika); varsayilan 15. Komut satirinda --oturum-sn. */
+  oturum_dk?: number;
+  /** Oturum baglami bu kadar token'i asarsa devredilir; varsayilan 120000. Komut satirinda --baglam-esigi. */
+  baglam_esigi?: number;
   isler: ListeIsi[];
+}
+
+/** Listenin ayar alanlari: pencerenin "Liste ayarlari" bolumu bunlardan cizilir (Asama 30). Bos: varsayilan / Ayarlar sekmesi. */
+export interface ListeAlani {
+  ad: Exclude<keyof IsListesi, 'isler' | 'ajan'>;
+  tur: 'sayi' | 'ondalik' | 'metin' | 'secim' | 'evet_hayir';
+  en_az?: number;
+  en_cok?: number;
+  secenekler?: readonly string[];
+}
+export const LISTE_ALANLARI: readonly ListeAlani[] = [
+  { ad: 'butce_usd', tur: 'ondalik', en_az: 0 },
+  { ad: 'is_butce_usd', tur: 'ondalik', en_az: 0 },
+  { ad: 'sure_tavani_dk', tur: 'sayi', en_az: 1, en_cok: 100_000 },
+  { ad: 'is_sure_tavani_dk', tur: 'sayi', en_az: 1, en_cok: 100_000 },
+  { ad: 'deneme_siniri', tur: 'sayi', en_az: 1, en_cok: 20 },
+  { ad: 'devir_siniri', tur: 'sayi', en_az: 0, en_cok: 20 },
+  { ad: 'oturum_dk', tur: 'sayi', en_az: 1, en_cok: 1440 },
+  { ad: 'baglam_esigi', tur: 'sayi', en_az: 10_000, en_cok: 10_000_000 },
+  { ad: 'kota_bekleme_dk', tur: 'sayi', en_az: 1, en_cok: 1440 },
+  { ad: 'kota_bekleme_sayisi', tur: 'sayi', en_az: 0, en_cok: 100 },
+  { ad: 'gerileme_komutu', tur: 'metin' },
+  { ad: 'gerileme_zaman_asimi_sn', tur: 'sayi', en_az: 10, en_cok: 86_400 },
+  { ad: 'saklama', tur: 'secim', secenekler: SAKLAMA_KIPLERI },
+  { ad: 'uyanik_tut', tur: 'evet_hayir' },
+];
+
+/** Bir liste alaninin degerini dogrular; gecersizse hata metni, gecerliyse null. */
+export function listeAlaniDenetle(a: ListeAlani, d: unknown): string | null {
+  if (a.tur === 'metin') return typeof d === 'string' && d.trim() !== '' ? null : 'metin';
+  if (a.tur === 'evet_hayir') return typeof d === 'boolean' ? null : 'evet_hayir';
+  if (a.tur === 'secim') return typeof d === 'string' && (a.secenekler ?? []).includes(d) ? null : 'secim';
+  if (typeof d !== 'number' || !Number.isFinite(d)) return 'sayi';
+  if (a.tur === 'sayi' && !Number.isInteger(d)) return 'tam_sayi';
+  if ((a.en_az !== undefined && d < a.en_az) || (a.en_cok !== undefined && d > a.en_cok)) return 'aralik';
+  return null;
 }
 
 export interface SurucuSecenekleri {
@@ -373,10 +418,12 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
   const kok = resolve(s.kok);
   const ajanlar = s.ajanlar ?? AJANLAR;
   const kip = saklamaKipiSec({ bayrak: s.saklama, liste: s.liste, kok });
-  const denemeSiniri = s.denemeSiniri ?? 3;
-  const devirSiniri = s.devirSiniri ?? 3;
-  const ajanZamanAsimiMs = (s.ajanZamanAsimiSn ?? 900) * 1000;
-  const baglamEsigi = s.baglamEsigi ?? 120_000;
+  // Oncelik: komut satiri, sonra listenin kendi ayari (pencerede "Liste ayarlari"), sonra varsayilan.
+  const denemeSiniri = s.denemeSiniri ?? s.liste.deneme_siniri ?? 3;
+  const devirSiniri = s.devirSiniri ?? s.liste.devir_siniri ?? 3;
+  const ajanZamanAsimiSn = s.ajanZamanAsimiSn ?? (s.liste.oturum_dk !== undefined ? s.liste.oturum_dk * 60 : 900);
+  const ajanZamanAsimiMs = ajanZamanAsimiSn * 1000;
+  const baglamEsigi = s.baglamEsigi ?? s.liste.baglam_esigi ?? 120_000;
   const yaz = s.yaz ?? ((satir: string) => console.log(satir));
   // Varsayilan koruma: mihenk'in kendi deposu (proje o deponun kendisi degilse).
   const korunan = (s.korunanDizinler ?? (MIHENK_DEPOSU === kok ? [] : [MIHENK_DEPOSU])).map((d) => resolve(d));
@@ -446,6 +493,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
           const secim = ajanSec({
             tur: listeIsi.tur, olcumler: defter.olcumler(), kurulu, sira,
             kesifOrani: typeof bekciler.kesif_orani === 'number' ? bekciler.kesif_orani : VARSAYILAN_KESIF_ORANI,
+            oneriAyarlari: projeOneriAyarlari(kok),
           });
           ajanAdi = secim?.ajan ?? '';
           secimNotu = secim?.neden ?? t('k_kurulu_yok');
@@ -597,7 +645,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
         const hukum = await defter.hukumVer({ is_id: isId, surucu: true });
         if (hukum.kapandi) break;
         const neden = kosu.zaman_asimi
-          ? `ajan oturumu ${s.ajanZamanAsimiSn ?? 900} saniyede bitmedi, kapatildi`
+          ? `ajan oturumu ${ajanZamanAsimiSn} saniyede bitmedi, kapatildi`
           : kosu.esik_asildi
             ? 'baglam esigi yine asildi, devir siniri doldu'
             : `ajan durdu (cikis kodu ${kosu.cikis_kodu}) ama dogrulama gecmedi`;

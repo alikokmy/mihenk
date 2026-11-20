@@ -876,3 +876,50 @@ Pencere tarayıcıda açılıp bakıldı: "Öneriye göre" seçili geldi; işte 
 "Keşif oranı (yüzde)" 20 değeri ve notlarıyla göründü.
 
 **Sürüm 0.5:** Aşama 26-29 kapandı; `npm test` 237/237.
+## Aşama 30 sonucu (2026-11-20)
+
+**Ne eklendi.** Pencereye üç bölüm ve bir düğme eklendi:
+
+- "Liste ayarları": 14 alan; her birinin açıklaması ve varsayılanı yazılı.
+- İşin "Bu işe özel" bölümü: o işi yapacak araç ve denetim süresi.
+- Ayarlar'da "Gelişmiş": izin verilen programlar, abonelikli araçlar tablosu, fiyat tablosu, üç denetim süresi.
+- Liste uyarısında izinsiz program için "izin ver" düğmesi. Uyarı metni artık düz dille: teknik ret metni ve "mihenk.json" adı
+  kullanıcıya gösterilmiyor.
+
+Öneri eşikleri ayar oldu (`oneri_esik`, `oneri_en_az`). Komut satırının `--esik` ve `--en-az` seçenekleri yalnız o
+koşu için bu ayarları ezer. Sürücü deneme sınırını, devir sınırını, oturum süresini ve bağlam eşiğini artık listeden de okuyor.
+
+**Düzeltilen hata.** Pencere öneriyi uyum raporuna bakmadan hesaplıyordu. Artık komut satırı, pencere ve keşif aynı okuyucuyu
+kullanıyor (`projeOneriAyarlari`). Raporda sürücünün araç seçim notu da görünüyor.
+
+**Kanıt:** `test/pencere-tam.test.ts` (6 test).
+
+- Komut satırındaki 21 seçeneğin her biri `SECENEK_ESLEME` içinde ve karşılığı gerçekten var (ayar, liste alanı, iş alanı ya da
+  sayfadaki öğe). Karşılığı olmayanlar için nedeni yazılı.
+- Defterin her `mihenk.json` alanı, `IsListesi` ve `ListeIsi` arayüzlerinin her alanı (kaynak koddan okunuyor) pencerede.
+  Her liste alanının iki dilde başlığı ve açıklaması var.
+- Liste ayarları ve işe özel alanlar gidiş-dönüşte korunuyor. Beş geçersiz değer 400 aldı ve dosya bayt bayt aynı kaldı. Dosyanın
+  bilinmeyen alanı korundu.
+- Gelişmiş bölümün dört alanı yazılıp okunuyor, beş geçersiz değer reddediliyor. Varsayılana dönen alan dosyadan çıkıyor ve dosya
+  yalnız `{"dil":"en"}` olarak kalıyor.
+- İzinsiz `deno` uyarısı programın adını taşıyor; izin verilince uyarı kalkıyor.
+- Uyum raporu varken pencere ve komut satırı aynı ajanı öneriyor (uyumu düşük ucuz ajan önerilmedi). Eşik Ayarlar'dan %90 yapılınca
+  ikisinde de öneri kalkıyor.
+- `test/kesif.test.ts`: rapordaki 10 işin her birinde seçim notu var.
+
+Ters denetim, üç kasıtlı bozmada da test kaldı:
+
+- pencere uyum ayarını almadı;
+- bir liste alanı pencereden çıkarıldı;
+- rapordaki seçim notu kaldırıldı.
+
+Bir bozma girişimi derlenmediği için sayılmadı ve başka biçimde yeniden yapıldı.
+
+**Tarayıcıda denendi:**
+
+- 14 liste alanı ve işe özel alanlar göründü.
+- `deno test` kaydedilince "izin ver" çıktı; tıklayınca uyarı kalktı ve `mihenk.json`'a `deno` eklendi.
+- Kota tablosuna satır eklenip kaydedildi; dosyaya `{"claude":{"pencere_saat":5,"pencere_usd":1.5}}` yazıldı.
+- Bu denemede "Kaydedildi" iletisinin, bölüm yeniden çizilince kaybolduğu görüldü ve düzeltildi.
+
+`npm test` 243/243.

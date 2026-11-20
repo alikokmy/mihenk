@@ -8,6 +8,9 @@
 // agirliklandirilir (dogrudan standartlastirma); secenegin az ya da hic isi olmayan katmanda oran turun o katmandaki oranina cekilir.
 // Boylece kolay isleri alan ajan, zor iste zayifsa one gecmez. Zorluk yazilmamis defterde hesap eskisiyle aynidir.
 // Kullanici her zaman kendi secimini yapar; bu hesap yalniz gosterir.
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { ayarlariOku } from './ayar.js';
 import type { IsOlcumu } from './defter.js';
 import { t as ileti } from './dil.js';
 
@@ -30,6 +33,36 @@ export interface OneriAyarlari {
 }
 
 export const VARSAYILAN_ONERI_AYARLARI: OneriAyarlari = { esik: 0.5, enAz: 5, uyumEsigi: 0.8 };
+
+/** Varsayilan uyum raporu yeri (mihenk uyum ciktisi). */
+export const uyumRaporuYolu = (kok: string): string => join(kok, 'mihenk-uyum', 'uyum-raporu.json');
+
+/** Arac adina gore uyum testi sonucu; rapor yoksa ya da okunamazsa undefined. */
+export function uyumRaporuOku(yol: string): Record<string, UyumOlcumu> | undefined {
+  if (!existsSync(yol)) return undefined;
+  try {
+    const ozet = (JSON.parse(readFileSync(yol, 'utf8')) as { ozet?: Array<{ arac: string; gecen: number; toplam: number }> }).ozet ?? [];
+    return Object.fromEntries(ozet.map((u) => [u.arac, { gecen: u.gecen, toplam: u.toplam }]));
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Projenin oneri ayarlari: esik ve en az is "Ayarlar"dan (oneri_esik, oneri_en_az), uyum raporu varsayilan yerinden. Komut satiri,
+ * pencere ve kesif ayni ayarlari kullanir (Asama 30: pencere onceden uyum raporunu okumuyordu).
+ */
+export function projeOneriAyarlari(kok: string, ek: Partial<OneriAyarlari> & { uyumYolu?: string } = {}): Partial<OneriAyarlari> {
+  const a = ayarlariOku(kok);
+  const { uyumYolu, ...gerisi } = ek;
+  const uyum = uyumRaporuOku(uyumYolu ?? uyumRaporuYolu(kok));
+  return {
+    esik: typeof a.oneri_esik === 'number' ? a.oneri_esik / 100 : VARSAYILAN_ONERI_AYARLARI.esik,
+    enAz: typeof a.oneri_en_az === 'number' ? a.oneri_en_az : VARSAYILAN_ONERI_AYARLARI.enAz,
+    ...(uyum ? { uyum } : {}),
+    ...gerisi,
+  };
+}
 
 export type SecenekDurumu = 'aday' | 'veri_yetersiz' | 'esik_alti' | 'uyum_dusuk';
 

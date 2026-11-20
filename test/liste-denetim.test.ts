@@ -39,7 +39,8 @@ test('KABUL sorunlu liste: her sorun dogru is numarasiyla ve anlasilir metinle',
   ], { ajan: 'var', ajanlar });
   const bul = (n: number) => u.filter((x) => x.is === n).map((x) => x.uyari).join(' | ');
   assert.match(bul(1), /"npm test" calistirilamaz: package\.json icinde "test" betigi yok/);
-  assert.match(bul(2), /denetim komutu calistirilamaz: .*curl/i);
+  assert.match(bul(2), /"curl" programını kullanıyor; bu program henüz izinli değil/);
+  assert.equal(u.find((x) => x.is === 2)?.program, 'curl', 'pencere izin ver dugmesi icin program adi');
   assert.match(bul(3), /"node yok\.js" calistirilamaz: yok\.js dosyasi yok/);
   assert.match(bul(4), /"soru" bos/);
   assert.match(bul(5), /"lint" betigi yok/);

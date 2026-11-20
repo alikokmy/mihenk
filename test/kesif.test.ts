@@ -11,6 +11,7 @@ import { Defter, type IsOlcumu } from '../src/defter.js';
 import { ajanSec } from '../src/kesif.js';
 import { oneriHesapla, oneriMetni } from '../src/oneri.js';
 import { listeyiYurut } from '../src/surucu.js';
+import { raporHtml } from '../src/rapor.js';
 
 const BETIKLER = mkdtempSync(join(tmpdir(), 'mihenk-kesif-ajan-'));
 // Istemdeki "dosya-N" adli dosyayi yazar: isi yapan ajan taklidi.
@@ -22,7 +23,7 @@ const sahte = (ad: string): AjanTanimi => ({
 });
 const AJANLAR = { a_usta: sahte('a_usta'), b_yeni: sahte('b_yeni') };
 
-async function kos(kesifOrani: number | null): Promise<{ ajanlar: string[]; notlar: string[] }> {
+async function kos(kesifOrani: number | null): Promise<{ ajanlar: string[]; notlar: string[]; kok: string }> {
   const kok = mkdtempSync(join(tmpdir(), 'mihenk-kesif-'));
   writeFileSync(join(kok, 'var.js'), "process.exit(require('node:fs').existsSync(process.argv[2] + '.txt') ? 0 : 1);");
   ayarYaz(kok, { bekci_dongu: false, ...(kesifOrani === null ? {} : { kesif_orani: kesifOrani }) });
@@ -35,6 +36,7 @@ async function kos(kesifOrani: number | null): Promise<{ ajanlar: string[]; notl
   const raporlar = r.isler.map((x) => defter.rapor({ is_id: x.is_id }));
   defter.kapat();
   return {
+    kok,
     ajanlar: raporlar.map((x) => x.is!.ajan),
     notlar: raporlar.map((x) => (x.kanitlar ?? []).map((k) => k.icerik ?? '').find((c) => c.includes('ajan secimi')) ?? ''),
   };
@@ -49,6 +51,10 @@ test('KABUL kesif %20: 10 isten 2si (5. ve 10.) verisi en az ajana gider; nedenl
   // 6. iste a_usta 4 is, b_yeni 1 is: oneri icin veri yetersiz. 7. iste a_usta 5/5 gecti: oneri a_usta.
   assert.match(bir.notlar[6]!, /ONERI - a_usta/);
   assert.ok(bir.notlar.every((n) => n !== ''), 'her isin secim nedeni var');
+  // Rapor sayfasi da her isin secim nedenini gosterir (Asama 30).
+  const html = raporHtml(bir.kok).html;
+  assert.equal((html.match(/data-ajan-secimi=/g) ?? []).length, 10);
+  assert.match(html, /KESIF - b_yeni/);
   const iki = await kos(null);
   assert.deepEqual(iki.ajanlar, bir.ajanlar, 'ayni defter ve sira ayni secimi verir');
 });

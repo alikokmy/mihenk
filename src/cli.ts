@@ -26,7 +26,7 @@ import { spawnSync } from 'node:child_process';
 import { ayarKomutu } from './ayar-cli.js';
 import { ayarlariOku } from './ayar.js';
 import { dilAyarla, sistemDili, t } from './dil.js';
-import { oneriHesapla, oneriMetni, VARSAYILAN_ONERI_AYARLARI, type OneriAyarlari } from './oneri.js';
+import { oneriHesapla, oneriMetni, projeOneriAyarlari, uyumRaporuYolu, VARSAYILAN_ONERI_AYARLARI, type OneriAyarlari } from './oneri.js';
 
 const [komut, ...gerisi] = process.argv.slice(2);
 // Dil: projenin "dil" ayari (sistem / tr / en). Proje --hedef ile verilir, yoksa calisilan klasor.
@@ -103,17 +103,15 @@ function oneriKomutu(): number {
     if (!(n >= 0 && n <= 1)) throw new Error(t('oran_hatasi', { ad, deger: d }));
     return n;
   };
-  const uyumYolu = resolve(secenek('--uyum') ?? join(kok, 'mihenk-uyum', 'uyum-raporu.json'));
-  let uyum: OneriAyarlari['uyum'];
-  if (existsSync(uyumYolu)) {
-    const ozet = (JSON.parse(readFileSync(uyumYolu, 'utf8')) as { ozet?: Array<{ arac: string; gecen: number; toplam: number }> }).ozet ?? [];
-    uyum = Object.fromEntries(ozet.map((u) => [u.arac, { gecen: u.gecen, toplam: u.toplam }]));
-  }
+  const uyumYolu = resolve(secenek('--uyum') ?? uyumRaporuYolu(kok));
+  // Esik ve en az is Ayarlar'dan gelir (pencere de ayni ayarlari kullanir); komut satiri secenekleri bu kosu icin ezer.
+  const proje = projeOneriAyarlari(kok, { uyumYolu });
   const ayarlar: Partial<OneriAyarlari> = {
-    esik: oran('--esik', VARSAYILAN_ONERI_AYARLARI.esik), enAz: sayi('--en-az') ?? VARSAYILAN_ONERI_AYARLARI.enAz,
+    ...proje,
+    esik: oran('--esik', proje.esik ?? VARSAYILAN_ONERI_AYARLARI.esik), enAz: sayi('--en-az') ?? proje.enAz ?? VARSAYILAN_ONERI_AYARLARI.enAz,
     kurulu: Object.keys(AJANLAR).filter((a) => AJANLAR[a]!.komutBul() != null),
-    ...(uyum ? { uyum } : {}),
   };
+  const uyum = ayarlar.uyum;
   const defter = new Defter(kok);
   const turler = oneriHesapla(defter.olcumler(), ayarlar);
   defter.kapat();

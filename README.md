@@ -138,6 +138,16 @@ tek tıkla geri alma, rapor), **Ayarlar** (her ayarın anlaşılır adı, kısa 
 altında amacı, sonucu ve varsayılanın ne yaptığı; bu notlar en üstteki kutuyla gizlenir) ve **Öneri ve maliyet**. Pencere yalnız bu bilgisayardan açılır (127.0.0.1) ve her açılışta değişen bir
 anahtarla korunur; başka bir web sitesi ona ulaşamaz. Kurulum ve yönetici izni gerekmez. İşiniz bitince siyah komut penceresini kapatın.
 
+**Dosya ya da komut satırı gerekmez.** Komut satırının yapabildiği her şey ve ayar dosyalarının her alanı pencerede de var:
+
+- **İş listesi** sekmesinde "Liste ayarları" bölümü: dolar ve süre sınırları, deneme sayısı, oturum süresi, kullanım sınırında bekleme,
+  projenin bütün testleri.
+- Her işin "Bu işe özel" bölümü: o işi yapacak araç ve denetim süresi.
+- **Ayarlar** sekmesinin "Gelişmiş" bölümü: izin verilen programlar, abonelikli araçlar, fiyatlar ve denetim süreleri.
+- İşin denetim komutu izin verilmeyen bir program kullanıyorsa uyarının yanında "izin ver" düğmesi çıkar.
+
+Bir test, komut satırına eklenen her yeni seçeneğin ve dosyalara eklenen her yeni alanın pencerede de olmasını zorunlu kılar.
+
 ## Özellikleri açıp kapatmak
 
 Proje klasöründeki `mihenk-ayarlar.cmd` dosyasına çift tıklayın. Her özellik bir numarayla listelenir; numarayı yazıp Enter'a basınca

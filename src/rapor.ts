@@ -45,7 +45,10 @@ export function raporHtml(kok: string, zaman = new Date()): { html: string; ozet
   const defter = new Defter(kok);
   try {
     const r = defter.rapor({ sinir: 100 });
-    const isler = (r.isler ?? []).map((x) => defter.rapor({ is_id: x.id }).is!).reverse();
+    const tam = (r.isler ?? []).map((x) => defter.rapor({ is_id: x.id })).reverse();
+    const isler = tam.map((x) => x.is!);
+    // Surucunun ajan secim notu (Asama 29-30): "oneri" kipinde bu is neden bu araca gitti.
+    const secimNotu = new Map(tam.map((x) => [x.is!.id, (x.kanitlar ?? []).map((k) => k.icerik ?? '').find((c) => c.startsWith('[surucu] ajan secimi:'))?.slice('[surucu] ajan secimi: '.length) ?? '']));
     const geriAlinan = geriAlinanIsler(kok);
     const o = r.ozet;
     const k = r.kullanim;
@@ -62,6 +65,7 @@ export function raporHtml(kok: string, zaman = new Date()): { html: string; ozet
   <p><b>${kacis(t('r_neden'))}:</b> ${kacis(neden(is))}</p>
   ${supheler}
   ${geriAlindi}
+  ${secimNotu.get(is.id) ? `<p class="kucuk" data-ajan-secimi="${is.id}">${kacis(t('r_ajan_secimi', { not: secimNotu.get(is.id)! }))}</p>` : ''}
   <p class="kucuk">${kacis(t('r_satir', { sure: sure(is.sure_sn), maliyet: para(is.kullanim_toplami.maliyet_usd, is.kullanim_toplami.maliyeti_bilinmeyen_oturum), ajan: is.ajan, deneme: is.deneme_sayisi }))}</p>
   ${geriAl}
 </section>`;

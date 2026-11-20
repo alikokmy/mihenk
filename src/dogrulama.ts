@@ -18,7 +18,7 @@ export interface CozulmusKomut {
 }
 
 const KABUK_KARAKTERLERI = /[&|;<>`$()^%!'\r\n]/;
-const PROGRAM_ADI = /^[A-Za-z0-9_.+-]+$/;
+export const PROGRAM_ADI = /^[A-Za-z0-9_.+-]+$/;
 /** Komut ciktiktan sonra borularin kendiliginden kapanmasi icin beklenen sure. */
 const CIKIS_PAYI_MS = 500;
 

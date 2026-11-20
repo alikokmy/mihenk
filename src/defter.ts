@@ -65,7 +65,7 @@ export interface Fiyat {
   onbellek_yazma?: number;
 }
 
-const VARSAYILAN_AYARLAR: Ayarlar = {
+export const VARSAYILAN_AYARLAR: Ayarlar = {
   izinli_programlar: [...VARSAYILAN_IZINLI],
   zaman_asimi_sn: 120,
   en_fazla_zaman_asimi_sn: 1800,

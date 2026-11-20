@@ -9,17 +9,17 @@ import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { AYARLAR, ayarlariOku, ayarTanimi, degerCoz, type AyarDegeri } from './ayar.js';
+import { AYARLAR, ayarlariOku, ayarTanimi, degerCoz, ekAlanYaz, type AyarDegeri } from './ayar.js';
 import { ayarDegistir, baglamYuku } from './ayar-cli.js';
-import { Defter } from './defter.js';
+import { ayarlariOku as defterAyarlari, Defter, VARSAYILAN_AYARLAR } from './defter.js';
 import { dilAyarla, hangiDil, METINLER, sec, sistemDili } from './dil.js';
-import { agaciOldur } from './dogrulama.js';
+import { agaciOldur, PROGRAM_ADI, VARSAYILAN_IZINLI } from './dogrulama.js';
 import { geriAl, geriAlinanIsler } from './geri.js';
 import { kaldir } from './kaldir.js';
 import { kur } from './kur.js';
-import { oneriHesapla, oneriMetni } from './oneri.js';
+import { oneriHesapla, oneriMetni, projeOneriAyarlari } from './oneri.js';
 import { raporHtml } from './rapor.js';
-import { listeOku } from './surucu.js';
+import { LISTE_ALANLARI, listeAlaniDenetle, listeOku } from './surucu.js';
 import { AJANLAR } from './ajanlar.js';
 import { PENCERE_SAYFASI } from './pencere-sayfa.js';
 import { doktor, hataPaketi } from './doktor.js';
@@ -75,6 +75,38 @@ export const PENCERE_ESLEME: Record<string, { sekme: string; api: string } | { y
   paketle: { yok: 'gelistirici araci: cevrimdisi kurulum paketini uretir' },
 };
 
+/**
+ * Komut satirinin her seceneginin penceredeki karsiligi (Asama 30). ayar: Ayarlar sekmesi; liste: Is listesi > Liste ayarlari;
+ * is: isin formu; gelismis: Ayarlar > Gelismis; yer: sayfadaki ogenin kimligi; yok: neden pencerede olmadigi.
+ * test/pencere-tam.test.ts komut satirindaki her secenegin burada olmasini ve karsiligin sayfada bulunmasini zorlar.
+ */
+export type SecenekKarsiligi = { ayar: string } | { liste: string } | { is: string } | { gelismis: string } | { yer: string } | { yok: string };
+export const SECENEK_ESLEME: Record<string, SecenekKarsiligi[]> = {
+  '--hedef': [{ yok: 'pencere hep acildigi projede calisir; proje degistirmek Asama 31' }],
+  '--arac': [{ ayar: 'arac_claude' }, { yok: 'uyum icin: gelistirici araci' }],
+  '--senaryo': [{ yok: 'uyum: gelistirici araci' }],
+  '--cikis': [{ yok: 'uyum ve paketle: gelistirici araclari' }],
+  '--oturum-sn': [{ liste: 'oturum_dk' }],
+  '--uyum': [{ yok: 'pencere uyum raporunu varsayilan yerinden kendisi okur' }],
+  '--esik': [{ ayar: 'oneri_esik' }],
+  '--en-az': [{ ayar: 'oneri_en_az' }],
+  '--json': [{ yok: 'makine ciktisi; pencere zaten veriyi kendisi gosterir' }],
+  '--ac': [{ yer: 'p_rapor_ac' }],
+  '--deneme': [{ yer: 'geri-al' }, { liste: 'deneme_siniri' }],
+  '--defter-dahil': [{ yer: 'defter-dahil' }],
+  '--cmd-den': [{ yok: 'ic kullanim: mihenk-kaldir.cmd kendini en son siler' }],
+  '--liste': [{ yok: 'pencere projenin kendi listesini (mihenk-isler.json) duzenler' }],
+  '--saklama': [{ ayar: 'saklama' }, { liste: 'saklama' }],
+  '--ajan': [{ yer: 'ajan-sec' }, { is: 'ajan' }],
+  '--uyanik-tut': [{ ayar: 'uyanik_tut' }, { liste: 'uyanik_tut' }],
+  '--baglam-esigi': [{ liste: 'baglam_esigi' }],
+  '--port': [{ yok: 'pencerenin kendisi: dolu portta kendiliginden baska port secer' }],
+  '--acma': [{ yok: 'pencerenin kendisi' }],
+  '--zipsiz': [{ yok: 'paketle: gelistirici araci' }],
+};
+/** Isin formundaki alanlar (data-alan); kimlik ic kullanimdir: listedeki isin kalici adi, pencere korur ama gostermez. */
+export const IS_ALANLARI = ['tur', 'soru', 'beklenti', 'yanlissa', 'dogrulama_komutu', 'zorluk', 'ajan', 'zaman_asimi_sn'] as const;
+
 function dilKur(kok: string): void {
   const d = ayarlariOku(kok).dil;
   dilAyarla(d === 'en' || d === 'tr' ? d : sistemDili());
@@ -126,6 +158,65 @@ function durum(kok: string) {
       aciklama: sec(t.aciklama), amac: sec(t.amac), sonuc: sec(t.sonuc), varsayilan_aciklama: sec(t.varsayilan_aciklama),
     })),
   };
+}
+
+
+/** Pencerenin "Gelismis" bolumundeki sayisal alanlar: mihenk.json'da, defter ayarlari (Asama 30). */
+export const GELISMIS_SAYILAR = [
+  { ad: 'zaman_asimi_sn', en_az: 1, en_cok: 86_400 },
+  { ad: 'en_fazla_zaman_asimi_sn', en_az: 1, en_cok: 86_400 },
+  { ad: 'ozet_siniri', en_az: 200, en_cok: 200_000 },
+] as const;
+/** "Gelismis" bolumunun butun alanlari; esleme testi defterin her ayarinin burada oldugunu denetler. */
+export const GELISMIS_ALANLARI = ['izinli_programlar', 'kota', 'fiyatlar', ...GELISMIS_SAYILAR.map((s) => s.ad)] as const;
+
+function gelismisOku(kok: string) {
+  const a = defterAyarlari(kok);
+  return {
+    izinli_programlar: a.izinli_programlar, varsayilan_izinli: [...VARSAYILAN_IZINLI],
+    kota: a.kota, fiyatlar: a.fiyatlar,
+    sayilar: GELISMIS_SAYILAR.map((s) => ({ ...s, deger: a[s.ad], varsayilan: VARSAYILAN_AYARLAR[s.ad] })),
+    araclar: Object.keys(AJANLAR),
+  };
+}
+
+const pozitifMi = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x) && x > 0;
+const negatifDegilMi = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x) && x >= 0;
+
+/** Gelismis alanin degerini dogrular; varsayilana esitse null doner (dosyadan cikar). */
+function gelismisDenetle(alan: string, d: unknown): { deger: unknown } | { hata: string } {
+  if (alan === 'izinli_programlar') {
+    if (!Array.isArray(d)) return { hata: 'liste' };
+    const l = [...new Set(d.map((x) => String(x).trim().toLowerCase()).filter(Boolean))];
+    const kotu = l.find((x) => !PROGRAM_ADI.test(x));
+    if (kotu !== undefined) return { hata: kotu };
+    if (l.length === 0) return { hata: 'bos' };
+    const v = [...VARSAYILAN_IZINLI].map((x) => x.toLowerCase());
+    return { deger: l.length === v.length && l.every((x) => v.includes(x)) ? null : l };
+  }
+  if (alan === 'kota' || alan === 'fiyatlar') {
+    if (!d || typeof d !== 'object' || Array.isArray(d)) return { hata: alan };
+    const sonuc: Record<string, Record<string, number>> = {};
+    for (const [ad, k] of Object.entries(d as Record<string, Record<string, unknown>>)) {
+      const isim = ad.trim();
+      if (!isim || !k || typeof k !== 'object') return { hata: ad || '?' };
+      if (alan === 'kota') {
+        if (!pozitifMi(k.pencere_saat)) return { hata: `${isim}: pencere_saat` };
+        for (const x of ['kapasite', 'pencere_usd']) if (k[x] !== undefined && k[x] !== null && !pozitifMi(k[x])) return { hata: `${isim}: ${x}` };
+        sonuc[isim] = { pencere_saat: k.pencere_saat as number, ...(pozitifMi(k.kapasite) ? { kapasite: k.kapasite } : {}), ...(pozitifMi(k.pencere_usd) ? { pencere_usd: k.pencere_usd } : {}) };
+      } else {
+        if (!negatifDegilMi(k.girdi) || !negatifDegilMi(k.cikti)) return { hata: `${isim}: girdi / cikti` };
+        for (const x of ['onbellek_okuma', 'onbellek_yazma']) if (k[x] !== undefined && k[x] !== null && !negatifDegilMi(k[x])) return { hata: `${isim}: ${x}` };
+        sonuc[isim] = { girdi: k.girdi as number, cikti: k.cikti as number, ...(negatifDegilMi(k.onbellek_okuma) ? { onbellek_okuma: k.onbellek_okuma } : {}), ...(negatifDegilMi(k.onbellek_yazma) ? { onbellek_yazma: k.onbellek_yazma } : {}) };
+      }
+    }
+    return { deger: Object.keys(sonuc).length ? sonuc : null };
+  }
+  const s = GELISMIS_SAYILAR.find((x) => x.ad === alan);
+  if (!s) return { hata: alan };
+  if (d === null || d === '') return { deger: null };
+  if (typeof d !== 'number' || !Number.isInteger(d) || d < s.en_az || d > s.en_cok) return { hata: `${s.en_az}-${s.en_cok}` };
+  return { deger: d === VARSAYILAN_AYARLAR[s.ad] ? null : d };
 }
 
 export interface PencereSunucusu {
@@ -187,6 +278,16 @@ export function pencereAc(hedef: string, o: { port?: number; dosyaAcici?: (yol: 
         const deger: AyarDegeri = degerCoz(t, typeof g.deger === 'boolean' ? (g.deger ? 'ac' : 'kapa') : String(g.deger));
         return json(res, 200, { mesaj: ayarDegistir(kok, t.ad, deger) });
       }
+      if (yol === 'GET /api/gelismis') return json(res, 200, gelismisOku(kok));
+      if (yol === 'POST /api/gelismis') {
+        // mihenk.json'un ayar disi alanlari (Asama 30): dosya elle duzenlenmez. Gecersiz deger dosyaya yazilmaz.
+        const g = await govde(req);
+        const alan = String(g.alan);
+        const sonuc = gelismisDenetle(alan, g.deger);
+        if ('hata' in sonuc) return json(res, 400, { hata: METINLER.p_gl_hatali[hangiDil()].replace('{neden}', sonuc.hata) });
+        ekAlanYaz(kok, { [alan]: sonuc.deger });
+        return json(res, 200, gelismisOku(kok));
+      }
       if (yol === 'POST /api/kur') {
         const s = kur(kok, { esitle: true });
         return json(res, 200, { yazilan: s.yazilan.length, degismeyen: s.degismeyen.length, geri_alinan: s.geri_alinan?.length ?? 0, uyarilar: s.uyarilar });
@@ -207,8 +308,8 @@ export function pencereAc(hedef: string, o: { port?: number; dosyaAcici?: (yol: 
         if (!existsSync(join(kok, '.mihenk', 'defter.db'))) return json(res, 200, { metin: METINLER.p_defter_bos[hangiDil()], turler: [] });
         const d = new Defter(kok);
         try {
-          const turler = oneriHesapla(d.olcumler(), { kurulu: Object.keys(AJANLAR).filter((a) => AJANLAR[a]!.komutBul() !== null) });
-          return json(res, 200, { metin: oneriMetni(turler), turler, kullanim: d.rapor({}).kullanim });
+          const turler = oneriHesapla(d.olcumler(), projeOneriAyarlari(kok, { kurulu: Object.keys(AJANLAR).filter((a) => AJANLAR[a]!.komutBul() !== null) }));
+          return json(res, 200, { metin: oneriMetni(turler, projeOneriAyarlari(kok)), turler, kullanim: d.rapor({}).kullanim });
         } finally {
           d.kapat();
         }
@@ -231,6 +332,9 @@ export function pencereAc(hedef: string, o: { port?: number; dosyaAcici?: (yol: 
         return json(res, 200, {
           var: existsSync(dosya), bozuk, ajan: typeof ham.ajan === 'string' ? ham.ajan : '', araclar,
           uyarilar: existsSync(dosya) ? listeDenetimi(kok, listeIsleri, { ...(typeof ham.ajan === 'string' ? { ajan: ham.ajan } : {}) }) : [],
+          // Liste ayarlari (Asama 30): bos olanlar null; pencere bunlari "Liste ayarlari" bolumunde gosterir.
+          liste_alanlari: LISTE_ALANLARI, liste_ayarlari: Object.fromEntries(LISTE_ALANLARI.map((a) => [a.ad, ham[a.ad] ?? null])),
+          saklama_adlari: Object.fromEntries(Object.entries(ayarTanimi('saklama').secenek_adlari ?? {}).map(([k, v]) => [k, sec(v)])),
           // Ise ozel ek alanlar (ajan, kimlik, zaman asimi, zorluk) da doner: form kaydedince kaybolmasinlar.
           isler: liste.map((x) => ({ tur: alan(x, 'tur'), soru: alan(x, 'soru'), beklenti: alan(x, 'beklenti'), yanlissa: alan(x, 'yanlissa'), dogrulama_komutu: alan(x, 'dogrulama_komutu'), ...isEkleri(x) })),
         });
@@ -259,6 +363,18 @@ export function pencereAc(hedef: string, o: { port?: number; dosyaAcici?: (yol: 
         }
         if (typeof g.ajan === 'string' && g.ajan !== '') ham.ajan = g.ajan;
         else delete ham.ajan;
+        if (g.liste_ayarlari && typeof g.liste_ayarlari === 'object') {
+          const la = g.liste_ayarlari as Record<string, unknown>;
+          for (const a of LISTE_ALANLARI) {
+            if (!(a.ad in la)) continue;
+            const v = typeof la[a.ad] === 'string' ? (la[a.ad] as string).trim() : la[a.ad];
+            if (v === null || v === '') { delete ham[a.ad]; continue; }
+            if (listeAlaniDenetle(a, v) !== null) {
+              return json(res, 400, { hata: METINLER.p_la_hatali[hangiDil()].replace('{alan}', METINLER[`p_la_${a.ad}`]?.[hangiDil()] ?? a.ad) });
+            }
+            ham[a.ad] = v;
+          }
+        }
         const gecici = `${dosya}.${process.pid}.tmp`;
         writeFileSync(gecici, JSON.stringify(ham, null, 2) + '\n');
         try {

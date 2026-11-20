@@ -5,12 +5,15 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { AJANLAR, type AjanTanimi } from './ajanlar.js';
 import { t } from './dil.js';
-import { komutuCoz, VARSAYILAN_IZINLI } from './dogrulama.js';
+import { komutuCoz, PROGRAM_ADI, VARSAYILAN_IZINLI } from './dogrulama.js';
+import { Ret } from './hata.js';
 
 export interface ListeUyarisi {
   /** 1'den baslayan is sirasi. */
   is: number;
   uyari: string;
+  /** Uyari izinsiz bir programdan geliyorsa o programin adi: pencere "izin ver" dugmesi gosterir (Asama 30). */
+  program?: string;
 }
 
 interface DenetlenecekIs { soru?: string; beklenti?: string; yanlissa?: string; dogrulama_komutu?: string; ajan?: string; zorluk?: string }
@@ -51,7 +54,7 @@ export function listeDenetimi(kok: string, isler: DenetlenecekIs[], o: { ajan?: 
   const bulunanAjan = new Map<string, boolean>();
   isler.forEach((is, i) => {
     const n = i + 1;
-    const ekle = (uyari: string): void => { sonuc.push({ is: n, uyari }); };
+    const ekle = (uyari: string, program?: string): void => { sonuc.push({ is: n, uyari, ...(program ? { program } : {}) }); };
     for (const alan of ['soru', 'beklenti', 'yanlissa', 'dogrulama_komutu'] as const) {
       if (!String(is[alan] ?? '').trim()) ekle(t('l_bos_alan', { alan }));
     }
@@ -73,7 +76,11 @@ export function listeDenetimi(kok: string, isler: DenetlenecekIs[], o: { ajan?: 
           if (dosya && /\.(m?js|cjs|ts|py)$/i.test(dosya) && !existsSync(join(kok, dosya))) ekle(t('l_dosya_yok', { komut, dosya }));
         }
       } catch (e) {
-        ekle(t('l_komut_red', { neden: e instanceof Error ? e.message.split('\n')[0]! : String(e) }));
+        const ilk = komut.split(/\s+/)[0] ?? '';
+        const program = e instanceof Ret && e.kod === 'KOMUT_IZINSIZ' && PROGRAM_ADI.test(ilk) ? ilk.toLowerCase().replace(/\.(exe|cmd|bat)$/, '') : undefined;
+        // Izinsiz program: duz dille (teknik ret metni kodlama bilmeyen kullaniciya gosterilmez); pencere "izin ver" dugmesi ekler.
+        if (program) ekle(t('l_program_izinsiz', { program }), program);
+        else ekle(t('l_komut_red', { neden: e instanceof Error ? e.message.split('\n')[0]! : String(e) }));
       }
     }
     if (is.zorluk !== undefined && !['kolay', 'orta', 'zor'].includes(is.zorluk)) ekle(t('l_zorluk', { deger: String(is.zorluk) }));

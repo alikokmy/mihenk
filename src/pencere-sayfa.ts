@@ -51,6 +51,9 @@ async function api(yol, govde) {
   const r = await fetch(yol, { method: govde === undefined ? 'GET' : 'POST', headers: { 'x-mihenk-anahtar': ANAHTAR, 'content-type': 'application/json' }, body: govde === undefined ? undefined : JSON.stringify(govde) });
   const j = await r.json(); if (!r.ok) throw new Error(j.hata || r.status); return j;
 }
+// Sayi kutusu: bos -> null; ondalik izinli ise adim 0.01 (Asama 30).
+function sayiKutusu(deger, ondalik, ozellik) { const g = el('input', Object.assign({ type: 'number', step: ondalik ? '0.01' : '1' }, ozellik)); g.value = deger === null || deger === undefined ? '' : String(deger); return g; }
+const sayiOku = (g) => g.value.trim() === '' ? null : Number(g.value);
 function ileti(yer, metin, hata) { yer.textContent = metin; yer.className = 'ileti' + (hata ? ' hata' : ''); }
 const SEKMELER = [['proje', 'p_sekme_proje'], ['liste', 'p_sekme_liste'], ['defter', 'p_sekme_defter'], ['ayarlar', 'p_sekme_ayarlar'], ['oneri', 'p_sekme_oneri']];
 let secili = 'proje';
@@ -116,14 +119,46 @@ async function listeCiz() {
         const g = el(k === 'dogrulama_komutu' ? 'input' : 'textarea', { 'data-alan': k, rows: '2' }); g.value = is[k] || ''; g.oninput = () => { is[k] = g.value; };
         kart.append(el('label', { class: 'alan' }, el('span', { metin: m(mt) }), g));
       }
+      const isAjan = el('select', { 'data-alan': 'ajan' });
+      for (const [k, metin] of [['', m('p_is_ajan_liste')], ['oneri', m('p_ajan_oneri')]].concat(l.araclar.map((a) => [a, a]))) { const o = el('option', { value: k, metin }); if (k === (is.ajan || '')) o.selected = true; isAjan.append(o); }
+      if (is.ajan && !Array.from(isAjan.options).some((o) => o.value === is.ajan)) { const o = el('option', { value: is.ajan, metin: is.ajan }); o.selected = true; isAjan.append(o); }
+      isAjan.onchange = () => { if (isAjan.value) is.ajan = isAjan.value; else delete is.ajan; };
+      const zaman = sayiKutusu(is.zaman_asimi_sn, false, { 'data-alan': 'zaman_asimi_sn', min: '1' });
+      zaman.onchange = () => { const v = sayiOku(zaman); if (v === null) delete is.zaman_asimi_sn; else is.zaman_asimi_sn = v; };
+      kart.append(el('details', {}, el('summary', { metin: m('p_is_ozel') }),
+        el('label', { class: 'alan' }, el('span', { metin: m('p_alan_is_ajan') }), isAjan),
+        el('label', { class: 'alan' }, el('span', { metin: m('p_alan_zaman_asimi') }), zaman)));
       kutu.append(kart);
     });
   }
   isleriCiz();
+  // Liste ayarlari (Asama 30): bos olan varsayilani kullanir.
+  const la = Object.assign({}, l.liste_ayarlari || {});
+  const laKart = el('details', { class: 'kart', id: 'liste-ayarlari' }, el('summary', { metin: m('p_liste_ayarlari') }), el('p', { class: 'soluk', metin: m('p_liste_ayarlari_aciklama') }));
+  for (const a of l.liste_alanlari || []) {
+    let g;
+    if (a.tur === 'secim' || a.tur === 'evet_hayir') {
+      g = el('select', { 'data-liste-ayar': a.ad });
+      const secenekler = a.tur === 'secim' ? a.secenekler.map((s) => [s, (l.saklama_adlari && l.saklama_adlari[s]) || s]) : [['true', m('p_evet')], ['false', m('p_hayir')]];
+      for (const [k, metin] of [['', m('p_ayardaki_deger')]].concat(secenekler)) { const o = el('option', { value: k, metin }); if (k === (la[a.ad] === null || la[a.ad] === undefined ? '' : String(la[a.ad]))) o.selected = true; g.append(o); }
+      g.onchange = () => { la[a.ad] = g.value === '' ? null : a.tur === 'evet_hayir' ? g.value === 'true' : g.value; };
+    } else if (a.tur === 'metin') {
+      g = el('input', { 'data-liste-ayar': a.ad }); g.value = la[a.ad] || ''; g.oninput = () => { la[a.ad] = g.value.trim() === '' ? null : g.value; };
+    } else {
+      g = sayiKutusu(la[a.ad], a.tur === 'ondalik', { 'data-liste-ayar': a.ad, min: a.en_az === undefined ? '' : String(a.en_az) });
+      g.onchange = () => { la[a.ad] = sayiOku(g); };
+    }
+    laKart.append(el('label', { class: 'alan' }, el('span', { metin: m('p_la_' + a.ad) }), g, el('span', { class: 'not', metin: m('p_la_' + a.ad + '_not') })));
+  }
   const uyariKutusu = el('div', { class: 'kart uyari', id: 'liste-uyarilari' });
-  const uyarilariGoster = (u) => { koy(uyariKutusu, ...(u && u.length ? [el('b', { metin: m('p_uyarilar') }), el('ul', {}, ...u.map((x) => el('li', { metin: m('p_uyari_satir', { n: x.is, uyari: x.uyari }) })))] : [])); uyariKutusu.hidden = !(u && u.length); };
+  const izinVer = async (program) => {
+    try { const g = await api('/api/gelismis'); await api('/api/gelismis', { alan: 'izinli_programlar', deger: g.izinli_programlar.concat([program]) }); await kaydet(); ileti(sonuc, m('p_izin_verildi', { program })); }
+    catch (e) { ileti(sonuc, m('p_hata', { hata: e.message }), true); }
+  };
+  const uyarilariGoster = (u) => { koy(uyariKutusu, ...(u && u.length ? [el('b', { metin: m('p_uyarilar') }), el('ul', {}, ...u.map((x) => el('li', { metin: m('p_uyari_satir', { n: x.is, uyari: x.uyari }) },
+    x.program ? el('button', { class: 'dugme ikincil kucuk', 'data-izin-ver': x.program, metin: m('p_izin_ver', { program: x.program }), onclick: () => izinVer(x.program) }) : null)))] : [])); uyariKutusu.hidden = !(u && u.length); };
   uyarilariGoster(l.uyarilar);
-  const kaydet = async () => { const r = await api('/api/liste', { isler, ajan: ajan.value }); uyarilariGoster(r.uyarilar); };
+  const kaydet = async () => { const r = await api('/api/liste', { isler, ajan: ajan.value, liste_ayarlari: la }); uyarilariGoster(r.uyarilar); };
   const baslat = el('button', { class: 'dugme', 'data-eylem': 'baslat', metin: m('p_baslat') });
   const durdur = el('button', { class: 'dugme ikincil', metin: m('p_durdur'), onclick: () => api('/api/sur/durdur', {}) });
   baslat.onclick = async () => { try { await kaydet(); await api('/api/sur', {}); izle(); } catch (e) { ileti(sonuc, m('p_hata', { hata: e.message }), true); } };
@@ -134,6 +169,7 @@ async function listeCiz() {
     uyariKutusu,
     el('div', { class: 'kart' }, el('p', { class: 'soluk', metin: m('p_liste_aciklama') }), el('label', { class: 'alan' }, el('span', { metin: m('p_ajan_sec') }), ajan)),
     kutu,
+    laKart,
     el('div', { class: 'kart' }, el('div', { class: 'satir' }, el('button', { class: 'dugme ikincil', metin: m('p_is_ekle'), onclick: () => { isler.push({ tur: 'hata_duzeltme', soru: '', beklenti: '', yanlissa: '', dogrulama_komutu: '' }); isleriCiz(); } }),
       el('button', { class: 'dugme ikincil', 'data-eylem': 'liste-kaydet', metin: m('p_kaydet'), onclick: async () => { try { await kaydet(); ileti(sonuc, m('p_kaydedildi')); } catch (e) { ileti(sonuc, m('p_hata', { hata: e.message }), true); } } }), baslat, durdur), sonuc),
     el('details', { class: 'kart' }, el('summary', { metin: m('p_ayrintili_kayit') }), kayit));
@@ -187,7 +223,43 @@ function ayarlarCiz() {
     if (notlar) blok.append(...[el('p', { class: 'not', metin: m('p_amac') + ': ' + a.amac }), el('p', { class: 'not', metin: m('p_sonuc') + ': ' + a.sonuc }), el('p', { class: 'not', metin: m('p_varsayilan') + ': ' + a.varsayilan_aciklama }), a.etki === 'kurulum' ? el('p', { class: 'not', metin: m('p_degisiklik_kurulum') }) : null].filter(Boolean));
     liste.append(blok);
   }
-  koy(s, el('div', { class: 'kart' }, el('label', { class: 'satir' }, goster, document.createTextNode(m('p_bilgi_goster')))), sonuc, liste);
+  const gelismis = el('div', { id: 'gelismis' });
+  koy(s, el('div', { class: 'kart' }, el('label', { class: 'satir' }, goster, document.createTextNode(m('p_bilgi_goster')))), sonuc, liste, gelismis);
+  gelismisCiz(gelismis, notlar);
+}
+
+// Gelismis (Asama 30): mihenk.json'un ayar disi alanlari; dosya elle duzenlenmez.
+async function gelismisCiz(yer, notlar, mesaj) {
+  const g = await api('/api/gelismis'); const sonuc = el('div', { class: 'ileti', id: 'gelismis-iletisi' }); if (mesaj) ileti(sonuc, mesaj);
+  const kaydet = async (alan, deger) => { try { await api('/api/gelismis', { alan, deger }); await gelismisCiz(yer, notlar, m('p_kaydedildi')); const d = yer.querySelector('details'); if (d) d.open = true; } catch (e) { ileti(sonuc, m('p_hata', { hata: e.message }), true); } };
+  const not = (k) => notlar ? el('p', { class: 'not', metin: m(k) }) : null;
+  // 1. Izinli programlar
+  const yeni = el('input', { placeholder: m('p_gl_program_adi'), 'data-gelismis': 'izinli-yeni' });
+  const izinli = el('div', { class: 'kart', 'data-gelismis': 'izinli_programlar' }, el('b', { metin: m('p_gl_izinli') }), not('p_gl_izinli_not'),
+    el('div', { class: 'satir' }, ...g.izinli_programlar.map((p) => el('span', { class: 'satir' }, el('code', { metin: p }), el('button', { class: 'dugme ikincil kucuk', metin: m('p_gl_kaldir'), onclick: () => kaydet('izinli_programlar', g.izinli_programlar.filter((x) => x !== p)) })))),
+    el('div', { class: 'satir' }, yeni, el('button', { class: 'dugme ikincil kucuk', metin: m('p_gl_ekle'), onclick: () => { if (yeni.value.trim()) kaydet('izinli_programlar', g.izinli_programlar.concat([yeni.value.trim()])); } }),
+      el('button', { class: 'dugme ikincil kucuk', metin: m('p_gl_varsayilana_don'), onclick: () => kaydet('izinli_programlar', g.varsayilan_izinli) })));
+  // 2. Kota ve 3. fiyat tablolari: satir satir; "Kaydet" butun tabloyu yazar.
+  const tablo = (alan, baslik, aciklama, sutunlar, kayitlar, adAlani) => {
+    const satirlar = Object.entries(kayitlar).map(([ad, d]) => Object.assign({ ad }, d));
+    const govde = el('div', {});
+    const ciz = () => { govde.replaceChildren(); satirlar.forEach((r, i) => {
+      const adKutusu = adAlani(r); const kutular = sutunlar.map(([k, mt, ondalik]) => { const x = sayiKutusu(r[k], ondalik, { 'data-sutun': k, min: '0', title: m(mt) }); x.onchange = () => { r[k] = sayiOku(x); }; return el('label', { class: 'alan' }, el('span', { metin: m(mt) }), x); });
+      govde.append(el('div', { class: 'satir', 'data-satir': String(i) }, adKutusu, ...kutular, el('button', { class: 'dugme ikincil kucuk', metin: m('p_gl_kaldir'), onclick: () => { satirlar.splice(i, 1); ciz(); } })));
+    }); };
+    ciz();
+    return el('div', { class: 'kart', 'data-gelismis': alan }, el('b', { metin: m(baslik) }), not(aciklama), govde,
+      el('div', { class: 'satir' }, el('button', { class: 'dugme ikincil kucuk', metin: m('p_gl_satir_ekle'), onclick: () => { satirlar.push({ ad: '' }); ciz(); } }),
+        el('button', { class: 'dugme kucuk', metin: m('p_kaydet'), onclick: () => { const d = {}; for (const r of satirlar) { if (!r.ad) continue; const v = {}; for (const [k] of sutunlar) if (r[k] !== null && r[k] !== undefined) v[k] = r[k]; d[r.ad] = v; } kaydet(alan, d); } })));
+  };
+  const aracSec = (r) => { const s = el('select', { 'data-sutun': 'ad' }); for (const a of [''].concat(g.araclar)) { const o = el('option', { value: a, metin: a || '-' }); if (a === r.ad) o.selected = true; s.append(o); } if (r.ad && !g.araclar.includes(r.ad)) { const o = el('option', { value: r.ad, metin: r.ad }); o.selected = true; s.append(o); } s.onchange = () => { r.ad = s.value; }; return el('label', { class: 'alan' }, el('span', { metin: m('p_gl_arac') }), s); };
+  const adYaz = (r) => { const s = el('input', { 'data-sutun': 'ad' }); s.value = r.ad || ''; s.oninput = () => { r.ad = s.value.trim(); }; return el('label', { class: 'alan' }, el('span', { metin: m('p_gl_fiyat_ad') }), s); };
+  const kota = tablo('kota', 'p_gl_kota', 'p_gl_kota_not', [['pencere_saat', 'p_gl_pencere_saat', true], ['kapasite', 'p_gl_kapasite', false], ['pencere_usd', 'p_gl_pencere_usd', true]], g.kota, aracSec);
+  const fiyat = tablo('fiyatlar', 'p_gl_fiyat', 'p_gl_fiyat_not', [['girdi', 'p_gl_girdi', true], ['cikti', 'p_gl_cikti', true], ['onbellek_okuma', 'p_gl_okuma', true], ['onbellek_yazma', 'p_gl_yazma', true]], g.fiyatlar, adYaz);
+  // 4. Denetim sureleri
+  const sureler = el('div', { class: 'kart', 'data-gelismis': 'sureler' }, el('b', { metin: m('p_gl_sureler') }));
+  for (const x of g.sayilar) { const k = sayiKutusu(x.deger, false, { 'data-gelismis': x.ad, min: String(x.en_az), max: String(x.en_cok) }); k.onchange = () => kaydet(x.ad, sayiOku(k)); sureler.append(el('label', { class: 'alan' }, el('span', { metin: m('p_gl_' + x.ad) + ' (' + m('p_varsayilan') + ': ' + x.varsayilan + ')' }), k)); }
+  koy(yer, el('details', { class: 'kart' }, el('summary', { metin: m('p_gelismis') }), el('p', { class: 'soluk', metin: m('p_gelismis_aciklama') }), sonuc, izinli, kota, fiyat, sureler));
 }
 
 async function oneriCiz() {
