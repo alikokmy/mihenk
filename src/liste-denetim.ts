@@ -13,7 +13,7 @@ export interface ListeUyarisi {
   uyari: string;
 }
 
-interface DenetlenecekIs { soru?: string; beklenti?: string; yanlissa?: string; dogrulama_komutu?: string; ajan?: string }
+interface DenetlenecekIs { soru?: string; beklenti?: string; yanlissa?: string; dogrulama_komutu?: string; ajan?: string; zorluk?: string }
 
 function izinliProgramlar(kok: string): readonly string[] {
   try {
@@ -76,6 +76,7 @@ export function listeDenetimi(kok: string, isler: DenetlenecekIs[], o: { ajan?: 
         ekle(t('l_komut_red', { neden: e instanceof Error ? e.message.split('\n')[0]! : String(e) }));
       }
     }
+    if (is.zorluk !== undefined && !['kolay', 'orta', 'zor'].includes(is.zorluk)) ekle(t('l_zorluk', { deger: String(is.zorluk) }));
     const ajan = is.ajan ?? o.ajan;
     if (ajan) {
       if (!bulunanAjan.has(ajan)) bulunanAjan.set(ajan, ajanlar[ajan]?.komutBul() != null);

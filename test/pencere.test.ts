@@ -119,6 +119,13 @@ test('is listesi formu: alan alan okunur ve yazilir; bos alanli is reddedilir; l
     const geri = (await api('/api/liste')).veri;
     assert.deepEqual(geri.isler, [is]);
     assert.equal(geri.ajan, 'kilo');
+    // Ise ozel ek alanlar (zorluk, ajan, kimlik, zaman asimi) okuma-yazma turunda kaybolmaz; gecersiz zorluk atilir (Asama 28).
+    const ekli = { ...is, zorluk: 'zor', ajan: 'codex', kimlik: 'is-1', zaman_asimi_sn: 300 };
+    assert.equal((await api('/api/liste', { isler: [ekli, { ...is, soru: 'Iki', zorluk: 'cok' }] })).kod, 200);
+    const tur = (await api('/api/liste')).veri;
+    assert.deepEqual(tur.isler, [ekli, { ...is, soru: 'Iki' }]);
+    assert.equal((await api('/api/liste', { isler: tur.isler })).kod, 200);
+    assert.deepEqual(JSON.parse(readFileSync(join(kok, 'mihenk-isler.json'), 'utf8')).isler, [ekli, { ...is, soru: 'Iki' }]);
   } finally {
     await p.kapat();
   }

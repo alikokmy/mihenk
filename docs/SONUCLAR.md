@@ -815,3 +815,29 @@ sonraki defterlere sızabilirdi. Artık her okuma yeni nesne kuruyor.
 
 **Sınır:** ağırlıklar yaklaşıktır, sağlayıcının gerçek kota hesabı bilinmez. Elle açılan oturumlar (`maliyet-topla`) yalnız işe
 bağlanırsa pencere tüketimine girer.
+## Aşama 28 sonucu (2026-11-20)
+
+**Zorluk alanı.** İşe isteğe bağlı `zorluk` alanı (`kolay`, `orta`, `zor`) eklendi. Yazılabildiği yerler: deftere yeni sütun
+olarak (eski defterler açılırken eklenir), `is_ac` şeması, iş listesi ve pencerenin iş formu. Sürücünün açtığı işte listedeki değer
+yazılır. Geçersiz değer defterde reddedilir; liste denetimi bunun için uyarır.
+
+**Öneri hesabı.** Bir türde en az bir işin zorluğu yazılmışsa doğrudan standartlaştırma uygulanır:
+
+- Türün katman ağırlıkları ve katman başına türün oranı hesaplanır. Zorluğu yazılmamış işler "belirtilmemiş" katmanına girer.
+- Seçeneğin her katmandaki oranı, 2 işlik önselle türün oranına çekilir.
+- Aralık ve eşik düzeltilmiş oranla hesaplanır. Başarı başına maliyet ve süre de aynı ağırlıklarla hesaplanır.
+
+**Kanıt:** `test/zorluk.test.ts`.
+
+- Kolay işleri alan ajanın ham oranı %90, öteki ajanınki %85.
+- Düzeltilmiş oranlar elle hesapla aynı çıktı: 0,725 ve 0,91. Öneri ham hesapta öteki ajana dönüyor.
+- Çıktıdaki "zorluk: kolay 18, zor 2; başarı ham %90, düzeltilmiş %73" satırı da denendi.
+- Zorluk yazılmamış defterde düzeltme alanları boş, maliyet eskisiyle aynı (0,111111), öneri değişmiyor; eski öneri ve kota testleri
+  aynen geçiyor.
+
+Ters denetim: düzeltme kapatılınca ve ölçümden zorluk düşürülünce kabul testi kaldı.
+
+**Yan bulgu (önceden vardı).** Pencere iş listesini kaydederken işe özel `ajan`, `kimlik` ve `zaman_asimi_sn` alanlarını siliyordu.
+Artık okuma ve yazmada korunuyor. `test/pencere.test.ts` bunu gidiş-dönüşte denetliyor.
+
+**Denenmedi:** pencerenin yeni seçim kutusu tarayıcıda açılıp bakılmadı. Sayfa betiğinin sözdizimi testi ve API testleri geçti.

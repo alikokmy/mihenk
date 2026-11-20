@@ -10,7 +10,7 @@ import { appendFileSync, closeSync, existsSync, openSync, readFileSync, writeFil
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AJANLAR, saglayiciHatasi, type AjanTanimi } from './ajanlar.js';
-import { Defter, SURUCU_ISTEMCISI, type Durum, type IsGorunumu } from './defter.js';
+import { Defter, SURUCU_ISTEMCISI, type Durum, type IsGorunumu, type Zorluk } from './defter.js';
 import { agaciOldur, gectiMi, komutuCalistir, komutuCoz } from './dogrulama.js';
 import { Ret } from './hata.js';
 import { depoDurumu, sakla, SAKLAMA_KIPLERI, type SaklamaKipi } from './saklama.js';
@@ -30,6 +30,8 @@ export interface ListeIsi {
   dogrulama_komutu: string;
   ajan?: string;
   zaman_asimi_sn?: number;
+  /** Isin zorlugu (Asama 28): kolay, orta, zor. Oneri ajanlari ayni zorluk karisiminda karsilastirir. */
+  zorluk?: Zorluk;
 }
 
 export interface IsListesi {
@@ -438,6 +440,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
             dogrulama_komutu: listeIsi.dogrulama_komutu, ajan: ajanAdi === '' ? 'belirtilmedi' : ajanAdi, model: 'aracin varsayilani',
             istemci: SURUCU_ISTEMCISI, etiket: kimlik,
             ...(listeIsi.zaman_asimi_sn === undefined ? {} : { zaman_asimi_sn: listeIsi.zaman_asimi_sn }),
+            ...(listeIsi.zorluk === undefined ? {} : { zorluk: listeIsi.zorluk }),
           });
         } catch (e) {
           // Kaydi acilamayan is (eksik alan, izinsiz komut) listeyi durdurmaz.

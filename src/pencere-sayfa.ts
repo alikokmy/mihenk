@@ -107,6 +107,10 @@ async function listeCiz() {
       const kart = el('div', { class: 'kart', 'data-is-formu': String(n) }, el('div', { class: 'satir arasi' }, el('b', { metin: m('p_is_no', { n: n + 1 }) }),
         el('button', { class: 'dugme ikincil kucuk', metin: m('p_is_sil'), onclick: () => { isler.splice(n, 1); isleriCiz(); } })));
       kart.append(el('label', { class: 'alan' }, el('span', { metin: m('p_alan_tur') }), tur));
+      const zorluk = el('select', { 'data-alan': 'zorluk' });
+      for (const [k, mt] of [['', 'p_zorluk_yok'], ['kolay', 'p_zorluk_kolay'], ['orta', 'p_zorluk_orta'], ['zor', 'p_zorluk_zor']]) { const o = el('option', { value: k, metin: m(mt) }); if (k === (is.zorluk || '')) o.selected = true; zorluk.append(o); }
+      zorluk.onchange = () => { if (zorluk.value) is.zorluk = zorluk.value; else delete is.zorluk; };
+      kart.append(el('label', { class: 'alan' }, el('span', { metin: m('p_alan_zorluk') }), zorluk));
       for (const [k, mt] of alanlar) {
         const g = el(k === 'dogrulama_komutu' ? 'input' : 'textarea', { 'data-alan': k, rows: '2' }); g.value = is[k] || ''; g.oninput = () => { is[k] = g.value; };
         kart.append(el('label', { class: 'alan' }, el('span', { metin: m(mt) }), g));

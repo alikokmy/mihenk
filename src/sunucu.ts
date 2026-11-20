@@ -86,6 +86,7 @@ export function sunucuKur(defter: Defter): McpServer {
         ajan: z.string().describe('Isi yuruten ajan araci, or. claude-code, codex, gemini-cli'),
         model: z.string().describe('Kullanilan model kimligi'),
         zaman_asimi_sn: z.number().int().optional().describe('Dogrulama komutunun zaman asimi, saniye (varsayilan 120)'),
+        zorluk: z.enum(['kolay', 'orta', 'zor']).optional().describe('Isin zorlugu, durust tahmin: kolay, orta ya da zor. Oneri hesabi ajanlari ayni zorluk karisiminda karsilastirir.'),
       }),
     },
     (g, ctx) =>

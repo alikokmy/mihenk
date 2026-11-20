@@ -4,6 +4,9 @@
 // (basarisiz islerin ve yeniden denemelerin maliyeti dahil); esitlikte sure. Az veride oneri verilmez: "veri yetersiz".
 // Abonelikli ajanin maliyeti dolar degil kota payidir (Asama 27): pencere degeri verilmisse dolara cevrilir; verilmemisse kota payli
 // secenekler kendi aralarinda karsilastirilir, dolarlilarla karsilastirilmaz (birimler karisirsa maliyet yerine basari ve sure).
+// Zorluk (Asama 28): turde en az bir iste zorluk yazilmissa her secenegin basarisi, maliyeti ve suresi turun ortak zorluk dagilimina gore
+// agirliklandirilir (dogrudan standartlastirma); secenegin az ya da hic isi olmayan katmanda oran turun o katmandaki oranina cekilir.
+// Boylece kolay isleri alan ajan, zor iste zayifsa one gecmez. Zorluk yazilmamis defterde hesap eskisiyle aynidir.
 // Kullanici her zaman kendi secimini yapar; bu hesap yalniz gosterir.
 import type { IsOlcumu } from './defter.js';
 import { t as ileti } from './dil.js';
@@ -56,6 +59,31 @@ export interface Secenek {
   karsilastirma: { birim: 'usd' | 'kota'; deger: number } | null;
   /** Maliyetin duz metni (komut satiri ve pencere ayni metni gosterir). */
   maliyet_metni: string;
+  /** Zorluga gore duzeltilmis basari orani (Asama 28); turde zorluk yazilmamissa null. Aralik ve esik bunu kullanir. */
+  duzeltilmis_basari: number | null;
+  /** Secenegin islerinin zorluk karisimi (or. { kolay: 7, zor: 1, belirtilmemis: 2 }); turde zorluk yoksa null. */
+  zorluk_dagilimi: Record<string, number> | null;
+}
+
+/** Turun ortak zorluk dagilimi ve katman basina turun basari orani. */
+interface ZorlukReferansi {
+  agirlik: Map<string, number>;
+  oran: Map<string, number>;
+}
+/** Bos ya da az isli katmani turun oranina ceken onsel agirligi (is sayisi cinsinden). */
+const ONSEL = 2;
+const katman = (i: IsOlcumu): string => i.zorluk ?? 'belirtilmemis';
+const basarili = (i: IsOlcumu): boolean => i.durum === 'gecti' && !i.geri_alindi;
+
+function zorlukReferansi(isler: IsOlcumu[]): ZorlukReferansi | null {
+  if (!isler.some((i) => i.zorluk)) return null;
+  const agirlik = new Map<string, number>(), oran = new Map<string, number>();
+  for (const k of new Set(isler.map(katman))) {
+    const g = isler.filter((i) => katman(i) === k);
+    agirlik.set(k, g.length / isler.length);
+    oran.set(k, g.filter(basarili).length / g.length);
+  }
+  return { agirlik, oran };
 }
 
 export interface TurOnerisi {
@@ -80,26 +108,43 @@ export function wilson(k: number, n: number, z = 1.96): [number, number] {
 
 const yuvarla = (x: number, b = 6): number => Math.round(x * 10 ** b) / 10 ** b;
 
-function secenekHesapla(isler: IsOlcumu[], a: OneriAyarlari): Secenek {
+function secenekHesapla(isler: IsOlcumu[], a: OneriAyarlari, ref: ZorlukReferansi | null = null): Secenek {
   const { ajan, model } = isler[0]!;
   const n = isler.length;
   // Sonradan geri alinan "gecti" isi basari sayilmaz: kullanici sonucu begenmemistir (Asama 21; CodeBurn'deki "reverted" sinifi).
-  const gecen = isler.filter((i) => i.durum === 'gecti' && !i.geri_alindi).length;
+  const gecen = isler.filter(basarili).length;
   const bilinmeyen = isler.filter((i) => i.maliyet_usd === null).length;
   const maliyetler = isler.map((i) => i.maliyet_usd).filter((m): m is number => m !== null);
-  const toplamMaliyet = maliyetler.reduce((t, m) => t + m, 0);
   const sureler = isler.map((i) => i.sure_sn).filter((s): s is number => s !== null);
   const toplamSure = sureler.reduce((t, s) => t + s, 0);
   const u = a.uyum?.[ajan];
   const uyum = u && u.toplam > 0 ? { ...u, oran: u.gecen / u.toplam } : null;
-  const aralik = wilson(gecen, n);
+  // Zorluk duzeltmesi: katman basina (basari + ONSEL x turun orani) / (is + ONSEL), turun agirliklariyla toplanir.
+  const katmanda = (k: string): IsOlcumu[] => isler.filter((i) => katman(i) === k);
+  const duzeltilmis = ref === null ? null : [...ref.agirlik].reduce((t, [k, w]) => {
+    const g = katmanda(k);
+    return t + w * (g.filter(basarili).length + ONSEL * ref.oran.get(k)!) / (g.length + ONSEL);
+  }, 0);
+  const aralik = duzeltilmis === null ? wilson(gecen, n) : wilson(duzeltilmis * n, n);
   const durum: SecenekDurumu =
     n < a.enAz ? 'veri_yetersiz' : aralik[0] < a.esik ? 'esik_alti' : uyum && uyum.oran < a.uyumEsigi ? 'uyum_dusuk' : 'aday';
   const abonelik = isler.every((i) => i.abonelik === true);
   // Hepsi biliniyorsa basari basina toplam; biri bile bilinmiyorsa null (kismi toplam yaniltir).
-  const basariBasina = (degerler: Array<number | null | undefined>): number | null =>
-    gecen === 0 || degerler.some((d) => d === null || d === undefined) ? null : (degerler as number[]).reduce((t, d) => t + d, 0) / gecen;
-  const dolar = abonelik ? null : bilinmeyen > 0 || gecen === 0 ? null : yuvarla(toplamMaliyet / gecen);
+  const basariBasina = (degerler: Array<number | null | undefined>): number | null => {
+    if (gecen === 0 || degerler.some((d) => d === null || d === undefined)) return null;
+    const v = degerler as number[];
+    if (duzeltilmis === null) return v.reduce((t, d) => t + d, 0) / gecen;
+    // Is basina beklenen deger turun zorluk dagilimiyla; secenegin o katmanda isi yoksa kendi ortalamasi.
+    const ort = (d: number[]): number => d.reduce((t, x) => t + x, 0) / d.length;
+    const genel = ort(v);
+    const isBasina = [...ref!.agirlik].reduce((t, [k, w]) => {
+      const d = v.filter((_, j) => katman(isler[j]!) === k);
+      return t + w * (d.length > 0 ? ort(d) : genel);
+    }, 0);
+    return isBasina / duzeltilmis;
+  };
+  const dolarHam = abonelik || bilinmeyen > 0 ? null : basariBasina(isler.map((i) => i.maliyet_usd));
+  const dolar = dolarHam === null ? null : yuvarla(dolarHam);
   const kotaBirimi = abonelik ? basariBasina(isler.map((i) => i.kota_birimi)) : null;
   const kotaPayi = abonelik ? basariBasina(isler.map((i) => i.kota_payi)) : null;
   const kotaUsd = abonelik ? basariBasina(isler.map((i) => i.kota_usd)) : null;
@@ -122,8 +167,11 @@ function secenekHesapla(isler: IsOlcumu[], a: OneriAyarlari): Secenek {
     basari_basina_maliyet: dolar ?? (kotaUsd !== null ? yuvarla(kotaUsd) : null),
     maliyet_araligi,
     maliyeti_bilinmeyen_is: bilinmeyen,
-    basari_basina_sure_sn: gecen === 0 || sureler.length === 0 ? null : yuvarla(toplamSure / gecen, 1),
+    basari_basina_sure_sn: gecen === 0 || sureler.length === 0 ? null
+      : yuvarla(duzeltilmis === null || sureler.length < n ? toplamSure / gecen : basariBasina(isler.map((i) => i.sure_sn))!, 1),
     uyum, durum, abonelik,
+    duzeltilmis_basari: duzeltilmis === null ? null : yuvarla(duzeltilmis, 3),
+    zorluk_dagilimi: ref === null ? null : Object.fromEntries([...ref.agirlik.keys()].map((k) => [k, katmanda(k).length]).filter(([, s]) => (s as number) > 0)),
     basari_basina_kota_birimi: kotaBirimi === null ? null : Math.round(kotaBirimi),
     basari_basina_kota_payi: kotaPayi === null ? null : yuvarla(kotaPayi), kota_kaynagi, karsilastirma, maliyet_metni,
   };
@@ -140,7 +188,8 @@ export function oneriHesapla(olcumler: IsOlcumu[], ayarlar: Partial<OneriAyarlar
       const anahtar = `${o.ajan}\u0000${o.model}`;
       gruplar.set(anahtar, [...(gruplar.get(anahtar) ?? []), o]);
     }
-    const secenekler = [...gruplar.values()].map((g) => secenekHesapla(g, a)).sort((x, y) => y.aralik[0] - x.aralik[0]);
+    const ref = zorlukReferansi(kendi);
+    const secenekler = [...gruplar.values()].map((g) => secenekHesapla(g, a, ref)).sort((x, y) => y.aralik[0] - x.aralik[0]);
     const adaylar = secenekler.filter((s) => s.durum === 'aday');
     const ad = (s: Secenek): string => `${s.ajan} / ${s.model}`;
 
@@ -206,6 +255,12 @@ export function oneriMetni(turler: TurOnerisi[], ayarlar: Partial<OneriAyarlari>
       const sure = s.basari_basina_sure_sn !== null ? ileti('o_sure', { sn: s.basari_basina_sure_sn }) : ileti('o_sure_yok');
       const uyum = s.uyum ? ileti('o_uyum', { gecen: s.uyum.gecen, toplam: s.uyum.toplam }) : '';
       satirlar.push(ileti('o_secenek', { ajan: s.ajan, model: s.model, gecen: s.gecen, sayi: s.is_sayisi, alt: Math.round(s.aralik[0] * 100), ust: Math.round(s.aralik[1] * 100), maliyet, sure, uyum, durum: ileti(DURUM_ANAHTARI[s.durum]) }));
+      if (s.zorluk_dagilimi) {
+        satirlar.push(ileti('o_zorluk', {
+          dagilim: Object.entries(s.zorluk_dagilimi).map(([k, v]) => `${k} ${v}`).join(', '),
+          ham: Math.round(s.basari * 100), duz: Math.round((s.duzeltilmis_basari ?? s.basari) * 100),
+        }));
+      }
     }
   }
   satirlar.push('', ileti('o_kapanis'));

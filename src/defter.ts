@@ -113,7 +113,12 @@ export interface IsGirdisi {
   istemci?: string;
   /** Is listesindeki kimlik; surucu doldurur. Kesilen liste bununla kaldigi yerden surer. */
   etiket?: string;
+  /** Isin zorlugu (Asama 28): kolay, orta, zor. Istege bagli; listedeki deger ajaninkinden onceliklidir. */
+  zorluk?: Zorluk;
 }
+
+export type Zorluk = 'kolay' | 'orta' | 'zor';
+export const ZORLUKLAR: readonly Zorluk[] = ['kolay', 'orta', 'zor'];
 
 export interface IsKaydi {
   id: number;
@@ -127,6 +132,7 @@ export interface IsKaydi {
   model: string;
   istemci: string | null;
   etiket: string | null;
+  zorluk: Zorluk | null;
   durum: Durum;
   baslangic: string;
   bitis: string | null;
@@ -234,6 +240,8 @@ export interface IsOlcumu {
   maliyet_usd: number | null;
   /** Is kapandiktan sonra degisiklikleri geri alindi mi (Asama 21): "gecti" ise oneri bunu basari saymaz. */
   geri_alindi?: boolean;
+  /** Isin zorlugu (Asama 28); yazilmamissa null. */
+  zorluk?: Zorluk | null;
   /** Abonelikli ajan (Asama 27): mihenk.json "kota"da adi geciyor ya da dolar maliyeti bilinmiyor ama token biliniyor. */
   abonelik?: boolean;
   /** Butun oturumlarin kota birimi (agirlikli token); hic oturum olcumu yoksa null. */
@@ -407,7 +415,7 @@ export class Defter {
     this.db.exec(SEMA);
     // Sema gocu: etiket (Asama 3), bekci sutunlari (Asama 10) sonradan eklendi; eski defterler acilirken tamamlanir.
     const sutunlar = this.db.prepare('PRAGMA table_info(isler)').all() as Array<{ name: string }>;
-    for (const [ad, tur] of [['etiket', 'TEXT'], ['testler_ozeti', 'TEXT'], ['baslangic_dogrulama', 'INTEGER'], ['supheler', 'TEXT']] as const) {
+    for (const [ad, tur] of [['etiket', 'TEXT'], ['testler_ozeti', 'TEXT'], ['baslangic_dogrulama', 'INTEGER'], ['supheler', 'TEXT'], ['zorluk', 'TEXT']] as const) {
       if (sutunlar.some((s) => s.name === ad)) continue;
       try {
         this.db.exec(`ALTER TABLE isler ADD COLUMN ${ad} ${tur}`);
@@ -456,16 +464,20 @@ export class Defter {
       const model = dolu('model', g.model, SINIRLAR.kisa);
       komutuCoz(komut, this.ayarlar.izinli_programlar);
       const etiket = g.etiket === undefined ? null : dolu('etiket', g.etiket, SINIRLAR.kisa);
+      const zorluk = g.zorluk === undefined || g.zorluk === null ? null : g.zorluk;
+      if (zorluk !== null && !ZORLUKLAR.includes(zorluk)) {
+        throw new Ret('GECERSIZ_DEGER', `zorluk kolay, orta ya da zor olmalidir; gelen: ${JSON.stringify(zorluk)}.`);
+      }
       const zamanAsimi = g.zaman_asimi_sn ?? this.ayarlar.zaman_asimi_sn;
       if (!Number.isInteger(zamanAsimi) || zamanAsimi < 1 || zamanAsimi > this.ayarlar.en_fazla_zaman_asimi_sn) {
         throw new Ret('GECERSIZ_DEGER', `zaman_asimi_sn 1 ile ${this.ayarlar.en_fazla_zaman_asimi_sn} arasinda tam sayi olmalidir.`);
       }
       const sonuc = this.db
         .prepare(
-          `INSERT INTO isler (tur, soru, beklenti, yanlissa, dogrulama_komutu, zaman_asimi_sn, ajan, model, istemci, etiket, baslangic, testler_ozeti)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO isler (tur, soru, beklenti, yanlissa, dogrulama_komutu, zaman_asimi_sn, ajan, model, istemci, etiket, zorluk, baslangic, testler_ozeti)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .run(tur, soru, beklenti, yanlissa, komut, zamanAsimi, ajan, model, g.istemci ?? null, etiket, new Date().toISOString(),
+        .run(tur, soru, beklenti, yanlissa, komut, zamanAsimi, ajan, model, g.istemci ?? null, etiket, zorluk, new Date().toISOString(),
           ozellikleriOku(this.kok).bekci_test_kurcalama === false ? null : JSON.stringify(testOzeti(this.kok)));
       const is = this.isGetir(Number(sonuc.lastInsertRowid));
       this.fotograf(is.id, 'bas');
@@ -797,7 +809,7 @@ export class Defter {
         durum: is.durum as Exclude<Durum, 'acik'>, sure_sn: sureSn(is), deneme_sayisi: is.deneme_sayisi,
         maliyet_usd: maliyet,
         geri_alindi: geriAlinan.has(is.id),
-        abonelik, kota_birimi: birim, kota_payi: pay, kota_kaynagi: kapasite?.kaynak ?? null,
+        zorluk: is.zorluk ?? null, abonelik, kota_birimi: birim, kota_payi: pay, kota_kaynagi: kapasite?.kaynak ?? null,
         kota_usd: pay !== null && ayar?.pencere_usd ? pay * ayar.pencere_usd : null,
       };
     });

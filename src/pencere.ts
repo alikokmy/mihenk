@@ -29,6 +29,16 @@ import { elOturumlariniTopla } from './el-oturumu.js';
 const CLI = join(dirname(fileURLToPath(import.meta.url)), 'cli.js');
 
 /** Pencerenin varsayilan portu; doluysa sonraki 20 port, o da olmazsa isletim sisteminin verdigi bos port denenir. */
+/** Ise ozel ek alanlar: gecerli olanlar korunur (Asama 28 oncesi pencere bunlari kaydederken siliyordu). */
+function isEkleri(x: Record<string, unknown>): Record<string, unknown> {
+  const e: Record<string, unknown> = {};
+  if (typeof x.kimlik === 'string' && x.kimlik.trim()) e.kimlik = x.kimlik.trim();
+  if (typeof x.ajan === 'string' && x.ajan.trim()) e.ajan = x.ajan.trim();
+  if (Number.isInteger(x.zaman_asimi_sn)) e.zaman_asimi_sn = x.zaman_asimi_sn;
+  if (typeof x.zorluk === 'string' && ['kolay', 'orta', 'zor'].includes(x.zorluk)) e.zorluk = x.zorluk;
+  return e;
+}
+
 export const VARSAYILAN_PORT = 47700;
 
 /** "Dosyayi ac" dugmesi: her ayarin bulundugu dosya (proje icinde sabit yollar; disaridan yol alinmaz). */
@@ -217,11 +227,12 @@ export function pencereAc(hedef: string, o: { port?: number; dosyaAcici?: (yol: 
         const alan = (x: Record<string, unknown>, a: string): string => (typeof x[a] === 'string' ? (x[a] as string) : '');
         const liste = Array.isArray(ham.isler) ? (ham.isler as Record<string, unknown>[]) : [];
         const araclar = Object.entries(AJANLAR).filter(([, t]) => t.komutBul() !== null).map(([a]) => a);
-        const listeIsleri = liste.map((x) => ({ soru: alan(x, 'soru'), beklenti: alan(x, 'beklenti'), yanlissa: alan(x, 'yanlissa'), dogrulama_komutu: alan(x, 'dogrulama_komutu'), ...(alan(x, 'ajan') ? { ajan: alan(x, 'ajan') } : {}) }));
+        const listeIsleri = liste.map((x) => ({ soru: alan(x, 'soru'), beklenti: alan(x, 'beklenti'), yanlissa: alan(x, 'yanlissa'), dogrulama_komutu: alan(x, 'dogrulama_komutu'), ...(alan(x, 'ajan') ? { ajan: alan(x, 'ajan') } : {}), ...(x.zorluk !== undefined ? { zorluk: String(x.zorluk) } : {}) }));
         return json(res, 200, {
           var: existsSync(dosya), bozuk, ajan: typeof ham.ajan === 'string' ? ham.ajan : '', araclar,
           uyarilar: existsSync(dosya) ? listeDenetimi(kok, listeIsleri, { ...(typeof ham.ajan === 'string' ? { ajan: ham.ajan } : {}) }) : [],
-          isler: liste.map((x) => ({ tur: alan(x, 'tur'), soru: alan(x, 'soru'), beklenti: alan(x, 'beklenti'), yanlissa: alan(x, 'yanlissa'), dogrulama_komutu: alan(x, 'dogrulama_komutu') })),
+          // Ise ozel ek alanlar (ajan, kimlik, zaman asimi, zorluk) da doner: form kaydedince kaybolmasinlar.
+          isler: liste.map((x) => ({ tur: alan(x, 'tur'), soru: alan(x, 'soru'), beklenti: alan(x, 'beklenti'), yanlissa: alan(x, 'yanlissa'), dogrulama_komutu: alan(x, 'dogrulama_komutu'), ...isEkleri(x) })),
         });
       }
       if (yol === 'POST /api/liste') {
@@ -238,6 +249,7 @@ export function pencereAc(hedef: string, o: { port?: number; dosyaAcici?: (yol: 
         const temiz = (s: unknown): string => String(s ?? '').trim();
         ham.isler = (Array.isArray(g.isler) ? g.isler as Record<string, unknown>[] : []).map((x) => ({
           tur: temiz(x.tur) || 'hata_duzeltme', soru: temiz(x.soru), beklenti: temiz(x.beklenti), yanlissa: temiz(x.yanlissa), dogrulama_komutu: temiz(x.dogrulama_komutu),
+          ...isEkleri(x),
         }));
         const ALANLAR = [['soru', 'p_alan_soru'], ['beklenti', 'p_alan_beklenti'], ['yanlissa', 'p_alan_yanlissa'], ['dogrulama_komutu', 'p_alan_komut']] as const;
         for (const [n, x] of (ham.isler as Record<string, string>[]).entries()) {

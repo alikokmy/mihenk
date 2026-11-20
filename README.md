@@ -261,6 +261,12 @@ ucunun %50'yi geçmesi gerekir; yoksa "veri yetersiz" yazar ve öneri vermez. Uy
 uyumu %80'in altındaki araç önerilmez.
 Öneri yalnız gösterir; aracı her zaman siz seçersiniz. Eşikler `--esik` ve `--en-az` ile değişir.
 
+**Zorluk.** Kolay işleri alan bir araç, zor işte zayıf olsa bile iyi görünebilir. Bunu önlemek için işe isteğe bağlı `"zorluk"`
+(`kolay`, `orta`, `zor`) yazılır. Yazılabileceği yerler: iş listesi, pencerede işin "Zorluk" alanı, ya da ajanın `is_ac` çağrısı
+(iş listesindeki değer önceliklidir). Bir iş türünde en az bir işin zorluğu yazılmışsa öneri her aracın başarısını, maliyetini ve
+süresini o türün ortak zorluk karışımına göre hesaplar. Aracın hiç ya da az işi olmayan zorluk katmanında, türün genel oranı kullanılır.
+Çıktıda her aracın zorluk karışımı, ham başarısı ve düzeltilmiş başarısı yan yana yazar. Zorluk hiç yazılmamışsa hesap değişmez.
+
 **Abonelikle çalışan araçlarda maliyet kota payıdır.** Abonelikte (ör. Claude Pro/Max, ChatGPT ile Codex) dolar ödemezsiniz. Ödediğiniz
 şey, birkaç saatlik kullanım penceresinin ne kadarını harcadığınızdır. mihenk bunu şöyle ölçer:
 
