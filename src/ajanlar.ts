@@ -156,7 +156,11 @@ export const OPENCODE: AjanTanimi = {
     const paketli = join(process.env.LOCALAPPDATA ?? '', 'Programs', 'ai.opencode.desktop', 'resources', 'opencode-cli.exe');
     return existsSync(paketli) ? { program: paketli, onEk: [] } : null;
   },
-  argumanlar: (istem) => ['run', '--standalone', '--auto', '--format', 'json', istem],
+  // Model verilmezse opencode.json'daki "model" kullanilir (yerel saglayici, or. yerel/qwen3-coder); MIHENK_OPENCODE_MODEL onu ezer.
+  argumanlar: (istem) => {
+    const m = process.env.MIHENK_OPENCODE_MODEL;
+    return ['run', '--standalone', '--auto', '--format', 'json', ...(m ? ['-m', m] : []), istem];
+  },
   kullanimKatkisi(satir) {
     const s = nesne(satir);
     const p = s?.type === 'step_finish' ? nesne(s.part) : undefined;

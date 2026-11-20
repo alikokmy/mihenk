@@ -4,6 +4,8 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
+import { OPENCODE } from './ajanlar.js';
 import { ayarlariOku } from './ayar.js';
 import { t } from './dil.js';
 import { bosDizinleriSil, dosyayiGeriAl, kayitOku, kayitYaz, ozet, yedegiSil, yedekYaz } from './kaldir.js';
@@ -22,6 +24,8 @@ export interface KurSecenekleri {
    * "mihenk kur" komutu bunu kullanir; ozel bir arac listesiyle cagrilan kur (ornegin uyum senaryolari) eskileri silmez.
    */
   esitle?: boolean;
+  /** Kurulu OpenCode surumu (testler icin); verilmezse bilgisayarda aranir, null: bulunamadi. */
+  opencodeSurumu?: string | null;
 }
 
 export interface KurSonucu {
@@ -34,6 +38,16 @@ export interface KurSonucu {
 
 const BURASI = dirname(fileURLToPath(import.meta.url)); // dist/src
 const egik = (yol: string): string => yol.replace(/\\/g, '/');
+
+let opencodeSurumOnbellek: string | null | undefined;
+/** Bilgisayardaki OpenCode'un surumu ("2.3.2"); yoksa null. Bir kez okunur. */
+export function opencodeSurumu(): string | null {
+  if (opencodeSurumOnbellek !== undefined) return opencodeSurumOnbellek;
+  const k = OPENCODE.komutBul();
+  const r = k ? spawnSync(k.program, [...k.onEk, '--version'], { encoding: 'utf8', timeout: 15_000, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }) : null;
+  opencodeSurumOnbellek = /(\d+\.\d+\.\d+)/.exec(r?.stdout ?? '')?.[1] ?? null;
+  return opencodeSurumOnbellek;
+}
 
 export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu {
   const hedef = resolve(hedefDizin);
@@ -225,10 +239,26 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
   }
 
   if (araclar.includes('opencode')) {
-    // OpenCode 2.3.2: bicim aracin kendi "opencode mcp add" komutunun yazdigi dosyadan okundu (mcp.servers.<ad>, type local, command dizisi).
+    // OpenCode 2.x (2.3.2 ile denendi, 2026-11-20): yerli bicim mcp.servers.<ad>. MCP araclari varsayilan olarak "Code Mode" ile
+    // sunulur (model JavaScript yazip execute araci icinden cagirir); codemode:false ile araclar modele dogrudan gider
+    // (mihenk_is_ac ...). Kucuk yerel modeller (Qwen, DeepSeek) icin dogrudan arac daha guvenilir; mihenk'in bes araci baglami
+    // sisirmez. OpenCode 1.x yalniz mcp.<ad> bicimini tanir ve codemode anahtarini bilmez: kurulu surum 1.x ise o bicim yazilir
+    // (1.x elde denenmedi). Surum bulunamazsa 2.x bicimi yazilir. Obur bicimdeki eski mihenk kaydi kaldirilir.
+    // Kullanicinin provider/model ve oteki MCP kayitlarina dokunulmaz.
+    const eskiOpencode = /^1\./.test(secenek.opencodeSurumu === undefined ? opencodeSurumu() ?? '' : secenek.opencodeSurumu ?? '');
     jsonGuncelle('opencode.json', (n) => {
       const mcp = (n.mcp ??= {}) as Record<string, any>;
-      mcp.servers = { ...(mcp.servers ?? {}), mihenk: { type: 'local', command: [mcpKaydi.command, ...mcpKaydi.args] } };
+      const komut = [mcpKaydi.command, ...mcpKaydi.args];
+      if (eskiOpencode) {
+        if (mcp.servers?.mihenk) {
+          delete mcp.servers.mihenk;
+          if (Object.keys(mcp.servers).length === 0) delete mcp.servers;
+        }
+        mcp.mihenk = { type: 'local', command: komut };
+      } else {
+        delete mcp.mihenk;
+        mcp.servers = { ...(mcp.servers ?? {}), mihenk: { type: 'local', command: komut, codemode: false } };
+      }
     });
   }
 

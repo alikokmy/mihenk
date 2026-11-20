@@ -52,7 +52,7 @@ test('KABUL dort bozuk kurulum dogru satirda SORUN verir ve ne yapilacagini soyl
   // 3. ajan araci yok
   const c = kurulu();
   assert.equal(durum(c, 'araclar', { ajanlar: {} }), 'sorun');
-  assert.match(doktor(c, { ajanlar: {} }).find((x) => x.kimlik === 'araclar')!.cozum!, /npm install -g @kilocode\/cli/);
+  assert.match(doktor(c, { ajanlar: {} }).find((x) => x.kimlik === 'araclar')!.cozum!, /OpenCode/);
   // 4. eski Node
   assert.equal(durum(c, 'node', { nodeSurumu: '20.11.0' }), 'sorun');
   // ek: kaydin cagirdigi program yok (or. mihenk tasindi)
@@ -102,4 +102,17 @@ test('KABUL hata paketi: ev dizini yolu, kullanici adi, e-posta ve anahtarlar te
   assert.match(icerik, /== doktor ==/);
   assert.match(icerik, /~/);
   assert.equal(temizle('"password": "x"'), '"password": "<gizli>"');
+});
+
+test('doktor OpenCode: iki bicim (mcp.mihenk, mcp.servers.mihenk) TAMAM; komutsuz kayit SORUN', () => {
+  const kok = kurulu();
+  const yol = join(kok, 'opencode.json');
+  const kayit = JSON.parse(readFileSync(yol, 'utf8')).mcp.servers.mihenk;
+  assert.equal(durum(kok, 'mcp_opencode'), 'tamam');
+  writeFileSync(yol, JSON.stringify({ mcp: { mihenk: kayit } }));
+  assert.equal(durum(kok, 'mcp_opencode'), 'tamam');
+  writeFileSync(yol, JSON.stringify({ mcp: { mihenk: { type: 'local', command: kayit.command.join(' ') } } }));
+  const satir = doktor(kok).find((x) => x.kimlik === 'mcp_opencode')!;
+  assert.equal(satir.durum, 'sorun');
+  assert.match(satir.metin, /bicimi/);
 });

@@ -52,6 +52,7 @@ export function doktor(kok: string, o: { nodeSurumu?: string; ajanlar?: Readonly
       else {
         const metin = readFileSync(yol, 'utf8');
         if (!metin.includes('mihenk')) neden = t('d_neden_kayit_yok');
+        else if (arac === 'opencode' && !opencodeKaydiVar(metin)) neden = t('d_neden_bicim');
         else {
           const eksik = yollar(metin.slice(metin.indexOf('mihenk'))).find((p) => !existsSync(p));
           if (eksik) neden = t('d_neden_program_yok', { yol: eksik });
@@ -157,4 +158,14 @@ export function hataPaketi(kok: string, zaman = new Date()): string {
   const yol = join(dizin, `hata-paketi-${zaman.toISOString().replace(/[:.]/g, '-')}.txt`);
   writeFileSync(yol, temizle(parcalar.join('\n')) + '\n');
   return yol;
+}
+
+/** OpenCode kaydi: mcp.mihenk (1.x ve 2.x) ya da mcp.servers.mihenk (yalniz 2.x); ikisinde de command bir dizi olmalidir. */
+function opencodeKaydiVar(metin: string): boolean {
+  try {
+    const n = JSON.parse(metin) as { mcp?: { mihenk?: { command?: unknown }; servers?: { mihenk?: { command?: unknown } } } };
+    return Array.isArray(n.mcp?.mihenk?.command) || Array.isArray(n.mcp?.servers?.mihenk?.command);
+  } catch {
+    return false;
+  }
 }

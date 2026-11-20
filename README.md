@@ -6,14 +6,14 @@ Kodlama ajanlarının bağlandığı, işi kayda alan, kanıtı kendisi denetley
 Ad: mihenk taşı, altının ayarını sınamak için kullanılan taştır. Proje iki şeyi sınar: yapılan işin doğruluğunu ve işi yapan ajanın o iş türündeki
 değerini (doğruluk, süre, maliyet).
 
-**Durum: sürüm 0.3.** Defter, yöntem paketi, sürücü, uyum testleri, süre ve maliyet, öneri, kanıtsız "bitti"ye kapı ve temiz kaldırma
+**Durum: sürüm 0.4.** İnternetsiz ortam için tek zip paket (Node.js dahil, yönetici izni yok) ve OpenCode + yerel model uyumu eklendi. Defter, yöntem paketi, sürücü, uyum testleri, süre ve maliyet, öneri, kanıtsız "bitti"ye kapı ve temiz kaldırma
 yazıldı ve denendi. Açık kalemler ve sürüm 0.2 taslağı [docs/IS_PLANI.md](docs/IS_PLANI.md) içinde.
 
 | Araç | Kurulum | Gerçek denemede | Kapı (kanca) |
 |---|---|---|---|
 | Claude Code | var | defter, sürücü, uyum 16/16, maliyet | var, denendi |
 | Codex CLI | var | defter, sürücü, uyum 15/16, token (maliyet abonelikte bilinmiyor) | var, denendi (bir kez onay ister) |
-| OpenCode | var | defter, sürücü, uyum 16/16, maliyet | yok |
+| OpenCode | var | defter, sürücü, uyum 16/16, maliyet; internet kesikken yerel model (sahte sunucuyla) | yok |
 | Kilo Code CLI | var | defter, sürücü, uyum 16/16, maliyet; ücretsiz modelle oturumsuz | yok |
 | Antigravity | var | masaüstünde defter (4 ölçütten 3'ü); komut satırı kipi olmadığı için sürücü ve uyum yok | yok |
 | Cline CLI | var | **denenmedi**: hesapla oturum açmak gerekiyor | yok |
@@ -58,6 +58,61 @@ Bu komut yedi skill'i (`.claude/skills` ve `.agents/skills`), her oturuma giren 
 
 Kurulum ayrıca proje klasörüne örnek bir iş listesi (`mihenk-isler.ornek.json`) ve Windows'ta çift tıklanır bir başlatma dosyası
 (`mihenk-baslat.cmd`) bırakır.
+
+## İnternetsiz ortam ve yerel model
+
+İnterneti olmayan, modeli (Qwen, DeepSeek...) kendi sunucusunda OpenAI uyumlu bir API ile çalıştıran ve OpenCode kullanan ortam için.
+
+**Paket.** İnternetli bir bilgisayarda depodan `npm run paketle` çalıştırılır. Sonuç `cikti/mihenk-<sürüm>-win32-x64.zip` dosyasıdır
+(yaklaşık 100 MB). İçinde Node.js (`node\node.exe`), mihenk ve bütün bağımlılıkları bulunur. Hedef bilgisayarda internet, `npm install`,
+Node.js kurulumu ya da yönetici izni gerekmez. Zip kalıcı bir klasöre açılır (ör. `Belgeler\mihenk`). Ardından proje klasörü
+`Projeye-kur.cmd` dosyasının üstüne sürüklenir; ayrıntılı adımlar paketteki `KURULUM.txt` içindedir. Kurulumun yazdığı ayarlar
+paketteki `node.exe` dosyasını tam yoluyla çağırır, bu yüzden klasörün yeri sonradan değiştirilmemelidir.
+
+**OpenCode.** Kurulum `opencode.json` içine yalnız mihenk kaydını ekler. Sizin sağlayıcı (`provider`), model ve öteki MCP
+ayarlarınıza dokunmaz. Kayıt, bilgisayardaki OpenCode sürümüne göre yazılır:
+
+- **2.x:** `mcp.servers.mihenk` biçimi, `codemode: false` ile. OpenCode 2.x, MCP araçlarını varsayılan olarak "Code Mode" ile sunar:
+  model bir JavaScript parçası yazar ve aracı onun içinden çağırır. Bu ayar kapatılınca mihenk'in beş aracı modele doğrudan araç olarak
+  gider (`mihenk_is_ac` ...), bu da küçük yerel modeller için daha güvenilirdir.
+- **1.x:** `mcp.mihenk` biçimi (1.x elde denenmedi).
+
+Örnek `opencode.json` (sağlayıcı kısmı sizindir; mihenk kaydını kurulum ekler):
+
+```json
+{
+  "provider": {
+    "yerel": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Yerel model",
+      "options": { "baseURL": "http://10.0.0.5:8000/v1", "apiKey": "gerekmiyorsa-herhangi-bir-deger" },
+      "models": { "qwen3-coder": { "name": "Qwen3 Coder", "tool_call": true } }
+    }
+  },
+  "model": "yerel/qwen3-coder",
+  "small_model": "yerel/qwen3-coder",
+  "share": "disabled",
+  "autoupdate": false
+}
+```
+
+- `@ai-sdk/openai-compatible`, OpenCode'un kendi dosyasının içinde gelir; internetten indirilmez.
+- OpenCode'un model listesini internetten çekmesini kapatmak için `OPENCODE_DISABLE_MODELS_FETCH=1`, güncelleme denetimini kapatmak
+  için `OPENCODE_DISABLE_AUTOUPDATE=1` kullanılır. İkisi de yönetici izni gerektirmez; kalıcı yapmak için PowerShell'de
+  `setx OPENCODE_DISABLE_MODELS_FETCH 1` yazılır.
+- Sürücünün kullanacağı model `opencode.json` dosyasındaki `model` değeridir. Başka bir model için `MIHENK_OPENCODE_MODEL=yerel/deepseek-v3`.
+- Model sunucusunda araç çağırma açık olmalıdır. Örneğin vLLM'de `--enable-auto-tool-choice` ve modele uygun `--tool-call-parser`
+  gerekir. Bu OpenCode dışındaki bir ayardır ve burada denenmedi.
+
+**Denendi (2026-11-20, OpenCode 2.3.2).** Dış istekler çalışmayan bir vekil sunucuya yönlendirilerek internet kesildi. Qwen yerine
+sahte bir yerel OpenAI uyumlu sunucu kullanıldı. Bu koşullarda:
+
+- istekler yalnız yerel sunucuya gitti;
+- beş mihenk aracı isteğe doğrudan araç olarak girdi;
+- modelin `mihenk_is_ac` çağrısı deftere kayıt açtı (`test/opencode-yerel.test.ts`).
+
+Paket, PATH'te Node olmayan ortamda ve başka bir klasöre açılmış haliyle de denendi: kurulum, doktor ve MCP sunucusu çalıştı
+(`test/cevrimdisi.test.ts`). Gerçek bir Qwen ya da DeepSeek sunucusuyla deneme yapılmadı.
 
 ## Sorular
 

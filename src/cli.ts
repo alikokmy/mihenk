@@ -19,6 +19,7 @@ import { raporYaz } from './rapor.js';
 import { pencereAc, VARSAYILAN_PORT } from './pencere.js';
 import { doktor, doktorMetni, hataPaketi } from './doktor.js';
 import { elOturumlariniTopla } from './el-oturumu.js';
+import { paketle } from './paketle.js';
 import { listeDenetimi, listeDenetimMetni } from './liste-denetim.js';
 import { spawnSync } from 'node:child_process';
 import { ayarKomutu } from './ayar-cli.js';
@@ -253,6 +254,10 @@ try {
   else if (komut === 'maliyet-topla') {
     console.log(t('mt_sonuc', { ...elOturumlariniTopla(resolve(secenek('--hedef') ?? process.cwd())) }));
     console.log(t('mt_fiyat'));
+  }
+  else if (komut === 'paketle') {
+    const p = paketle(resolve(secenek('--cikis') ?? join(process.cwd(), 'cikti')), { zip: !gerisi.includes('--zipsiz') });
+    console.log(t('pk_sonuc', { klasor: p.klasor, zip: p.zip ?? '-', paket: p.paket_sayisi, mb: p.boyut_mb }));
   }
   else if (komut === 'hata-paketi') console.log(t('hp_yazildi', { yol: hataPaketi(resolve(secenek('--hedef') ?? process.cwd())) }));
   else if (komut === 'pencere') {

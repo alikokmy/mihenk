@@ -88,8 +88,9 @@ test('kur: her aracin MCP ayari kendi dosyasina, kendi biciminde yazilir', () =>
   }
   const toml = oku(h, '.codex/config.toml');
   assert.match(toml, /\[mcp_servers\.mihenk\]\ncommand = "node"\nargs = \[".*bin\.js", "--kok", ".*"\]/);
-  // OpenCode 2.3.2: mcp.servers.<ad>, komut ve argumanlar tek dizide (aracin kendi "mcp add" ciktisindaki bicim).
+  // OpenCode 2.x: mcp.servers.<ad>, komut ve argumanlar tek dizide, Code Mode kapali (araclar modele dogrudan gider).
   const oc = JSON.parse(oku(h, 'opencode.json')).mcp.servers.mihenk;
+  assert.equal(oc.codemode, false);
   assert.equal(oc.type, 'local');
   assert.equal(oc.command[0], NODE);
   assert.match(oc.command[1], /bin\.js$/);
@@ -197,4 +198,33 @@ test('kur: yazilan MCP ayariyla sunucu gercekten baslar ve bes araci sunar (ucta
   } finally {
     await istemci.close();
   }
+});
+
+test('KABUL OpenCode: 2.x bicimi (Code Mode kapali); kullanicinin saglayici, model ve oteki MCP kayitlari korunur; 1.x icin eski bicim', () => {
+  const h = hedef();
+  const kullanici = {
+    $schema: 'https://opencode.ai/config.json',
+    provider: { yerel: { npm: '@ai-sdk/openai-compatible', name: 'Yerel', options: { baseURL: 'http://10.0.0.5:8000/v1' }, models: { 'qwen3-coder': { name: 'Qwen' } } } },
+    model: 'yerel/qwen3-coder',
+    small_model: 'yerel/qwen3-coder',
+    share: 'disabled',
+    autoupdate: false,
+    mcp: { baska: { type: 'local', command: ['x'] }, mihenk: { type: 'local', command: ['eski'] } },
+  };
+  writeFileSync(join(h, 'opencode.json'), JSON.stringify(kullanici));
+  kur(h, { araclar: ['opencode'], opencodeSurumu: '2.3.2' });
+  const n = JSON.parse(oku(h, 'opencode.json'));
+  assert.deepEqual(n.provider, kullanici.provider);
+  for (const k of ['model', 'small_model', 'share', 'autoupdate', '$schema'] as const) assert.deepEqual(n[k], kullanici[k], k);
+  assert.deepEqual(n.mcp.baska, { type: 'local', command: ['x'] });
+  assert.equal(n.mcp.mihenk, undefined, 'oteki bicimdeki eski kayit kaldirildi');
+  assert.deepEqual({ ...n.mcp.servers.mihenk, command: undefined }, { type: 'local', command: undefined, codemode: false });
+  assert.equal(n.mcp.servers.mihenk.command[0], NODE);
+  // OpenCode 1.x: mcp.<ad>, codemode yok; 2.x kaydi tasinir; kullanicinin oteki kaydi yine korunur.
+  kur(h, { araclar: ['opencode'], opencodeSurumu: '1.0.150' });
+  const e = JSON.parse(oku(h, 'opencode.json'));
+  assert.equal(e.mcp.servers, undefined);
+  assert.deepEqual(Object.keys(e.mcp.mihenk).sort(), ['command', 'type']);
+  assert.deepEqual(e.mcp.baska, { type: 'local', command: ['x'] });
+  assert.deepEqual(e.provider, kullanici.provider);
 });

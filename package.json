@@ -1,6 +1,6 @@
 {
   "name": "mihenk",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Kodlama ajanlari icin is defteri: kaydi tutar, kaniti kendisi denetler (MCP sunucusu)",
   "private": true,
   "type": "module",
@@ -14,7 +14,8 @@
   "scripts": {
     "build": "tsc -p .",
     "test": "tsc -p . && node --test --test-reporter=spec \"dist/test/**/*.test.js\"",
-    "duman": "tsc -p . && node dist/test/duman.js"
+    "duman": "tsc -p . && node dist/test/duman.js",
+    "paketle": "tsc -p . && node --disable-warning=ExperimentalWarning dist/src/cli.js paketle"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.4.0",

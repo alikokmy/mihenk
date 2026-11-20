@@ -201,6 +201,85 @@ bağımsız inceleyici ajan (incelemeyi otomatik düzeltmeye bağlamanın doğru
 iş listesinde bağımlılık ve büyük işin bölünmesi (doğrudan kullanıcı
 talebi bulunamadı); elle açılan oturumların maliyetinin ölçülmesi (CodeBurn / ccusage bağlantısı; Aşama 5'ten açık).
 
+## Sürüm 0.4: internetsiz ortam ve OpenCode (kullanıcı isteği, 2026-11-20)
+
+Hedef ortam: internet yok; Qwen, DeepSeek gibi açık modeller kurum içinde OpenAI uyumlu API ile çalışıyor; kullanıcılar genelde
+OpenCode kullanıyor. İstenen üç özellik: (1) internet bağımlılığı olmaması: gereken her uygulama ve kütüphane paketin içinde olmalı;
+(2) kurulumun ve çalışmanın yönetici izni istememesi; (3) OpenCode ile doğru uyum.
+
+| Aşama | İş | Kabul ölçütü |
+|---|---|---|
+| 24 | **tamam** (2026-11-20; bkz. "Aşama 24 sonucu"). **Çevrimdışı paket:** `npm run paketle` → tek zip; içinde taşınabilir Node.js, derlenmiş mihenk, yalnız üretim bağımlılıkları, çift tıklanan `Projeye-kur.cmd` ve `KURULUM.txt` | zip başka bir klasöre açılınca, PATH'te Node yokken kurulum, doktor ve MCP sunucusu (beş araç) çalışıyor; kurulumun yazdığı ayar paketin `node.exe`'sini çağırıyor; kodda internete giden çağrı yok; geliştirme araçları pakete girmiyor |
+| 25 | **tamam, bir notla** (2026-11-20; bkz. "Aşama 25 sonucu"). **OpenCode ve yerel model:** kayıt OpenCode'un sürümüne göre yazılıyor; mihenk araçları modele doğrudan gidiyor; kullanıcının sağlayıcı ayarı korunuyor | internet kesik ve sahte yerel OpenAI uyumlu sunucuyla gerçek OpenCode: istekler yalnız yerel sunucuya gidiyor, beş mihenk aracı isteğe doğrudan araç olarak giriyor, modelin `mihenk_is_ac` çağrısı deftere kayıt açıyor; kullanıcının `provider`, `model` ve öteki MCP kayıtları kurulumdan sonra aynı |
+
+## Aşama 24 sonucu (2026-11-20)
+
+`mihenk paketle` (`npm run paketle`) şunları üretir: `cikti/mihenk-<sürüm>-<platform>-<mimari>/` klasörü ve aynı adla bir zip. Zip,
+Windows 10'un kendi `tar.exe` aracıyla yapılır; yönetici izni gerekmez. Paketin içeriği:
+
+- `node\node.exe`: paketi yapan bilgisayardaki Node 24.13.0, lisansıyla;
+- `app\dist\src` ve `app\paket`: derlenmiş mihenk ve yöntem paketi;
+- `app\node_modules`: yalnız üretim bağımlılıkları; liste `package-lock.json` dosyasından, `dev` işaretli olmayan paketlerden alınır;
+- `mihenk.cmd`, `Projeye-kur.cmd` (klasör sürükle-bırak ya da elle yazma) ve `KURULUM.txt`.
+
+Boyut yaklaşık 100 MB; bunun çoğu Node.js'tir. Doktorun "araç yok" çözümü artık "npm install -g" demiyor, çünkü internetsiz
+ortamda bu yol çalışmaz.
+
+**Kanıt:** `test/cevrimdisi.test.ts`. Zip başka bir klasöre açıldı. Ortam şöyle kuruldu: PATH yalnız
+`C:\Windows\System32;C:\Windows` idi; `NoDefaultCurrentDirectoryInExePath` ve `NODE_OPTIONS` değişkenleri yoktu. Bu ortamda:
+
+- `mihenk.cmd kur` 0 ile çıktı;
+- `opencode.json` içindeki kayıt paketin kendi `node.exe` dosyasını çağırdı;
+- doktor OpenCode satırında TAMAM verdi;
+- MCP sunucusu paketin node'u ile başladı ve beş aracı sundu;
+- kaynak kodda ağ modülü, `fetch` (pencerenin kendi sayfası dışında) ve çalışma anında paket kurulumu yok.
+
+Ters denetim: paketten `app\node_modules` silindiğinde sunucu `ERR_MODULE_NOT_FOUND` hatasıyla düştü.
+
+Olumsuz not: testin ilk sürümü, `npx` kelimesi bir belge yorumunda geçtiği için yanlış alarm verdi; blok yorumlar da ayıklanarak düzeltildi.
+
+## Aşama 25 sonucu (2026-11-20)
+
+Bulgular OpenCode 2.3.2 ile, kurulu ikili üzerinde elde edildi.
+
+**Biçim.** OpenCode 2.3.2'nin yerli biçimi `mcp.servers.<ad>`. Eski `mcp.<ad>` biçimi de kabul ediliyor ve `debug config` çıktısında
+yerli biçime çevriliyor.
+
+**Code Mode.** MCP araçları varsayılan olarak "Code Mode" ile sunuluyor. Model doğrudan araç almıyor; `execute` aracına JavaScript
+yazıp aracı onun içinden çağırması gerekiyor. Katalogda da "5 araçtan 4'ü gösteriliyor". Sunucu başına `codemode: false` ayarı bu
+davranışı kapatıyor. Ayar ikilinin şemasında, "Expose this server's tools through Code Mode. Defaults to true." açıklamasıyla yer alıyor.
+
+**Kurulumun yazdığı kayıt.** Kurulum OpenCode'un sürümünü okur:
+
+- **2.x ya da sürüm bulunamazsa:** `mcp.servers.mihenk` + `codemode: false` yazılır.
+- **1.x:** yalnız `mcp.mihenk` yazılır. 1.x eski biçimi tanır ama `codemode` anahtarını bilmez. Bu dal elde denenmedi.
+
+Öteki biçimde kalan eski mihenk kaydı kaldırılır. Doktor iki biçimi de kabul eder; `command` alanı bir dizi değilse SORUN verir.
+Sürücü için `MIHENK_OPENCODE_MODEL` eklendi; verilmezse `opencode.json` içindeki `model` kullanılır.
+
+**Karşı görüş.** Code Mode OpenCode'un varsayılanı ve çok araçlı sunucularda bağlamı küçültür. Ancak mihenk'in yalnız beş aracı var ve
+doğrudan araç çağırma küçük yerel modellerde daha az hata payı bırakır. Kullanıcı kendi kaydında `codemode` değerini değiştirebilir.
+
+**Kanıt: `test/opencode-yerel.test.ts`.** Gerçek OpenCode 2.3.2, sahte bir yerel OpenAI uyumlu sunucu ve çalışmayan bir vekil
+(internet kesik) ile koşuldu:
+
+- istekler yalnız yerel sunucuya gitti;
+- `mihenk_is_ac`, `mihenk_hukum_ver` ve öteki üç araç isteğe doğrudan araç olarak girdi;
+- modelin `mihenk_is_ac` çağrısı deftere `istemci: opencode 2.3.2` kaydını açtı.
+
+Bu test OpenCode yoksa atlanır. Ters denetim: `codemode: false` kaldırıldığında test "mihenk_is_ac dogrudan arac" iddiasında kaldı.
+`test/kur.test.ts`, kullanıcının `provider`, `model`, `small_model`, `share`, `autoupdate` değerlerinin ve öteki MCP kaydının
+korunduğunu, ayrıca 1.x için eski biçimin yazıldığını denetler.
+
+**Olumsuz notlar:**
+
+- Yeni bir klasörde `opencode mcp list` ilk iki çağrıda "No MCP servers configured" dedi; üçüncü çağrıda "pending", ardından
+  "connected" oldu. Çünkü OpenCode MCP'yi eşzamansız yüklüyor. Ara bir adımda bu çıktıya bakılıp yanlışlıkla `mcp.servers` biçiminin
+  çalışmadığı sanıldı; iki biçim yan yana denenince düzeltildi.
+- `opencode run` stdin açık kalırsa iletiyi stdin'den bekliyor ve hiç ilerlemiyor. Sürücü stdin'i zaten kapatıyor.
+- Gerçek bir Qwen ya da DeepSeek sunucusuyla, ayrıca OpenCode 1.x ile deneme yapılmadı. Model sunucusunda araç çağırmanın açık olması
+  (ör. vLLM'de `--enable-auto-tool-choice`) mihenk dışındaki bir koşuldur.
+
 ## Aşama 1 sonucu (2026-11-19)
 
 Kanıt: `npm test` (49 test, 49 geçti). Her ret kuralının karşısında en az bir test var; adında "KABUL" geçen testler ölçütlerin kendisidir.

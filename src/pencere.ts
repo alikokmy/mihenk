@@ -62,6 +62,7 @@ export const PENCERE_ESLEME: Record<string, { sekme: string; api: string } | { y
   'maliyet-topla': { sekme: 'oneri', api: 'POST /api/maliyet-topla' },
   uyum: { yok: 'gelistirici araci: araclarin yonteme uyumunu olcer; uzun surer ve sonucu dosyaya yazar' },
   pencere: { yok: 'pencerenin kendisi' },
+  paketle: { yok: 'gelistirici araci: cevrimdisi kurulum paketini uretir' },
 };
 
 function dilKur(kok: string): void {

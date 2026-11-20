@@ -51,3 +51,16 @@ test('OpenCode: adim sonu token ve maliyet; akil yurutme tokenlari ciktiya eklen
   assert.deepEqual(OPENCODE.kullanimKatkisi?.(satir), { tur: 'artis', girdi: 6671, onbellek_okuma: 3840, onbellek_yazma: 0, cikti: 596, maliyet_usd: 0 });
   assert.equal(OPENCODE.kullanimKatkisi?.({ type: 'text' }), undefined);
 });
+
+test('OpenCode: model verilmezse opencode.json modeli; MIHENK_OPENCODE_MODEL verilirse -m ile gecer', () => {
+  const eski = process.env.MIHENK_OPENCODE_MODEL;
+  try {
+    delete process.env.MIHENK_OPENCODE_MODEL;
+    assert.deepEqual(OPENCODE.argumanlar('x'), ['run', '--standalone', '--auto', '--format', 'json', 'x']);
+    process.env.MIHENK_OPENCODE_MODEL = 'yerel/qwen3-coder';
+    assert.deepEqual(OPENCODE.argumanlar('x'), ['run', '--standalone', '--auto', '--format', 'json', '-m', 'yerel/qwen3-coder', 'x']);
+  } finally {
+    if (eski === undefined) delete process.env.MIHENK_OPENCODE_MODEL;
+    else process.env.MIHENK_OPENCODE_MODEL = eski;
+  }
+});
