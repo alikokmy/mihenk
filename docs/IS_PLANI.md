@@ -180,7 +180,7 @@ Kaynak: superpowers ve CodeBurn depolarının README, sürüm notları, belgeler
 |---|---|---|
 | 17 | **tamam** (2026-11-20; `npm test`: 198 test geçti; bkz. "Aşama 17 sonucu"). **Kurulum sağlamlığı:** kanca komutu `node`'u mutlak yolla çağırır (proje köküne konan sahte `node.cmd` çalışmaz; superpowers'ta benzer bir açık çıktı); her `SKILL.md` boyut sınırının altında (Claude Code sıkıştırmada uzun skill'i kesiyor) | proje köküne konan `node.cmd` / `node.bat` kanca koşunca çalışmıyor (işaret dosyası oluşmuyor); `PATH`'te node yokken kanca yine çalışıyor; 20.000 baytı aşan skill testi kaldırıyor; kaldırma sonrası bayt bayt eşitlik korunuyor |
 | 18 | **tamam** (2026-11-20; `npm test`: 199 test geçti; bkz. "Aşama 18 sonucu"). **Geri almada önizleme ve onay** (pencerede bugün tek tık): önce hangi dosyaların geri alınacağı gösterilir, sonra onaylanır | onaysız `/api/geri-al` 400 veriyor ve dosya değişmiyor; önizleme listesi `--deneme` çıktısıyla aynı; tarayıcıda denendi |
-| 19 | **Doktor ve hata paketi:** `mihenk doktor` ve pencerede "Durum": Node sürümü, bulunan araçlar, MCP kaydı okunuyor mu, kancanın son çalışması, Codex kanca onayı, uyku; her satırda TAMAM ya da SORUN ve ne yapılacağı. Kişisel yol ve anahtarları temizlenmiş tek dosyalık hata paketi | kasıtlı bozulan dört kurulum (MCP kaydı silinmiş, kanca silinmiş, ajan yok, eski Node) doğru satırda SORUN veriyor; temiz kurulumda hepsi TAMAM; komut dosya yazmıyor; pakette ev dizini yolu ve gizli anahtar deseni yok |
+| 19 | **tamam** (2026-11-20; `npm test`: 204 test geçti; bkz. "Aşama 19 sonucu"). **Doktor ve hata paketi:** `mihenk doktor` ve pencerede "Durum": Node sürümü, bulunan araçlar, MCP kaydı okunuyor mu, kancanın son çalışması, Codex kanca onayı, uyku; her satırda TAMAM ya da SORUN ve ne yapılacağı. Kişisel yol ve anahtarları temizlenmiş tek dosyalık hata paketi | kasıtlı bozulan dört kurulum (MCP kaydı silinmiş, kanca silinmiş, ajan yok, eski Node) doğru satırda SORUN veriyor; temiz kurulumda hepsi TAMAM; komut dosya yazmıyor; pakette ev dizini yolu ve gizli anahtar deseni yok |
 | 20 | **Başlatmadan önce liste denetimi ("yapıcı denetimi"):** her işte eksik alan, izinsiz program, projede tanımlı olmayan betik (ör. `npm test` yok) için anlaşılır uyarı; pencerede ve komut satırında | tanımsız betik ve izinsiz program içeren liste başlamadan iş başına uyarı veriyor; temiz liste uyarısız |
 | 21 | **Öneride geri alma sinyali:** sonradan geri alınan "geçti" işi öneri hesabında başarı sayılmaz; rapor onu "geri alındı" gösterir | sentetik defterde geri alınan işin seçeneğinin başarı oranı düşüyor, öteki işler etkilenmiyor |
 | 22 | **Elle açılan oturumda döngü bekçisi (Claude Code, Codex):** aynı araç çağrısı ya da aynı başarısız komut tekrarlanınca önce uyarır, sonra durdurur; tek oturumluk izin | taklit kanca girdisiyle eşikte uyarı, sonra ret; farklı çağrı sayacı sıfırlıyor; anahtar kapalıyken etkisiz; bekçi kendisi bozulursa geçit verip kaydediyor |
@@ -824,6 +824,21 @@ gösterdi, dosya değişmedi; onaydan sonra dosya eski metne döndü.
 bulup klasörü "yok sayılan" diye boş döndürüyordu; geri alma "değişiklik yok" diyordu. Aynı açık kapının değişiklik denetiminde de
 vardı (kapı o projede hiçbir değişikliği görmezdi). Artık git'e yalnız proje klasörü deponun kökü ise sorulur (`gitKokuMu`), değilse
 dosyalar doğrudan taranır. Test: `test/geri.test.ts` iç içe depo testi; düzeltme kaldırılınca kaldı.
+
+## Aşama 19 sonucu (2026-11-20)
+
+`mihenk doktor` (`src/doktor.ts`) ve pencerenin Proje sekmesindeki "Durum": Node sürümü, kurulum, açık her aracın MCP kaydı (dosya var mı,
+mihenk kaydı var mı, çağırdığı program ve betik diskte var mı), kanca dosyaları, kapının son çalışma zamanı, Codex kanca onayı ipucu,
+bulunan araçlar, defterin okunabilirliği, uyku. Her satır TAMAM / SORUN / BİLGİ; sorunda ne yapılacağı yazılır; sorun varsa çıkış kodu 1.
+Doktor dosya yazmaz. `mihenk hata-paketi` (pencerede "Hata raporu oluştur"): doktor, sürümler, ayarlar ve günlüklerin sonu; ev dizini,
+kullanıcı adı, e-posta, anahtar ve jeton benzeri metinler temizlenmiş tek dosya (`.mihenk/hata-paketi-*.txt`).
+
+**Kanıt:** `test/doktor.test.ts` (5 test): temiz kurulumda kurulum, MCP ve kanca satırları TAMAM; dört bozuk kurulum (MCP kaydı silinmiş,
+kanca silinmiş, araç yok, eski Node) ve kaydın çağırdığı programın olmadığı kurulum doğru satırda SORUN; doktor ne kurulu projede ne
+boş klasörde dosya yazıyor; komut satırı çıkış kodu; hata paketinde ev dizini yolu, e-posta ve beş tür anahtar yok. Temizleme kasıtlı
+kaldırılınca test kaldı. Pencerede "Durum" tarayıcıda görüldü.
+
+**Sınır:** Codex'in kanca onayı Codex'in kullanıcı ayarında tutulur ve okunmaz; doktor yalnız "kanca hiç çalışmamış" ipucunu verir.
 
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 

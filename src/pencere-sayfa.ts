@@ -22,6 +22,7 @@ main{max-width:900px;margin:0 auto;padding:16px} section[hidden]{display:none}
 select,input[type=number]{font:inherit;padding:4px 6px;border:1px solid var(--cizgi);border-radius:6px;background:var(--kart);color:var(--yazi)}
 textarea{width:100%;min-height:260px;font:13px/1.4 ui-monospace,Consolas,monospace;border:1px solid var(--cizgi);border-radius:8px;padding:8px;background:var(--kart);color:var(--yazi)}
 pre{white-space:pre-wrap;font:12.5px/1.45 ui-monospace,Consolas,monospace;margin:0;max-height:340px;overflow:auto}
+.durum-satir{display:flex;gap:8px;padding:4px 0} .durum-etiket{font-weight:600;min-width:64px} .durum-tamam{color:var(--iyi)} .durum-sorun{color:var(--kotu)} .durum-bilgi{color:var(--soluk)}
 .is{border-left:5px solid var(--orta)} .is.gecti{border-left-color:var(--iyi)} .is.kaldi{border-left-color:var(--kotu)}
 .rozet{font-weight:600} .gecti .rozet{color:var(--iyi)} .kaldi .rozet{color:var(--kotu)} .belirsiz .rozet,.acik .rozet{color:var(--orta)}
 .ileti{min-height:1.4em;font-size:.9rem;margin-top:6px} .ileti.hata{color:var(--kotu)}
@@ -61,8 +62,17 @@ function sekmeAc(id) { secili = id; for (const [s] of SEKMELER) $(s).hidden = s 
 async function yukle() { D = await api('/api/durum'); M = D.metinler; document.documentElement.lang = D.dil; $('klasor').textContent = m('p_proje_klasoru') + ': ' + D.proje.kok; sekmeleriCiz(); ciz(secili); }
 function ciz(id) { ({ proje: projeCiz, liste: listeCiz, defter: defterCiz, ayarlar: ayarlarCiz, oneri: oneriCiz })[id](); }
 
+async function durumCiz(yer) {
+  const satirlar = await api('/api/doktor'); const sonuc = el('div', { class: 'ileti' });
+  const ad = { tamam: M.d_tamam || 'OK', sorun: M.d_sorun || '!', bilgi: M.d_bilgi || 'i' };
+  koy(yer, el('b', { metin: m('p_durum_baslik') }), ...satirlar.map((x) => el('div', { class: 'durum-satir', 'data-durum': x.kimlik },
+    el('span', { class: 'durum-etiket durum-' + x.durum, metin: x.durum === 'tamam' ? '✓' : x.durum === 'sorun' ? '✗' : 'ℹ' }),
+    el('div', {}, el('div', { metin: x.metin }), x.cozum && x.durum !== 'tamam' ? el('div', { class: 'soluk', metin: x.cozum }) : null))),
+    el('button', { class: 'dugme ikincil kucuk', 'data-eylem': 'hata-paketi', metin: m('p_hata_paketi'), onclick: async () => { try { const r = await api('/api/hata-paketi', {}); ileti(sonuc, r.yol); } catch (e) { ileti(sonuc, m('p_hata', { hata: e.message }), true); } } }), sonuc);
+}
+
 function projeCiz() {
-  const s = $('proje'); const sonuc = el('div', { class: 'ileti' }); const o = D.ozet;
+  const s = $('proje'); const sonuc = el('div', { class: 'ileti' }); const o = D.ozet; const durumKarti = el('div', { class: 'kart', id: 'durum' });
   const kaldirKutusu = el('div', { class: 'satir', hidden: '' });
   const dahil = el('input', { type: 'checkbox', id: 'defter-dahil' });
   kaldirKutusu.append(el('button', { class: 'dugme tehlike', 'data-eylem': 'kaldir-eminim', metin: m('p_eminim'), onclick: async () => { try { const r = await api('/api/kaldir', { onay: true, defter_dahil: dahil.checked }); ileti(sonuc, r.defter); await yukle(); } catch (e) { ileti(sonuc, m('p_hata', { hata: e.message }), true); } } }),
@@ -74,7 +84,8 @@ function projeCiz() {
       el('button', { class: 'dugme', 'data-eylem': 'kur', metin: m('p_kur'), onclick: async () => { try { const r = await api('/api/kur', {}); ileti(sonuc, m('p_kaydedildi') + ' (' + r.yazilan + '/' + r.degismeyen + ')' + (r.uyarilar.length ? ' ' + r.uyarilar.join(' ') : '')); await yukle(); } catch (e) { ileti(sonuc, m('p_hata', { hata: e.message }), true); } } })),
     el('div', { class: 'kart' }, el('p', { class: 'soluk', metin: m('p_kaldir_aciklama') }),
       el('button', { class: 'dugme ikincil', 'data-eylem': 'kaldir', metin: m('p_kaldir'), onclick: () => kaldirKutusu.hidden = false }), kaldirKutusu),
-    sonuc);
+    sonuc, durumKarti);
+  durumCiz(durumKarti);
 }
 
 async function listeCiz() {
