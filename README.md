@@ -74,6 +74,8 @@ açılır ya da kapanır ve hemen uygulanır, yalnız Enter çıkar. (Komut sat�
 | `bekci_test_kurcalama` | iş sırasında var olan test değişti, silindi ya da atlandıysa "geçti"ye şüpheli notu | açık |
 | `bekci_bos_kanit` | doğrulama iş başlamadan zaten geçiyorsa "geçti"ye şüpheli notu | açık |
 | `bekci_gerileme` | iş listesinde, önceden geçen bütün testleri bozan iş "geçti" sayılmaz | açık |
+| `bekci_dongu` | iş listesinde, aynı hatayı iki kez veren işte kalan denemeler harcanmaz | açık |
+| `bekci_yikici` | proje dışını silen ve git geçmişini ezen komutlar reddedilir | açık |
 | `bekci_kararsiz` | geçen doğrulama bir kez daha koşulur; sonuç değişirse iş "belirsiz (kararsız)" | açık |
 
 Kapatılan özelliğin dosyaları kaldırmadaki gibi geri alınır; yeniden açınca dosyalar bayt bayt önceki haline döner. Ayarlar `mihenk.json`'da
@@ -104,6 +106,13 @@ Bilmeniz gerekenler:
 - **Başka yeri bozan iş geçmez:** liste başlarken projenin bütün testleri bir kez koşulur (`gerileme_komutu`; yazmazsanız
   `package.json`'daki test betiği). Bir iş kendi doğrulamasını geçse de, önceden geçen testleri bozduysa "geçti" sayılmaz; ajana
   bozduğu söylenir ve düzeltmesi istenir. Testler liste başlamadan zaten kalıyorsa bu denetim yapılamaz ve bu söylenir.
+- **Harcama ve süre tavanı:** listede `butce_usd` / `is_butce_usd` (dolar) ve `sure_tavani_dk` / `is_sure_tavani_dk` (dakika)
+  yazabilirsiniz. İş tavanı dolunca o iş "belirsiz (bütçe)" kapanır, sıradakine geçilir; liste tavanı dolunca liste durur ve yeniden
+  başlatınca kaldığı yerden sürer. Dolar tavanı yalnız maliyetini bildiren araçlarda işler (Codex aboneliği sayılamaz: süre tavanı kullanın).
+- **Model sağlayıcısı reddederse** (hız sınırı, kota): sürücü bekler (`kota_bekleme_dk`, varsayılan 15) ve yeniden dener; bu deneme hakkından düşmez.
+- **Aynı hatada ısrar edilmez:** doğrulama iki denemede aynı hatayı verirse kalan denemeler harcanmaz.
+- **Yıkıcı komut reddedilir** (Claude Code, Codex, Qwen kancası; sürücü kipinde de): proje dışını ya da kökünü silen `rm -rf` /
+  `Remove-Item -Recurse`, `git reset --hard`, `git push --force`, `git clean -fd`. Proje içinde silmek (`rm -rf dist`) serbesttir.
 - **Liste tek iş yüzünden durmaz:** bir iş üç denemede geçmezse "kaldı" diye kapanır, sıradakine geçilir. Yarıda kesilen liste yeniden
   başlatılınca biten işleri atlar.
 - **Hangi araç:** listede `ajan` yazarsınız (`codex`, `opencode`, `kilo`, `claude`; denenmemiş: `cline`, `qwen`); yazmazsanız kurulu olan ilk araç kullanılır. İş başına ayrı

@@ -161,7 +161,7 @@ Sıra ölçütü: önce işin doğruluğu, sonra kullanıcı deneyiminin basitli
 | 9 | **tamam** (2026-11-20; `npm test`: 144 test geçti; bkz. "Aşama 9 sonucu"). **Aç-kapa ayarları:** her özellik tek bir anahtarla açılıp kapanır (kapı, araç başına kancalar, skiller, sürücünün saklama kipi, uyanık tutma, bildirim, sonraki aşamaların bekçileri). Ayar `mihenk.json`'da durur; kodlama bilmeyen kullanıcı için çift tıklanan `mihenk-ayarlar.cmd` numaralı bir menü gösterir (aç / kapa, ne işe yaradığı tek cümle). Kurulumun her oturuma eklediği bağlam yükü (token) gösterilir | her anahtar için: kapalıyken etkisi yok, açıkken var (anahtar başına test); aç-kapa-aç dosyaları bayt bayt aynı bırakıyor; menü yönetici izni istemiyor |
 | 10 | **tamam** (2026-11-20; `npm test`: 152 test geçti; bkz. "Aşama 10 sonucu"). **Doğruluk bekçileri:** (a) test kurcalama: iş sırasında test dosyası, beklenen çıktı değiştiyse ya da `skip` eklendiyse hüküm "şüpheli" notu taşır; (b) boş kanıt: doğrulama komutu iş başlamadan zaten geçiyorsa kayıtta not; (c) kararsız test: geçen doğrulama bir kez daha koşulur, sonuç değişirse "belirsiz (kararsız)" | her bekçi için kasıtlı bozuk ajan taklidi yakalanıyor; uyumlu taklit takılmıyor |
 | 11 | **tamam, bir sınırla** (2026-11-20; `npm test`: 156 test geçti; bkz. "Aşama 11 sonucu"). **Gerileme tabanı:** listenin başında projenin bütün test takımı bir kez koşulur; iş kapanırken önceden geçen bir şey kalırsa hüküm "geçti" olmaz | taklit bir ajanın kendi testini geçirip başka testi bozduğu iş "geçti" kapanmıyor |
-| 12 | **Gözetimsiz koşu emniyeti:** liste / iş başına dolar ve süre tavanı; aynı hatayı tekrarlayan denemeyi erken kesme; abonelik limitine takılınca güvenli duraklama ve sonra kaldığı yerden sürme; yıkıcı komut bekçisi (`rm -rf`, `git reset --hard`, `push --force`, proje dışına yazma) kancaya eklenir | tavan aşılınca iş "bütçe" gerekçesiyle kapanıyor ve liste duruyor; döngü taklidi erken kesiliyor; yıkıcı komut taklidi reddediliyor |
+| 12 | **tamam** (2026-11-20; `npm test`: 162 test geçti; bkz. "Aşama 12 sonucu"). **Gözetimsiz koşu emniyeti:** liste / iş başına dolar ve süre tavanı; aynı hatayı tekrarlayan denemeyi erken kesme; abonelik limitine takılınca güvenli duraklama ve sonra kaldığı yerden sürme; yıkıcı komut bekçisi (`rm -rf`, `git reset --hard`, `push --force`, proje dışına yazma) kancaya eklenir | tavan aşılınca iş "bütçe" gerekçesiyle kapanıyor ve liste duruyor; döngü taklidi erken kesiliyor; yıkıcı komut taklidi reddediliyor |
 | 13 | **İş başına geri alma:** her işin başında bir geri dönüş noktası (git varsa geçici dal / stash, yoksa gölge kopya); `mihenk geri-al <iş>` o işin değişikliklerini geri alır | "kaldı" kapanan işin değişiklikleri tek komutla geri alınıyor; başka işlerin değişikliklerine dokunulmuyor; git'siz projede de çalışıyor |
 | 14 | **Kullanıcıya ulaşan yüz:** liste bitince ya da durunca Windows bildirimi; çift tıklanan tek sayfalık düz dil raporu (ne yapıldı, ne kaldı ve neden, süre, maliyet) | bildirim yönetici izni istemeden çıkıyor; rapor kodlama terimi bilmeyen birinin okuyacağı dilde ve defterle sayıca uyuşuyor |
 
@@ -618,6 +618,34 @@ söylendi; anahtar kapalıyken denetim yok; komut yazılmayınca `npm test` seç
 **Sınır:** taban, test takımının çıkış koduyla çalışır; test bazında ayrım yapmaz. Proje liste başlamadan kalan bir test taşıyorsa
 gerileme denetimi o listede kapanır. Test bazında karşılaştırma (ör. `node --test` TAP çıktısı, pytest JUnit raporu) sonraki iş.
 Gerileme komutu her denemede bir kez daha koşar; uzun test takımında süre artar.
+
+## Aşama 12 sonucu (2026-11-20)
+
+- **Tavanlar** (listede `butce_usd`, `is_butce_usd`, `sure_tavani_dk`, `is_sure_tavani_dk`): her ajan oturumundan önce ve her yeni iş
+  açılmadan önce denetlenir. İş tavanı: iş "belirsiz", gerekçe "butce: ...", liste sürer. Liste tavanı: liste durur, kalan işler
+  açılmaz (`SurucuRaporu.durdu`), yeniden başlatınca biten işler atlanır. Dolar tavanı defterdeki maliyetten (araç bildirdi ya da fiyat
+  tablosu) hesaplanır; maliyeti bilinmeyen oturum sayılmaz ve bu liste başında söylenir.
+- **Kota / hız sınırı:** ajan çıktısında sağlayıcı hatası (429, 5xx, rate limit, quota; `saglayiciHatasi`) varsa deneme sayılmaz,
+  `kota_bekleme_dk` beklenip yeniden denenir; `kota_bekleme_sayisi` (4) dolarsa iş "belirsiz", gerekçe "kota: ...".
+- **Döngü kesici** (`bekci_dongu`): doğrulama çıktısının hata imzası (süre, sayı, yol farkları atılmış) iki denemede aynıysa kalan
+  denemeler harcanmaz; iş "kaldı" kapanır, notu "dongu: ...".
+- **Yıkıcı komut bekçisi** (`bekci_yikici`, `kapi.ts` `yikiciKomut`): kancada (sürücü kipinde de) reddedilir: proje kökünü ya da dışını
+  hedefleyen `rm -r`, `Remove-Item -Recurse`, `rd /s`, `del /s`; hedefi değişkenli ya da `~` olan silme; `git reset --hard`,
+  `git push --force` / `-f` (`--force-with-lease` serbest), `git clean -f` + `-d`/`-x`; `format`, `mkfs`, `diskpart`.
+
+**Kanıt:** `test/emniyet.test.ts` (6 test) ve `test/surucu.test.ts`: iş dolar tavanı 3 oturumda (0,4 × 3 ≥ 1) doldu ve sıradaki iş
+geçti; liste tavanı 2 işten sonra listeyi durdurdu ve 3. iş açılmadı; süre tavanı; kota beklemesi deneme sayılmadan geçti, sürekli
+reddeden sağlayıcıda "kota" kapanışı; 21 yıkıcı ve 11 serbest komut doğru ayrıldı; kanca reddediyor, sürücü kipinde de; anahtar
+kapalıyken geçiyor; "bitti" deyip yapmayan ajan 3 yerine 2 denemede kesildi, bekçi kapalıyken 3. Yıkıcı tanıyıcı ve tavan kasıtlı
+bozulunca 6 testin 5'i kaldı. Yolda bulunan kusur: liste tavanı dolunca sıradaki iş önce açılıp sonra kapatılıyordu; artık açılmıyor.
+
+**Sınırlar:**
+- Tavan oturumlar arasında denetlenir; tek bir oturumun ortasında kesilmez (Claude Code'un `--max-budget-usd 1` sınırı oturum başına
+  sürer). Bir oturum tavanı aşabilir.
+- Yıkıcı komut bekçisi yalnız kancası olan araçlarda (Claude Code, Codex, Qwen) çalışır. OpenCode, Kilo ve Cline'da kanca yok;
+  oralarda yalnız sürücünün proje dışı değişiklik denetimi var (iş geçersiz sayılır, ama silinen geri gelmez).
+- Tanıyıcı metin kalıplarıyla çalışır: komutu bir betik dosyasına yazıp çalıştırmak, takma ad (alias) ya da `xargs` ile silmek onu atlatır.
+- Döngü kesici iki denemeyle sınırlı tutar; ajan farklı ama aynı derecede yanlış çıktılar üretirse yakalanmaz.
 
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 

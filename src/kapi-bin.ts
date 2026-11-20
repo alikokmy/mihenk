@@ -6,7 +6,8 @@
 // Kapinin kendi hatasi oturumu kilitlememek icin gecit verir ve .mihenk/kapi.jsonl'a "kapi_hatasi" yazar.
 import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { bilesikCommitMi, commitMi, kapiDenetimi, oturumBaslat } from './kapi.js';
+import { ayarlariOku } from './ayar.js';
+import { bilesikCommitMi, commitMi, kapiDenetimi, oturumBaslat, yikiciKomut } from './kapi.js';
 
 const [arac = 'bilinmiyor', olay = ''] = process.argv.slice(2);
 const i = process.argv.indexOf('--kok');
@@ -20,8 +21,20 @@ const girdi = ((): Record<string, any> => {
 const kok = resolve(i >= 0 ? process.argv[i + 1]! : process.env.CLAUDE_PROJECT_DIR ?? girdi.cwd ?? process.cwd());
 const oturum = String(girdi.session_id ?? girdi.sessionId ?? 'adsiz');
 
+const reddet = (neden: string): void => {
+  process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: neden } }));
+};
+
 try {
-  if (process.env.MIHENK_SURUCU === '1') {
+  // Yikici komut bekcisi surucu kipinde de calisir (surucu de geri donussuz silmeye karsi korunmali).
+  const yikici = olay === 'arac' && ayarlariOku(kok).bekci_yikici !== false
+    ? yikiciKomut(((c) => (Array.isArray(c) ? c.join(' ') : String(c ?? '')))(girdi.tool_input?.command), kok)
+    : null;
+  if (yikici) {
+    mkdirSync(join(kok, '.mihenk'), { recursive: true });
+    appendFileSync(join(kok, '.mihenk', 'kapi.jsonl'), JSON.stringify({ zaman: new Date().toISOString(), olay: 'yikici_engel', arac, oturum, neden: yikici }) + '\n');
+    reddet(`mihenk: yikici komut reddedildi: ${yikici}. Proje icinde kalan, geri alinabilir bir yol kullanin.`);
+  } else if (process.env.MIHENK_SURUCU === '1') {
     // Surucu kipi: isi surucu dogrular ve kapatir; ajan kendisi hukum veremez (SURUCU_ISI). Kapi burada yalniz kaydeder.
     if (olay === 'bitir') {
       appendFileSync(join(kok, '.mihenk', 'kapi.jsonl'), JSON.stringify({ zaman: new Date().toISOString(), olay: 'surucu_kipi', arac, oturum }) + '\n');

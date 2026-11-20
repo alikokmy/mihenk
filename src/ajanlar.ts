@@ -262,3 +262,19 @@ export const QWEN: AjanTanimi = {
 };
 
 export const AJANLAR: Readonly<Record<string, AjanTanimi>> = { claude: CLAUDE, codex: CODEX, opencode: OPENCODE, kilo: KILO, cline: CLINE, qwen: QWEN };
+
+/**
+ * Ajan ciktisinda modeli sunan tarafin hatasi (hiz siniri, kota, asiri yuk, 5xx) var mi? Varsa kisa aciklama.
+ * Kilo'nun ucretsiz modeli uyum kosusunda 429 ile kesildi (2026-11-20); bu ajanin uyumsuzlugu sayilmamali.
+ * Yalniz aracin kendi "error" olaylarina bakilir; ajanin yazdigi metindeki "rate limit" sozu sayilmaz.
+ */
+export function saglayiciHatasi(metin: string): string | undefined {
+  for (const satir of metin.split('\n')) {
+    if (!/"type"\s*:\s*"error"/.test(satir)) continue;
+    if (/"statusCode"\s*:\s*(429|5\d\d)\b|rate.?limit|quota|overloaded|temporarily/i.test(satir)) {
+      const m = /"message"\s*:\s*"([^"]{1,160})/.exec(satir);
+      return m ? m[1] : 'hiz siniri ya da sunucu hatasi';
+    }
+  }
+  return undefined;
+}

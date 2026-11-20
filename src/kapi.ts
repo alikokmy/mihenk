@@ -5,7 +5,7 @@
 // Sinir: dosya degisikligi zamandan (mtime) anlasilir; degisiklik sayilmayan yerler: .git, .mihenk, node_modules ve git'in yok saydiklari.
 import { spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { ayarlariOku } from './ayar.js';
 
@@ -180,11 +180,56 @@ export function commitMi(komut: string): boolean {
  * commit'le birlikte kabul edilir. Aracin kabuk sarmalayicisi (powershell -Command "...", cmd /c, bash -lc) once soyulur.
  */
 export function bilesikCommitMi(komut: string): boolean {
+  return kabukParcalari(komut).some((p) => !commitMi(p) && !/^(git(\.exe)?(\s+-C\s+\S+)?\s+(add|status|diff)\b|cd\s|Set-Location\s)/i.test(p));
+}
+
+/** Aracin kabuk sarmalayicisini (powershell -Command "...", cmd /c, bash -lc) soyar ve komutu ; && || | ile parcalar. */
+export function kabukParcalari(komut: string): string[] {
   let ic = komut.trim();
   const sarmal = /^"?[^"\s]*?(powershell|pwsh|cmd|bash|sh)(\.exe)?"?\s+(-NoProfile\s+|-NoLogo\s+)*(-Command|-c|-lc|\/c|\/C)\s+([\s\S]*)$/i.exec(ic);
   if (sarmal) ic = sarmal[5]!.trim().replace(/^"([\s\S]*)"$/, '$1').replace(/^'([\s\S]*)'$/, '$1');
-  const parcalar = ic.split(/;|&&|\|\||\||\r?\n/).map((p) => p.trim()).filter(Boolean);
-  return parcalar.some((p) => !commitMi(p) && !/^(git(\.exe)?(\s+-C\s+\S+)?\s+(add|status|diff)\b|cd\s|Set-Location\s)/i.test(p));
+  return ic.split(/;|&&|\|\||\||\r?\n/).map((p) => p.trim()).filter(Boolean);
+}
+
+/** Tirnaklari gozeterek kelimelere ayirir. */
+function kelimeler(p: string): string[] {
+  return [...p.matchAll(/"([^"]*)"|'([^']*)'|(\S+)/g)].map((m) => m[1] ?? m[2] ?? m[3] ?? '');
+}
+
+/**
+ * Yikici komut bekcisi (Asama 12): proje disini ya da kokunu silen, git gecmisini ya da kaydedilmemis isi ezen komutlar.
+ * Proje icinde silmek (or. rm -rf dist) serbesttir. Hedefi dogrulanamayan (degiskenli) silme reddedilir. Neden ya da null doner.
+ */
+export function yikiciKomut(komut: string, kok: string): string | null {
+  for (const p of kabukParcalari(komut)) {
+    const k = kelimeler(p);
+    const ad = (k[0] ?? '').toLowerCase().replace(/\.exe$/, '');
+    if (ad === 'git') {
+      const alt = k.slice(1).find((x) => !x.startsWith('-'));
+      if (alt === 'reset' && k.includes('--hard')) return 'git reset --hard kaydedilmemis degisiklikleri geri donussuz siler';
+      if (alt === 'push' && k.some((x) => x === '--force' || x === '-f' || /^-[a-zA-Z]*f[a-zA-Z]*$/.test(x) && !x.startsWith('--'))) return 'git push --force uzak deponun gecmisini ezer (--force-with-lease kullanin)';
+      if (alt === 'clean' && k.some((x) => /^-[a-zA-Z]*f/.test(x)) && k.some((x) => /^-[a-zA-Z]*d|^-[a-zA-Z]*x/.test(x))) return 'git clean -fd izlenmeyen dosyalari geri donussuz siler';
+      continue;
+    }
+    if (/^(format|mkfs(\.\w+)?|diskpart)$/.test(ad)) return `${ad} disk bicimler`;
+    let hedefler: string[] | null = null;
+    if (ad === 'rm' || ad === 'remove-item' || ad === 'ri' || ad === 'rmdir' || ad === 'rd' || ad === 'del' || ad === 'erase') {
+      const bayrak = k.slice(1).filter((x) => x.startsWith('-') || x.startsWith('/')).map((x) => x.toLowerCase());
+      const ozyineli = bayrak.some((x) => /^-[a-z]*r|^--recursive$|^-recurse$|^\/s$/.test(x));
+      if (!ozyineli) continue;
+      // Bayrak olmayan her kelime hedeftir (Remove-Item -Path X'teki X de).
+      hedefler = k.slice(1).filter((x) => !x.startsWith('-') && !/^\/[a-z]$/i.test(x));
+    }
+    if (!hedefler) continue;
+    if (hedefler.length === 0) return `${ad}: silinecek hedef belirsiz`;
+    for (const h of hedefler) {
+      if (/[$%`]|^~/.test(h)) return `${ad} ${h}: hedef degiskenli ya da ev dizini; proje icinde oldugu dogrulanamiyor`;
+      const tam = resolve(kok, h.replace(/[\\/]\*$/, ''));
+      const ic = relative(kok, tam);
+      if (ic === '' || ic.startsWith('..') || isAbsolute(ic)) return `${ad} ${h}: proje kokunu ya da proje disini siler`;
+    }
+  }
+  return null;
 }
 
 export const goreli = (kok: string, yol: string): string => relative(kok, yol).replace(/\\/g, '/');

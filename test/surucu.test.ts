@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AjanTanimi } from '../src/ajanlar.js';
 import { Defter } from '../src/defter.js';
+import { ayarYaz } from '../src/ayar.js';
 import { isKimligi, listeOku, listeyiYurut, type ListeIsi } from '../src/surucu.js';
 import { uykuAyariniCoz, uykuUyarisi, uyanikTut } from '../src/uyanik.js';
 
@@ -111,8 +112,15 @@ test('"bitti" diyen ama yapmayan ajan: is gecmez; deneme siniri dolunca "kaldi" 
   const kok = proje();
   const r = await listeyiYurut({ kok, liste: { ajan: 'yalanci', isler: [is('yalan.txt')] }, saklama: 'yok', denemeSiniri: 3, ...sessiz });
   assert.equal(r.isler[0]?.durum, 'kaldi');
-  assert.equal(r.isler[0]?.deneme, 3);
+  // Dongu kesici (Asama 12): iki denemede ayni hata; ucuncu deneme harcanmaz.
+  assert.equal(r.isler[0]?.deneme, 2);
+  assert.match(r.isler[0]?.not ?? '', /dongu: dogrulama 1\. ve 2\. denemede ayni hatayi verdi/);
   assert.deepEqual(r.ozet, { toplam: 1, gecti: 0, kaldi: 1, belirsiz: 0, acik: 0 });
+  // Bekci kapaliyken butun denemeler kullanilir.
+  const kok2 = proje();
+  ayarYaz(kok2, { bekci_dongu: false });
+  const r2 = await listeyiYurut({ kok: kok2, liste: { ajan: 'yalanci', isler: [is('yalan.txt')] }, saklama: 'yok', denemeSiniri: 3, ...sessiz });
+  assert.equal(r2.isler[0]?.deneme, 3);
 });
 
 test('KABUL: baglami sisiren oturum kapatilir, yenisi devir notuyla acilir ve isi bitirir', async () => {

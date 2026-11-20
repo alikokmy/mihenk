@@ -39,6 +39,8 @@ export const AYARLAR: readonly AyarTanimi[] = [
   { ad: 'bekci_test_kurcalama', aciklama: 'Is sirasinda var olan testler degistiyse, silindiyse ya da test atlandiysa "gecti" hukmune supheli notu duser.', varsayilan: true, etki: 'calisma' },
   { ad: 'bekci_bos_kanit', aciklama: 'Is acilinca dogrulama bir kez kosulur; is baslamadan zaten geciyorsa "gecti" hukmune supheli notu duser.', varsayilan: true, etki: 'calisma' },
   { ad: 'bekci_gerileme', aciklama: 'Is listesinde: baslangicta gecen butun test takimi bir iste kalirsa o is "gecti" sayilmaz (onceden geceni bozmak).', varsayilan: true, etki: 'calisma' },
+  { ad: 'bekci_dongu', aciklama: 'Is listesinde: dogrulama iki denemede ayni hatayi verirse kalan denemeler harcanmaz.', varsayilan: true, etki: 'calisma' },
+  { ad: 'bekci_yikici', aciklama: 'Kancada ve surucude: proje disini ya da kokunu silen, git gecmisini ezen komutlar (rm -rf, reset --hard, push --force) reddedilir.', varsayilan: true, etki: 'calisma' },
   { ad: 'bekci_kararsiz', aciklama: 'Gecen dogrulama ikinci kez kosulur; sonuc degisirse is "belirsiz (kararsiz test)" diye kapanir.', varsayilan: true, etki: 'calisma' },
 ];
 
