@@ -6,7 +6,7 @@ Kodlama ajanlarının bağlandığı, işi kayda alan, kanıtı kendisi denetley
 Ad: mihenk taşı, altının ayarını sınamak için kullanılan taştır. Proje iki şeyi sınar: yapılan işin doğruluğunu ve işi yapan ajanın o iş türündeki
 değerini (doğruluk, süre, maliyet).
 
-**Durum: sürüm 0.5.** Öneri zorluğu, abonelikteki kota payını ve az denenen araçların keşfini hesaba katıyor. Sürüm 0.4: internetsiz ortam için tek zip paket ve OpenCode + yerel model uyumu. Defter, yöntem paketi, sürücü, uyum testleri, süre ve maliyet, öneri, kanıtsız "bitti"ye kapı ve temiz kaldırma
+**Durum: sürüm 0.6.** Kodlama bilmeyen kullanıcı için: tek dosyaya çift tıklayarak başlanır, fikir düz dille yazılır ve işlere bölünür, her ayar penceredendir. Sürüm 0.5: Öneri zorluğu, abonelikteki kota payını ve az denenen araçların keşfini hesaba katıyor. Sürüm 0.4: internetsiz ortam için tek zip paket ve OpenCode + yerel model uyumu. Defter, yöntem paketi, sürücü, uyum testleri, süre ve maliyet, öneri, kanıtsız "bitti"ye kapı ve temiz kaldırma
 yazıldı ve denendi. Açık kalemler ve sürüm 0.2 taslağı [docs/IS_PLANI.md](docs/IS_PLANI.md) içinde.
 
 | Araç | Kurulum | Gerçek denemede | Kapı (kanca) |
@@ -27,6 +27,15 @@ yazıldı ve denendi. Açık kalemler ve sürüm 0.2 taslağı [docs/IS_PLANI.md
 3. Pencerede var olan bir projeyi seçin (Windows'un klasör seçicisiyle ya da yolu yapıştırarak) ya da fikriniz için **yeni proje**
    açın. Proje kurulu değilse mihenk önce sorar, sonra kurar.
 4. İşleri pencerede yazar ve takip edersiniz. "Masaüstüne kısayol koy" ile bir dahaki sefere masaüstünden açabilirsiniz.
+
+**Fikirden yazılıma.** İş listesi sekmesinin en üstündeki "Fikrinizi yazın" kutusuna ne istediğinizi kendi cümlelerinizle yazın ve
+"İşlere böl"e basın. Sonra adım adım şunlar olur:
+
+1. Kurulu bir yapay zekâ aracı fikri küçük işlere böler. Önerilen işler düz dille forma eklenir; siz okur, düzeltir ya da silersiniz.
+2. Hiçbir işe komut yazmanız gerekmez. Komutu boş bir işte yapay zekâ önce o işin **kabul testini** yazar. mihenk bu testin iş
+   yapılmadan kaldığını kendisi denetler.
+3. İş ancak bu test geçince "bitti" sayılır. Yapay zekâ işi yaparken testi değiştirirse sonuç "şüpheli" diye işaretlenir.
+4. "İşlerin durumu" kartı her işi düz dille gösterir: sırada, şu an yapılıyor, bitti, olmadı, başlayamadı ve nedeni.
 
 Komut satırı, `npm install` ya da ayar dosyası düzenlemek gerekmez; yönetici izni istenmez. Tarayıcıdaki sayfayı kapatınca mihenk
 birkaç dakika içinde kendiliğinden kapanır (iş listesi çalışıyorsa bitmesini bekler). Paket, internetli bir bilgisayarda

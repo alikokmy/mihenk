@@ -10,7 +10,7 @@ import { appendFileSync, closeSync, existsSync, openSync, readFileSync, writeFil
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AJANLAR, saglayiciHatasi, type AjanTanimi } from './ajanlar.js';
-import { Defter, SURUCU_ISTEMCISI, type Durum, type IsGorunumu, type Zorluk } from './defter.js';
+import { Defter, SURUCU_ISTEMCISI, type Durum, type IsGorunumu, type Zorluk, ayarlariOku as ayarlariOkuDefter } from './defter.js';
 import { agaciOldur, gectiMi, komutuCalistir, komutuCoz } from './dogrulama.js';
 import { Ret } from './hata.js';
 import { depoDurumu, sakla, SAKLAMA_KIPLERI, type SaklamaKipi } from './saklama.js';
@@ -20,6 +20,7 @@ import { bildir } from './bildirim.js';
 import { ajanSec, ONERI_AJANI, VARSAYILAN_KESIF_ORANI } from './kesif.js';
 import { projeOneriAyarlari } from './oneri.js';
 import { raporYaz } from './rapor.js';
+import { testOnceYazdir, type TestOnceSonucu } from './test-once.js';
 import { kisalt } from './sinir.js';
 
 export interface ListeIsi {
@@ -29,7 +30,8 @@ export interface ListeIsi {
   soru: string;
   beklenti: string;
   yanlissa: string;
-  dogrulama_komutu: string;
+  /** Bos ya da yoksa is "komutsuz"dur (Asama 32): ajan once kabul testini yazar, kayit o testin komutuyla acilir. */
+  dogrulama_komutu?: string;
   ajan?: string;
   zaman_asimi_sn?: number;
   /** Isin zorlugu (Asama 28): kolay, orta, zor. Oneri ajanlari ayni zorluk karisiminda karsilastirir. */
@@ -501,11 +503,39 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
         }
       }
       const tanim = ajanlar[ajanAdi];
+      // Komutsuz is (Asama 32): kayit acilmadan once ajan kabul testini yazar; kayit o testin komutuyla acilir.
+      let komut = (listeIsi.dogrulama_komutu ?? '').trim();
+      let hazirlik: TestOnceSonucu | null = null;
+      if (!is && !komut) {
+        if (!tanim) {
+          const neden = t('to_ajan_yok', { ajan: ajanAdi || t('yok') });
+          yaz(t('kayit_acilamadi', { baslik, neden }));
+          olay('test_once', { kimlik, tamam: false, neden });
+          sonuclar.push({ kimlik, is_id: 0, durum: 'kaldi', atlandi: false, deneme: 0, devir: 0, gecersiz: true, not: `test once: ${neden}` });
+          continue;
+        }
+        yaz(t('to_basliyor', { baslik, ajan: ajanAdi, soru: tekSatir(listeIsi.soru, 70) }));
+        const etiketDosyasi = createHash('sha1').update(kimlik).digest('hex').slice(0, 8);
+        hazirlik = await testOnceYazdir({
+          kok, tanim, is: listeIsi, izinli: ayarlariOkuDefter(kok).izinli_programlar,
+          ciktiDosyasi: join(defter.dizin, 'ciktilar', `hazirlik-${etiketDosyasi}.txt`),
+          dogrulamaCiktisi: join(defter.dizin, 'ciktilar', `hazirlik-${etiketDosyasi}-test.txt`),
+          kosucu: (ta, istem) => ajaniKostur(ta, istem, { cwd: kok, zamanAsimiMs: ajanZamanAsimiMs, baglamEsigi, ciktiDosyasi: join(defter.dizin, 'ciktilar', `hazirlik-${etiketDosyasi}.txt`) }),
+        });
+        olay('test_once', { kimlik, tamam: hazirlik.tamam, komut: hazirlik.komut ?? null, neden: hazirlik.neden ?? null, test_dosyalari: hazirlik.test_dosyalari });
+        if (!hazirlik.tamam) {
+          yaz(t('to_olmadi', { baslik, neden: hazirlik.neden ?? '' }));
+          sonuclar.push({ kimlik, is_id: 0, durum: 'kaldi', atlandi: false, deneme: 0, devir: 0, gecersiz: true, not: `test once: ${hazirlik.neden}` });
+          continue;
+        }
+        komut = hazirlik.komut!;
+        yaz(t('to_tamam', { baslik, komut, dosyalar: hazirlik.test_dosyalari.join(', ') }));
+      }
       if (!is) {
         try {
           is = defter.isAc({
             tur: listeIsi.tur, soru: listeIsi.soru, beklenti: listeIsi.beklenti, yanlissa: listeIsi.yanlissa,
-            dogrulama_komutu: listeIsi.dogrulama_komutu, ajan: ajanAdi === '' ? 'belirtilmedi' : ajanAdi, model: 'aracin varsayilani',
+            dogrulama_komutu: komut, ajan: ajanAdi === '' ? 'belirtilmedi' : ajanAdi, model: 'aracin varsayilani',
             istemci: SURUCU_ISTEMCISI, etiket: kimlik,
             ...(listeIsi.zaman_asimi_sn === undefined ? {} : { zaman_asimi_sn: listeIsi.zaman_asimi_sn }),
             ...(listeIsi.zorluk === undefined ? {} : { zorluk: listeIsi.zorluk }),
@@ -520,6 +550,15 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
         }
       }
       const isId = is.id;
+      if (hazirlik?.kosu) {
+        // Hazirlik oturumunun kullanimi ve notu ise baglanir (oturum 0: is kaydindan once).
+        try {
+          defter.kullanimEkle({ is_id: isId, ajan: ajanAdi, ...hazirlik.kosu.kullanim, oturum: 0, sure_ms: hazirlik.kosu.sure_ms });
+        } catch {
+          // kullanim yazilamamasi isi durdurmaz
+        }
+        surucuNotu(isId, t('to_not', { komut, dosyalar: hazirlik.test_dosyalari.join(', ') }));
+      }
       if (secimNotu) {
         surucuNotu(isId, secimNotu);
         yaz(t('satir_not', { baslik, not: secimNotu }));

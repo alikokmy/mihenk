@@ -28,6 +28,11 @@ const SONUC: Record<string, { anahtar: 'r_sonuc_gecti' | 'r_sonuc_kaldi' | 'r_so
 };
 
 /** Gerekceyi teknik onekinden arindirip duz cumleye cevirir. */
+/** Isin sonucunun duz dille nedeni (rapor ve penceredeki "Islerin durumu"). */
+export function isNedeni(is: IsGorunumu): string {
+  return neden(is);
+}
+
 function neden(is: IsGorunumu): string {
   const g = is.gerekce ?? '';
   if (is.durum === 'gecti') return t('r_n_gecti');

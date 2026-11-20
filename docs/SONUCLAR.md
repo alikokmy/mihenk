@@ -980,3 +980,68 @@ projelerde görünüm.
 - Arka plandaki sekmelerde tarayıcıların zamanlayıcıları dakikada bire indirmesi, 3 dakikalık kapanma süresiyle denenmedi.
 
 `npm test` 248/248.
+
+## Aşama 32 sonucu (2026-11-20)
+
+**Plandan sapma (gerekçeli).** Ölçüt "fikirden üretilen listede her işin doğrulama komutu dolu" diyordu. Uygulamada fikirden üretilen
+işler **komutsuz** üretiliyor. Komut, işten hemen önce, o işin kabul testini yazan ajan tarafından belirleniyor; mihenk testin iş
+yapılmadan kaldığını kendisi denetliyor. Gerekçe: kodlama bilmeyen kullanıcı komutu okuyup onaylayamaz. Önceden yazılmış bir komut,
+henüz var olmayan bir teste işaret ederdi. Liste denetimi ve pencere komutsuz işi uyarısız kabul ediyor.
+
+**(a) Fikir.** İş listesi sekmesinde "Fikrinizi yazın" kutusu var. Kurulu bir ajan fikri en çok 12 işe böler; çıktısındaki
+`{"isler": [...]}` ayıklanıp doğrulanır. Planlama boş bir geçici klasörde çalışır, proje dosyalarının adları istemde verilir.
+Önerilen işler forma eklenir; kullanıcı okur, düzeltir ya da siler.
+
+**(b) Komutsuz iş, iki adım** (`src/test-once.ts`):
+
+1. Hazırlıkta ajan yalnız kabul testini yazar. Şu durumlarda hazırlık reddedilir ve iş başlamaz:
+   - test dışı bir proje dosyası değişti;
+   - test dosyası yazılmadı;
+   - komut bildirilmedi;
+   - bildirilen komut izinli değil;
+   - test iş yapılmadan geçiyor.
+2. Hazırlık geçerse iş kaydı bu komutla açılır ve o anda test özetleri alınır. Ajan sonradan testi değiştirirse "geçti" hükmü
+   "şüpheli" notu taşır.
+
+Hazırlık oturumunun kullanımı ise "oturum 0" olarak bağlanır.
+
+**(c) İşlerin durumu.** İş listesi sekmesindeki kart her işi düz dille gösterir: sırada, şu an yapılıyor, bitti, olmadı, başlayamadı,
+yarım kaldı. Kapanan işin nedeni raporla aynı metindir. Hiç başlayamamış işin nedeni sürücünün olay kaydından alınır.
+
+**Kanıt.**
+
+`test/test-once.test.ts` (5 test):
+- Dürüst ajan: test önce yazıldı, çıktısı "fail 1" oldu; kayıt o komutla açıldı ve iş geçti, şüphe yok.
+- Hileci ajan: testi değiştirdi, "geçti" şüpheli işaretlendi.
+- Dört hatalı hazırlık (hemen geçen test, test dışı dosya, komutsuz, izinsiz komut) reddedildi ve kayıt açılmadı.
+- Aracın kendi ayar dosyasına dokunması, mihenk kurduysa hazırlığı bozmuyor; kurmadıysa proje dosyası sayılıyor.
+
+`test/fikir.test.ts` (4 test):
+- Ayıklayıcı geçerli işleri alıyor, kusurlu işleri atıyor, en çok 12 iş alıyor.
+- Planlama proje klasörünün dışında çalışıyor; istem fikri ve dosya adlarını içeriyor.
+- Uçtan uca (sahte ajanlarla): fikir → bir komutsuz iş → liste kaydı (uyarısız) → önce test → iş → "Bitti"; dosya yazıldı.
+- Durum kartı: başlayamayan iş "Başlayamadı" ve nedeniyle, öteki "Sırada" olarak görünüyor.
+
+Ters denetim, dört kasıtlı bozmada da test kaldı: hemen geçen test kabul edildi; test dışı dosya kabul edildi; planlama proje
+klasöründe yapıldı; "başlayamadı" durumu kaldırıldı.
+
+**Gerçek araçla (Kilo CLI, ücretsiz model):**
+
+- Örnek fikir ("yemek tariflerini saklayıp malzemeye göre arayan basit bir komut satırı uygulaması") 54 saniyede düz dilli 8 işe
+  bölündü ve liste denetiminden uyarısız geçti.
+- İlk iş komutsuz yürütüldü. Kilo önce `test/tarif-ekle.test.js` yazdı; test iş yapılmadan kaldı. Sonra işi yaptı
+  (`tarif-ekle.js`), ama kendi yazdığı testi de değiştirdi. mihenk işi "GEÇTİ: ŞÜPHELİ: iş sırasında var olan test dosyası değişti"
+  diye kapattı. Yani bekçi gerçek bir modelde de çalıştı; bu sonuç modellerin testi gerçekten değiştirebildiğini de gösteriyor.
+
+**Olumsuz notlar:**
+
+- `isleriAyikla` ilk halinde, metnin başındaki geçersiz bir `{"isler"` nesnesinde sonsuz döngüye giriyordu
+  (`lastIndexOf(x, -1)` yine 0'a bakıyor). Test süreci takıldı; modüller tek tek yüklenerek bulundu ve düzeltildi.
+- Gerçek denemenin ilk koşusunda hazırlık reddedildi: Kilo CLI başlarken `opencode.json`'a kendi `$schema` satırını ekliyor. Artık
+  mihenk'in kurduğu araç ayar dosyaları ve araç klasörleri hazırlık sayımına girmiyor; bunun için bir test eklendi.
+- Fikir kutusu ve durum kartı tarayıcıda gerçek araçla tıklanarak denenmedi. Aynı uçlar API üzerinden gerçek Kilo ile, sayfa
+  betiği sözdizimi testiyle denendi.
+
+`npm test` 257/257.
+
+**Sürüm 0.6:** Aşama 30-32 kapandı.

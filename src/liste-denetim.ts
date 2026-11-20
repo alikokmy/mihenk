@@ -55,7 +55,8 @@ export function listeDenetimi(kok: string, isler: DenetlenecekIs[], o: { ajan?: 
   isler.forEach((is, i) => {
     const n = i + 1;
     const ekle = (uyari: string, program?: string): void => { sonuc.push({ is: n, uyari, ...(program ? { program } : {}) }); };
-    for (const alan of ['soru', 'beklenti', 'yanlissa', 'dogrulama_komutu'] as const) {
+    // Komut zorunlu degil (Asama 32): bos komutlu iste ajan once kabul testini yazar.
+    for (const alan of ['soru', 'beklenti', 'yanlissa'] as const) {
       if (!String(is[alan] ?? '').trim()) ekle(t('l_bos_alan', { alan }));
     }
     const komut = String(is.dogrulama_komutu ?? '').trim();

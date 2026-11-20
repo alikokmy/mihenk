@@ -204,9 +204,27 @@ async function listeCiz() {
   const durdur = el('button', { class: 'dugme ikincil', metin: m('p_durdur'), onclick: () => api('/api/sur/durdur', {}) });
   baslat.onclick = async () => { try { await kaydet(); await api('/api/sur', {}); izle(); } catch (e) { ileti(sonuc, m('p_hata', { hata: e.message }), true); } };
   let izleyici;
-  async function izle() { clearInterval(izleyici); const tur = async () => { const d = await api('/api/sur'); kayit.textContent = d.satirlar.join('\\n'); baslat.disabled = d.calisiyor; ileti(sonuc, d.calisiyor ? m('p_calisiyor') : d.satirlar.length ? m('p_bitti') : ''); if (!d.calisiyor) clearInterval(izleyici); }; await tur(); izleyici = setInterval(tur, 1500); }
+  // Islerin durumu duz dille (Asama 32); teknik kayit "Ayrintili kayit" altinda kalir.
+  const durumKarti = el('div', { class: 'kart', id: 'islerin-durumu' });
+  const durumCizgisi = async () => { try { const l2 = await api('/api/liste-durum'); koy(durumKarti, ...(l2.length ? [el('b', { metin: m('p_ld_baslik') }), ...l2.map((x) => el('div', { class: 'is ' + (x.durum === 'gecti' ? 'gecti' : x.durum === 'kaldi' || x.durum === 'takildi' ? 'kaldi' : 'acik'), 'data-is-durumu': x.durum, style: 'padding:6px 10px;margin:6px 0' },
+    el('div', {}, el('span', { class: 'rozet', metin: m('p_ld_' + x.durum) }), document.createTextNode(' Â· ' + x.sira + '. ' + x.soru)), x.neden ? el('div', { class: 'soluk', metin: x.neden }) : null))] : [])); durumKarti.hidden = !l2.length; } catch (e) { durumKarti.hidden = true; } };
+  async function izle() { clearInterval(izleyici); const tur = async () => { const d = await api('/api/sur'); kayit.textContent = d.satirlar.join('\\n'); baslat.disabled = d.calisiyor; ileti(sonuc, d.calisiyor ? m('p_calisiyor') : d.satirlar.length ? m('p_bitti') : ''); await durumCizgisi(); if (!d.calisiyor) clearInterval(izleyici); }; await tur(); izleyici = setInterval(tur, 1500); }
+  // Fikir (Asama 32): yapay zeka fikri islere boler; onerilen isler forma eklenir, kullanici okuyup duzeltir.
+  const fikir = el('textarea', { id: 'fikir', rows: '3', placeholder: m('p_fk_ornek') });
+  const fikirIletisi = el('div', { class: 'ileti', id: 'fikir-iletisi' });
+  const bol = el('button', { class: 'dugme', 'data-eylem': 'fikir-bol', metin: m('p_fk_bol') });
+  bol.onclick = async () => {
+    try {
+      const r = await api('/api/fikir', { fikir: fikir.value, ajan: ajan.value }); bol.disabled = true; ileti(fikirIletisi, m('p_fk_calisiyor', { ajan: r.ajan }));
+      const bekle = setInterval(async () => { try { const f = await api('/api/fikir'); if (f.calisiyor) return; clearInterval(bekle); bol.disabled = false;
+        if (f.tamam) { isler = isler.concat(f.isler); isleriCiz(); ileti(fikirIletisi, m('p_fk_eklendi', { sayi: f.isler.length })); } else ileti(fikirIletisi, f.neden || '', true); } catch (e) { clearInterval(bekle); bol.disabled = false; ileti(fikirIletisi, m('p_hata', { hata: e.message }), true); } }, 2000);
+    } catch (e) { ileti(fikirIletisi, m('p_hata', { hata: e.message }), true); }
+  };
+  const fikirKarti = el('div', { class: 'kart', id: 'fikir-karti' }, el('b', { metin: m('p_fk_baslik') }), el('p', { class: 'soluk', metin: m('p_fk_aciklama') }), el('label', { class: 'alan' }, fikir), bol, fikirIletisi);
   koy(s, 
     l.bozuk ? el('div', { class: 'kart uyari', metin: m('p_liste_bozuk') }) : null,
+    durumKarti,
+    fikirKarti,
     uyariKutusu,
     el('div', { class: 'kart' }, el('p', { class: 'soluk', metin: m('p_liste_aciklama') }), el('label', { class: 'alan' }, el('span', { metin: m('p_ajan_sec') }), ajan)),
     kutu,

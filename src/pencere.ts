@@ -5,7 +5,7 @@
 // CLI ile pencere ayrismaz. Eslesme PENCERE_ESLEME'dedir ve test/pencere.test.ts her CLI komutunun karsiligini denetler.
 import { spawn, type ChildProcess } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,9 +19,11 @@ import { geriAl, geriAlinanIsler } from './geri.js';
 import { kaldir } from './kaldir.js';
 import { kur } from './kur.js';
 import { oneriHesapla, oneriMetni, projeOneriAyarlari } from './oneri.js';
-import { raporHtml } from './rapor.js';
-import { LISTE_ALANLARI, listeAlaniDenetle, listeOku } from './surucu.js';
-import { AJANLAR } from './ajanlar.js';
+import { isNedeni, raporHtml } from './rapor.js';
+import { ajaniKostur, isKimligi, LISTE_ALANLARI, listeAlaniDenetle, listeOku, type ListeIsi } from './surucu.js';
+import { fikriBol } from './fikir.js';
+import { TERCIH_SIRASI } from './kesif.js';
+import { AJANLAR, type AjanTanimi } from './ajanlar.js';
 import { PENCERE_SAYFASI } from './pencere-sayfa.js';
 import { doktor, hataPaketi } from './doktor.js';
 import { listeDenetimi } from './liste-denetim.js';
@@ -242,6 +244,56 @@ export interface PencereSecenekleri {
   otomatikKapan?: { sureMs: number; denetimMs?: number };
   /** Kendiliginden kapandiktan sonra cagrilir (komut satiri sureci bitirir). */
   kapaninca?: () => void;
+  /** Fikri islere bolen ajan tanimlari (varsayilan: bilinen araclar); testler sahtesini verir. */
+  ajanlar?: Readonly<Record<string, AjanTanimi>>;
+}
+
+/**
+ * Islerin durumu duz dille (Asama 32): listedeki her is icin sirada / yapiliyor / bitti / olmadi / baslayamadi ve nedeni.
+ * Kayit listedeki isin kalici adiyla (etiket) bulunur; kaydi hic acilamamis is (hazirlik olmadi) surucunun olay kaydindan.
+ */
+function listeDurumu(kok: string, calisiyor: boolean) {
+  let isler: ListeIsi[] = [];
+  try {
+    isler = listeOku(join(kok, 'mihenk-isler.json')).isler;
+  } catch {
+    return [];
+  }
+  const takilan = new Map<string, string>();
+  try {
+    for (const s of readFileSync(join(kok, '.mihenk', 'surucu.jsonl'), 'utf8').split('\n')) {
+      if (!s.includes('"test_once"')) continue;
+      const o = JSON.parse(s) as { kimlik?: string; tamam?: boolean; neden?: string | null };
+      if (!o.kimlik) continue;
+      if (o.tamam === false) takilan.set(o.kimlik, o.neden ?? '');
+      else takilan.delete(o.kimlik);
+    }
+  } catch {
+    // olay kaydi yok
+  }
+  const d = existsSync(join(kok, '.mihenk', 'defter.db')) ? new Defter(kok) : null;
+  let yapiliyorVerildi = false;
+  try {
+    return isler.map((is, i) => {
+      const kimlik = isKimligi(is);
+      const kayit = d?.etiketleBul(kimlik) ?? null;
+      let durum: string;
+      let neden = '';
+      if (kayit && kayit.durum !== 'acik') {
+        durum = kayit.durum;
+        neden = isNedeni(d!.rapor({ is_id: kayit.id }).is!);
+      } else if (calisiyor && !yapiliyorVerildi && !(takilan.has(kimlik) && !kayit)) {
+        durum = 'yapiliyor';
+        yapiliyorVerildi = true;
+      } else if (!kayit && takilan.has(kimlik)) {
+        durum = 'takildi';
+        neden = takilan.get(kimlik)!;
+      } else durum = kayit ? 'yarim' : 'sirada';
+      return { sira: i + 1, soru: is.soru, durum, neden };
+    });
+  } finally {
+    d?.kapat();
+  }
 }
 
 /**
@@ -254,6 +306,7 @@ export function pencereAc(hedef: string | null, o: PencereSecenekleri = {}): Pro
   let surucu: { cocuk: ChildProcess; satirlar: string[]; bitti: boolean; cikis: number | null } | null = null;
   let port = 0;
   let sonNabiz = 0;
+  let fikirIsi: { calisiyor: boolean; ajan: string; sonuc: Awaited<ReturnType<typeof fikriBol>> | null } | null = null;
   let zamanlayici: NodeJS.Timeout | undefined;
   const listeCalisiyor = (): boolean => surucu !== null && !surucu.bitti;
   const baslangicDurumu = () => ({
@@ -420,10 +473,12 @@ export function pencereAc(hedef: string | null, o: PencereSecenekleri = {}): Pro
         delete ham.aciklama;
         const temiz = (s: unknown): string => String(s ?? '').trim();
         ham.isler = (Array.isArray(g.isler) ? g.isler as Record<string, unknown>[] : []).map((x) => ({
-          tur: temiz(x.tur) || 'hata_duzeltme', soru: temiz(x.soru), beklenti: temiz(x.beklenti), yanlissa: temiz(x.yanlissa), dogrulama_komutu: temiz(x.dogrulama_komutu),
+          tur: temiz(x.tur) || 'hata_duzeltme', soru: temiz(x.soru), beklenti: temiz(x.beklenti), yanlissa: temiz(x.yanlissa),
+          ...(temiz(x.dogrulama_komutu) ? { dogrulama_komutu: temiz(x.dogrulama_komutu) } : {}),
           ...isEkleri(x),
         }));
-        const ALANLAR = [['soru', 'p_alan_soru'], ['beklenti', 'p_alan_beklenti'], ['yanlissa', 'p_alan_yanlissa'], ['dogrulama_komutu', 'p_alan_komut']] as const;
+        // Komut zorunlu degil (Asama 32): bos birakilirsa ajan once kabul testini yazar.
+        const ALANLAR = [['soru', 'p_alan_soru'], ['beklenti', 'p_alan_beklenti'], ['yanlissa', 'p_alan_yanlissa']] as const;
         for (const [n, x] of (ham.isler as Record<string, string>[]).entries()) {
           for (const [a, k] of ALANLAR) {
             if (!x[a]) return json(res, 400, { hata: METINLER.p_alan_bos[hangiDil()].replace('{n}', String(n + 1)).replace('{alan}', METINLER[k][hangiDil()]) });
@@ -474,6 +529,27 @@ export function pencereAc(hedef: string | null, o: PencereSecenekleri = {}): Pro
         (o.dosyaAcici ?? isletimSistemiyleAc)(acilan);
         return json(res, 200, { acilan: acilan === kok ? '.' : goreli });
       }
+      if (yol === 'GET /api/liste-durum') return json(res, 200, listeDurumu(kok, listeCalisiyor()));
+      if (yol === 'POST /api/fikir') {
+        // Fikri islere bol (Asama 32): uzun surer; arka planda calisir, sayfa GET /api/fikir ile sorar.
+        const g = await govde(req);
+        if (fikirIsi?.calisiyor) return json(res, 409, { hata: METINLER.fk_calisiyor[hangiDil()] });
+        const ajanlar = o.ajanlar ?? AJANLAR;
+        const kurulu = Object.keys(ajanlar).filter((a) => ajanlar[a]!.komutBul() != null);
+        let listeAjani = '';
+        try { listeAjani = listeOku(join(kok, 'mihenk-isler.json')).ajan ?? ''; } catch { /* liste yok */ }
+        const ad = [String(g.ajan ?? ''), listeAjani].find((a) => a && kurulu.includes(a)) ?? TERCIH_SIRASI.find((a) => kurulu.includes(a)) ?? kurulu[0];
+        if (!ad) return json(res, 400, { hata: METINLER.fk_arac_yok[hangiDil()] });
+        const is = { calisiyor: true, ajan: ad, sonuc: null as Awaited<ReturnType<typeof fikriBol>> | null };
+        fikirIsi = is;
+        mkdirSync(join(kok, '.mihenk', 'ciktilar'), { recursive: true });
+        void fikriBol({
+          kok, fikir: String(g.fikir ?? ''), tanim: ajanlar[ad]!,
+          kosucu: (ta, istem, cwd) => ajaniKostur(ta, istem, { cwd, zamanAsimiMs: 15 * 60_000, baglamEsigi: 10_000_000, ciktiDosyasi: join(kok, '.mihenk', 'ciktilar', 'planlama.txt') }),
+        }).then((s) => { is.sonuc = s; }, (e: unknown) => { is.sonuc = { tamam: false, neden: e instanceof Error ? e.message : String(e) }; }).finally(() => { is.calisiyor = false; });
+        return json(res, 200, { basladi: true, ajan: ad });
+      }
+      if (yol === 'GET /api/fikir') return json(res, 200, fikirIsi ? { calisiyor: fikirIsi.calisiyor, ajan: fikirIsi.ajan, ...(fikirIsi.sonuc ?? {}) } : { calisiyor: false });
       if (yol === 'GET /api/sur') return json(res, 200, surucu ? { calisiyor: !surucu.bitti, cikis: surucu.cikis, satirlar: surucu.satirlar } : { calisiyor: false, cikis: null, satirlar: [] });
       if (yol === 'POST /api/sur/durdur') {
         if (surucu && !surucu.bitti) agaciOldur(surucu.cocuk);
