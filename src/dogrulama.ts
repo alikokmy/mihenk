@@ -109,7 +109,11 @@ function winTirnakla(parca: string): string {
 }
 
 function baslat(k: CozulmusKomut, cwd: string): ChildProcess {
-  const ortak = { cwd, stdio: ['ignore', 'pipe', 'pipe'] as ['ignore', 'pipe', 'pipe'], windowsHide: true };
+  // Dogrulama, cagiranin ortamindan bagimsiz sonuc vermeli. Node'un test kosucusu alt sureclere NODE_TEST_CONTEXT gecirir;
+  // ic ice "node --test" bunu gorunce kalan testte de 0 ile cikar (2026-11-20'de yakalandi). Bu degisken aktarilmaz.
+  const env: Record<string, string | undefined> = { ...process.env };
+  delete env.NODE_TEST_CONTEXT;
+  const ortak = { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] as ['ignore', 'pipe', 'pipe'], windowsHide: true };
   if (process.platform !== 'win32') {
     return spawn(k.program, k.argumanlar, { ...ortak, detached: true });
   }

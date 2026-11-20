@@ -13,6 +13,8 @@ export interface Kullanim {
 
 export interface AjanTanimi {
   ad: string;
+  /** Aracin MCP baglantisinda kendini tanittigi ad (deftere 'istemci' olarak girer); denemelerde gorulen degerlerden. */
+  istemci: RegExp;
   /** Calistirilacak program ve basa eklenecek argumanlar; bulunamazsa null. */
   komutBul(): { program: string; onEk: string[] } | null;
   argumanlar(istem: string): string[];
@@ -46,6 +48,7 @@ const DEFTER_ARACLARI = ['is_ac', 'hukum_ver', 'kanit_ekle', 'karar_yaz', 'rapor
 
 export const CLAUDE: AjanTanimi = {
   ad: 'claude',
+  istemci: /^claude-code/,
   komutBul() {
     const yolda = yoldaBul(process.platform === 'win32' ? ['claude.exe'] : ['claude']);
     if (yolda) return { program: yolda, onEk: [] };
@@ -59,7 +62,7 @@ export const CLAUDE: AjanTanimi = {
     }
     return null;
   },
-  argumanlar: (istem) => ['-p', istem, '--output-format', 'stream-json', '--verbose', '--permission-mode', 'acceptEdits',
+  argumanlar: (istem) => ['-p', istem, '--max-budget-usd', '1', '--output-format', 'stream-json', '--verbose', '--permission-mode', 'acceptEdits',
     '--no-session-persistence', '--allowedTools', ...DEFTER_ARACLARI, 'Read', 'Edit', 'Write', 'Glob', 'Grep'],
   kullanimOku(satir) {
     const k = nesne(nesne(nesne(satir)?.message)?.usage);
@@ -81,6 +84,7 @@ export const CLAUDE: AjanTanimi = {
 
 export const CODEX: AjanTanimi = {
   ad: 'codex',
+  istemci: /^codex-mcp-client/,
   komutBul() {
     // npm, Windows'ta codex.cmd sarmalayicisi kurar; .cmd kabuk ister. Kabuga girmemek icin asil betik node ile kosulur.
     const sarmalayici = yoldaBul(process.platform === 'win32' ? ['codex.cmd'] : ['codex']);
@@ -105,6 +109,7 @@ export const CODEX: AjanTanimi = {
 
 export const OPENCODE: AjanTanimi = {
   ad: 'opencode',
+  istemci: /^opencode/,
   komutBul() {
     const yolda = yoldaBul(process.platform === 'win32' ? ['opencode.exe'] : ['opencode']);
     if (yolda) return { program: yolda, onEk: [] };

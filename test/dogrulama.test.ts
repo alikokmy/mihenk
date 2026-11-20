@@ -120,6 +120,18 @@ test('calistirma: komut 0 ile cikip arkada borusu acik surec biraksa da sonuc he
   assert.match(readFileSync(join(kok, 'cikti.txt'), 'utf8'), /on surec bitti/, 'on surecin ciktisi kaybolmamali');
 });
 
+test('calistirma: kalan "node --test" komutu, cagiran surec bir test kosucusu icinde olsa da kalir', async () => {
+  // Kok neden kaydi (2026-11-20): bu dosya da "node --test" icinde kosar. Node, alt sureclere NODE_TEST_CONTEXT degiskenini
+  // gecirir; ic ice "node --test" bunu gorunce sonucu ust kosucuya birakir ve kalan testte bile 0 ile cikar.
+  // Yanlissa ne gorulur: asagidaki kalan test icin cikis_kodu 0.
+  const kok = gecici();
+  writeFileSync(join(kok, 'kalan.test.mjs'), "import { test } from 'node:test';\nimport assert from 'node:assert/strict';\ntest('kalir', () => assert.equal(1, 2));\n");
+  const s = await komutuCalistir(komutuCoz('node --test kalan.test.mjs', VARSAYILAN_IZINLI), {
+    cwd: kok, zamanAsimiMs: 30_000, ciktiDosyasi: join(kok, 'cikti.txt'),
+  });
+  assert.notEqual(s.cikis_kodu, 0, 'kalan test "gecti" sayildi');
+});
+
 test('calistirma: bulunamayan program hata olarak doner, gecti sayilmaz', async () => {
   const kok = gecici();
   const s = await komutuCalistir(komutuCoz('yokboyleprogram x', ['yokboyleprogram']), {

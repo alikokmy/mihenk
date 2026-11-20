@@ -32,6 +32,7 @@ const sahte = (ad: string, govde: string): AjanTanimi => {
   const yol = betik(ad, govde);
   return {
     ad,
+    istemci: new RegExp(`^${ad}$`),
     komutBul: () => ({ program: process.execPath, onEk: [yol] }),
     argumanlar: (istem) => [istem],
     kullanimOku: (s) => (s && typeof s === 'object' && 'baglam' in s ? { baglam: Number((s as { baglam: unknown }).baglam) } : undefined),

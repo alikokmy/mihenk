@@ -10,6 +10,8 @@ import { ARACLAR, kur, type Arac } from './kur.js';
 import { SAKLAMA_KIPLERI, type SaklamaKipi } from './saklama.js';
 import { listeOku, listeyiYurut } from './surucu.js';
 import { uyanikTut, uykuAyariniOku, uykuUyarisi } from './uyanik.js';
+import { KONTROL_ACIKLAMASI, raporMetni, SENARYOLAR, senaryoKostur, uyumOzeti, type SenaryoSonucu } from './uyum.js';
+import { mkdirSync, writeFileSync } from 'node:fs';
 
 const [komut, ...gerisi] = process.argv.slice(2);
 const secenek = (ad: string): string | undefined => {
@@ -29,7 +31,41 @@ function kullanim(): void {
   console.error('  mihenk kur [--hedef <proje klasoru>] [--arac claude,codex,gemini,antigravity,opencode]');
   console.error('  mihenk sur [--hedef <proje klasoru>] [--liste <dosya>] [--ajan claude|codex|opencode]');
   console.error('             [--saklama yok|yerel|yerel_gonder] [--uyanik-tut]');
+  console.error('  mihenk uyum [--arac claude,codex,opencode] [--senaryo duzeltme,tuzak,karar] [--cikis <klasor>]');
   console.error('Defter sunucusu ayri calisir: mihenk-defter [--kok <proje klasoru>]');
+}
+
+/**
+ * Uyum testleri: her arac her senaryoda kendi basina (surucusuz) calisir; yonteme uyup uymadigi olculur.
+ * Arac ya da model surumu degisince yeniden kosulur. Sonuc <cikis>/uyum-raporu.md ve .json.
+ */
+async function uyumKomutu(): Promise<number> {
+  const istenen = (secenek('--arac') ?? Object.keys(AJANLAR).join(',')).split(',').map((a) => a.trim()).filter(Boolean);
+  const senaryoAdlari = (secenek('--senaryo') ?? SENARYOLAR.map((s) => s.ad).join(',')).split(',').map((a) => a.trim());
+  const cikis = resolve(secenek('--cikis') ?? join(process.cwd(), 'mihenk-uyum'));
+  const sonuclar: SenaryoSonucu[] = [];
+  for (const ad of istenen) {
+    const tanim = AJANLAR[ad];
+    if (!tanim) throw new Error(`bilinmeyen arac: ${ad}. Gecerli: ${Object.keys(AJANLAR).join(', ')}`);
+    if (!tanim.komutBul()) {
+      console.log(`${ad}: bu bilgisayarda bulunamadi, atlandi.`);
+      continue;
+    }
+    for (const s of SENARYOLAR.filter((x) => senaryoAdlari.includes(x.ad))) {
+      console.log(`${ad} / ${s.ad}: basliyor...`);
+      const r = await senaryoKostur({ tanim, kurulacakArac: ad as Arac, senaryo: s, dizin: join(cikis, ad, s.ad), zamanAsimiSn: sayi('--oturum-sn') ?? 600 });
+      const kalan = r.kontroller.filter((k) => !k.gecti).map((k) => KONTROL_ACIKLAMASI[k.ad]);
+      console.log(`${ad} / ${s.ad}: ${r.gecersiz ? `GECERSIZ (${r.gecersiz})` : kalan.length === 0 ? 'butun kurallara uydu' : `uymadi: ${kalan.join('; ')}`}` +
+        ` | is ${r.basari ? 'yapildi' : 'yapilmadi'}, beyan ${r.beyan ?? 'yok'}`);
+      sonuclar.push(r);
+    }
+  }
+  mkdirSync(cikis, { recursive: true });
+  writeFileSync(join(cikis, 'uyum-raporu.md'), raporMetni(sonuclar));
+  writeFileSync(join(cikis, 'uyum-raporu.json'), JSON.stringify({ tarih: new Date().toISOString(), ozet: uyumOzeti(sonuclar), sonuclar }, null, 2) + '\n');
+  for (const u of uyumOzeti(sonuclar)) console.log(`${u.arac}: uyum ${u.gecen}/${u.toplam} (%${Math.round(u.oran * 100)}), basarili senaryo ${u.basarili_senaryo}/${u.senaryo}`);
+  console.log(`Rapor: ${join(cikis, 'uyum-raporu.md')}`);
+  return 0;
 }
 
 function kurKomutu(): number {
@@ -95,6 +131,7 @@ async function surKomutu(): Promise<number> {
 try {
   if (komut === 'kur') process.exitCode = kurKomutu();
   else if (komut === 'sur') process.exitCode = await surKomutu();
+  else if (komut === 'uyum') process.exitCode = await uyumKomutu();
   else {
     kullanim();
     process.exitCode = komut === undefined || komut === '--help' ? 0 : 2;

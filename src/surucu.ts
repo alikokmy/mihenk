@@ -118,7 +118,7 @@ function istemYaz(is: IsKaydi, devirNotu: string | null): string {
   return satirlar.join('\n');
 }
 
-interface AjanKosusu {
+export interface AjanKosusu {
   cikis_kodu: number | null;
   zaman_asimi: boolean;
   esik_asildi: boolean;
@@ -129,7 +129,7 @@ interface AjanKosusu {
 }
 
 /** Ajani bassiz kipte calistirir; ciktisini satir satir izler (kullanim, son ileti), dosyaya yazar. */
-function ajaniKostur(
+export function ajaniKostur(
   tanim: AjanTanimi,
   istem: string,
   o: { cwd: string; zamanAsimiMs: number; baglamEsigi: number; ciktiDosyasi: string },
@@ -143,6 +143,7 @@ function ajaniKostur(
   const ortam: Record<string, string | undefined> = { ...process.env, PWD: o.cwd };
   delete ortam.OLDPWD;
   delete ortam.INIT_CWD;
+  delete ortam.NODE_TEST_CONTEXT; // ajanin kostugu "node --test" cagiranin test kosucusuna baglanmasin
 
   return new Promise<AjanKosusu>((coz) => {
     const fd = openSync(o.ciktiDosyasi, 'w');
