@@ -517,6 +517,12 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
         // Kota / hiz siniri: model saglayicisi reddetti; ajanin denemesi sayilmaz, bekleyip yeniden denenir.
         const saglayici = saglayiciHatasi(okuSessiz(ciktiDosyasi));
         if (saglayici && (defter.rapor({ is_id: isId }).is as IsGorunumu).durum === 'acik') {
+          // Kapasite tahmini icin: o an pencere icinde olculen tuketim kaydedilir (Asama 27). Kayit yazilamazsa liste durmaz.
+          try {
+            defter.kotaSiniriEkle(tanim.ad);
+          } catch {
+            // yoksay
+          }
           const sinir = s.liste.kota_bekleme_sayisi ?? 4;
           if (kotaBekleme < sinir) {
             kotaBekleme += 1;

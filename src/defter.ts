@@ -32,7 +32,31 @@ export interface Ayarlar {
    * Varsayilan bos: fiyat uydurulmaz; abonelikle calisan aracta maliyet "bilinmiyor" kalir.
    */
   fiyatlar: Record<string, Fiyat>;
+  /**
+   * Abonelikle calisan ajanlar (Asama 27): ajan adi -> kota penceresi. Burada adi gecen ajanin maliyeti dolar degil kota payidir
+   * (aracin bildirdigi dolar API karsiligidir, odenen degildir). kapasite: bir pencerede kullanilabilen kota birimi; verilmezse surucunun
+   * gordugu kota hatalarindan alt sinir tahmin edilir. pencere_usd: bir tam pencerenin size dolar degeri (or. aylik ucret / aylik
+   * pencere sayisi); verilirse kota payi dolarli ajanlarla karsilastirilir.
+   */
+  kota: Record<string, KotaAyari>;
 }
+
+export interface KotaAyari {
+  pencere_saat: number;
+  kapasite?: number;
+  pencere_usd?: number;
+}
+
+/**
+ * Kota birimi: agirlikli token. Agirliklar Anthropic fiyat oranlaridir (girdi 1, cikti 5, onbellekten okuma 0,1, onbellege yazma 1,25).
+ * Saglayicilarin kota hesabi acik degildir; bu bir yaklasiktir ve butun ajanlara ayni uygulanir.
+ */
+export const KOTA_AGIRLIKLARI = { girdi: 1, cikti: 5, onbellek_okuma: 0.1, onbellek_yazma: 1.25 } as const;
+export function kotaBirimi(k: { girdi: number; cikti: number; onbellek_okuma: number; onbellek_yazma: number }): number {
+  const a = KOTA_AGIRLIKLARI;
+  return Math.round(k.girdi * a.girdi + k.cikti * a.cikti + k.onbellek_okuma * a.onbellek_okuma + k.onbellek_yazma * a.onbellek_yazma);
+}
+const VARSAYILAN_PENCERE_SAAT = 5;
 
 export interface Fiyat {
   girdi: number;
@@ -47,6 +71,7 @@ const VARSAYILAN_AYARLAR: Ayarlar = {
   en_fazla_zaman_asimi_sn: 1800,
   ozet_siniri: 2000,
   fiyatlar: {},
+  kota: {},
 };
 
 /** Ayarlar surec baslarken bir kez okunur: oturum icinde mihenk.json'u degistirmek calisan sunucuyu etkilemez. */
@@ -54,7 +79,7 @@ export function ayarlariOku(kok: string): Ayarlar {
   const yol = join(kok, 'mihenk.json');
   if (!existsSync(yol)) return { ...VARSAYILAN_AYARLAR };
   const ham = JSON.parse(readFileSync(yol, 'utf8')) as Partial<Ayarlar>;
-  const a = { ...VARSAYILAN_AYARLAR };
+  const a: Ayarlar = { ...VARSAYILAN_AYARLAR, fiyatlar: {}, kota: {} };
   if (Array.isArray(ham.izinli_programlar)) a.izinli_programlar = ham.izinli_programlar.map(String);
   if (Number.isInteger(ham.zaman_asimi_sn)) a.zaman_asimi_sn = ham.zaman_asimi_sn as number;
   if (Number.isInteger(ham.en_fazla_zaman_asimi_sn)) a.en_fazla_zaman_asimi_sn = ham.en_fazla_zaman_asimi_sn as number;
@@ -62,6 +87,14 @@ export function ayarlariOku(kok: string): Ayarlar {
   if (ham.fiyatlar && typeof ham.fiyatlar === 'object') {
     for (const [ad, f] of Object.entries(ham.fiyatlar)) {
       if (f && Number.isFinite(f.girdi) && Number.isFinite(f.cikti)) a.fiyatlar[ad] = f;
+    }
+  }
+  if (ham.kota && typeof ham.kota === 'object') {
+    const pozitif = (x: unknown): number | undefined => (typeof x === 'number' && Number.isFinite(x) && x > 0 ? x : undefined);
+    for (const [ad, k] of Object.entries(ham.kota as Record<string, Partial<KotaAyari>>)) {
+      if (!k || typeof k !== 'object') continue;
+      const kapasite = pozitif(k.kapasite), pencere_usd = pozitif(k.pencere_usd);
+      a.kota[ad] = { pencere_saat: pozitif(k.pencere_saat) ?? VARSAYILAN_PENCERE_SAAT, ...(kapasite ? { kapasite } : {}), ...(pencere_usd ? { pencere_usd } : {}) };
     }
   }
   return a;
@@ -201,6 +234,25 @@ export interface IsOlcumu {
   maliyet_usd: number | null;
   /** Is kapandiktan sonra degisiklikleri geri alindi mi (Asama 21): "gecti" ise oneri bunu basari saymaz. */
   geri_alindi?: boolean;
+  /** Abonelikli ajan (Asama 27): mihenk.json "kota"da adi geciyor ya da dolar maliyeti bilinmiyor ama token biliniyor. */
+  abonelik?: boolean;
+  /** Butun oturumlarin kota birimi (agirlikli token); hic oturum olcumu yoksa null. */
+  kota_birimi?: number | null;
+  /** Bir kota penceresinin ne kadarini yedigi (0-1); kapasite bilinmiyorsa null. */
+  kota_payi?: number | null;
+  /** Kapasitenin kaynagi: kullanicinin ayari ya da kota hatalarindan alt sinir tahmini. */
+  kota_kaynagi?: 'ayar' | 'tahmin' | null;
+  /** Kota payinin dolar karsiligi (pencere_usd verilmisse). */
+  kota_usd?: number | null;
+}
+
+/** Surucunun gordugu bir kota / hiz siniri hatasi ve o an pencere icinde bu projede olculen tuketim. */
+export interface KotaSiniri {
+  id: number;
+  zaman: string;
+  ajan: string;
+  pencere_saat: number;
+  tuketim: number;
 }
 
 /** Raporun ve dokumun gosterdigi is (test ozeti cikmis, supheler dizi). */
@@ -263,6 +315,13 @@ CREATE TABLE IF NOT EXISTS kullanim (
   cikti INTEGER NOT NULL CHECK (cikti >= 0),
   maliyet_usd REAL CHECK (maliyet_usd IS NULL OR maliyet_usd >= 0),
   maliyet_kaynagi TEXT CHECK (maliyet_kaynagi IS NULL OR maliyet_kaynagi IN ('arac', 'fiyat_tablosu'))
+);
+CREATE TABLE IF NOT EXISTS kota_sinirlari (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  zaman TEXT NOT NULL,
+  ajan TEXT NOT NULL,
+  pencere_saat REAL NOT NULL CHECK (pencere_saat > 0),
+  tuketim INTEGER NOT NULL CHECK (tuketim >= 0)
 );
 CREATE TRIGGER IF NOT EXISTS kullanim_degismez BEFORE UPDATE ON kullanim
 BEGIN SELECT RAISE(ABORT, 'mihenk: kullanim kaydi degismez'); END;
@@ -722,16 +781,52 @@ export class Defter {
     const geriAlinan = geriAlinanIsler(this.kok);
     const isler = this.db.prepare("SELECT * FROM isler WHERE durum <> 'acik' ORDER BY id").all() as unknown as IsKaydi[];
     const modelSorgusu = this.db.prepare('SELECT DISTINCT model FROM kullanim WHERE is_id = ? AND model IS NOT NULL');
+    const kapasiteler = new Map<string, ReturnType<Defter['kotaKapasitesi']>>();
     return isler.map((is) => {
       const k = this.kullanimToplami(is.id);
       const modeller = (modelSorgusu.all(is.id) as Array<{ model: string }>).map((m) => m.model);
+      const maliyet = k.oturum > 0 && k.maliyeti_bilinmeyen_oturum === 0 ? k.maliyet_usd : null;
+      const birim = k.oturum > 0 ? kotaBirimi(k) : null;
+      const ayar = this.ayarlar.kota[is.ajan];
+      const abonelik = ayar !== undefined || (maliyet === null && birim !== null);
+      if (!kapasiteler.has(is.ajan)) kapasiteler.set(is.ajan, this.kotaKapasitesi(is.ajan));
+      const kapasite = abonelik ? kapasiteler.get(is.ajan) ?? null : null;
+      const pay = kapasite && birim !== null ? birim / kapasite.deger : null;
       return {
         id: is.id, tur: is.tur, ajan: is.ajan, model: modeller.length === 1 ? modeller[0]! : is.model,
         durum: is.durum as Exclude<Durum, 'acik'>, sure_sn: sureSn(is), deneme_sayisi: is.deneme_sayisi,
-        maliyet_usd: k.oturum > 0 && k.maliyeti_bilinmeyen_oturum === 0 ? k.maliyet_usd : null,
+        maliyet_usd: maliyet,
         geri_alindi: geriAlinan.has(is.id),
+        abonelik, kota_birimi: birim, kota_payi: pay, kota_kaynagi: kapasite?.kaynak ?? null,
+        kota_usd: pay !== null && ayar?.pencere_usd ? pay * ayar.pencere_usd : null,
       };
     });
+  }
+
+  /**
+   * Surucu kota / hiz siniri hatasi gorunce cagirir (Asama 27): o an, ajanin pencere suresi icinde bu projede olculen kota birimi
+   * kaydedilir. Kapasite en az bu kadardir (ayni hesaptan baska yerde harcanan gorunmez): tahmin alt sinirdir.
+   */
+  kotaSiniriEkle(ajan: string, zaman = new Date()): KotaSiniri {
+    const pencere = this.ayarlar.kota[ajan]?.pencere_saat ?? VARSAYILAN_PENCERE_SAAT;
+    const bas = new Date(zaman.getTime() - pencere * 3_600_000).toISOString();
+    const t = this.db
+      .prepare(
+        `SELECT coalesce(sum(girdi), 0) AS girdi, coalesce(sum(cikti), 0) AS cikti, coalesce(sum(onbellek_okuma), 0) AS onbellek_okuma,
+                coalesce(sum(onbellek_yazma), 0) AS onbellek_yazma FROM kullanim WHERE ajan = ? AND zaman > ? AND zaman <= ?`,
+      )
+      .get(ajan, bas, zaman.toISOString()) as { girdi: number; cikti: number; onbellek_okuma: number; onbellek_yazma: number };
+    const tuketim = kotaBirimi({ girdi: Number(t.girdi), cikti: Number(t.cikti), onbellek_okuma: Number(t.onbellek_okuma), onbellek_yazma: Number(t.onbellek_yazma) });
+    const r = this.db.prepare('INSERT INTO kota_sinirlari (zaman, ajan, pencere_saat, tuketim) VALUES (?, ?, ?, ?)').run(zaman.toISOString(), ajan, pencere, tuketim);
+    return this.db.prepare('SELECT * FROM kota_sinirlari WHERE id = ?').get(Number(r.lastInsertRowid)) as unknown as KotaSiniri;
+  }
+
+  /** Ajanin bir kota penceresindeki kapasitesi: ayar varsa o; yoksa gorulen kota hatalarindaki en buyuk tuketim (alt sinir). */
+  kotaKapasitesi(ajan: string): { deger: number; kaynak: 'ayar' | 'tahmin'; gozlem: number } | null {
+    const ayar = this.ayarlar.kota[ajan]?.kapasite;
+    const g = this.db.prepare('SELECT count(*) AS n, max(tuketim) AS en FROM kota_sinirlari WHERE ajan = ?').get(ajan) as { n: number; en: number | null };
+    if (ayar) return { deger: ayar, kaynak: 'ayar', gozlem: Number(g.n) };
+    return g.en && Number(g.en) > 0 ? { deger: Number(g.en), kaynak: 'tahmin', gozlem: Number(g.n) } : null;
   }
 
   private kullanimlar(isId: number): KullanimKaydi[] {

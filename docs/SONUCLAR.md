@@ -772,6 +772,46 @@ korunduğunu, ayrıca 1.x için eski biçimin yazıldığını denetler.
 ## Aşama 26 sonucu (2026-11-20)
 
 26 bölüm (Aşama 1-25 sonuçları, "Aşama 2: yöntem paketi" ve "Varsayılan değişikliği ve fotoğraf temizliği") plandan bu dosyaya taşındı.
-Plan 1031 satırdan 261 satıra indi. Kanıt: taşıma betiği, taşımadan önceki ve sonraki satırları sayarak karşılaştırdı ve ikisi aynı
+Plan 261 satıra indi; `v0.4.0`'daki hali 998 satırdı, taşımadan hemen önce üstüne Sürüm 0.5 bölümü eklenmişti. Kanıt: taşıma betiği, taşımadan önceki ve sonraki satırları sayarak karşılaştırdı ve ikisi aynı
 çıktı; ayrıca planda "sonucu" başlığı ya da eski biçimde `bkz. "Aşama ..."` atfı kalırsa hata verecek şekilde yazıldı. Plandaki atıflar,
 README'deki "Aşama 2" atfı, iki kaynak yorumu ve AGENTS.md yeni dosyayı gösteriyor.
+
+Olumsuz not: Aşama 2 tablosunu planda arayan bir test (`test/paket.test.ts`) taşımadan sonra kaldı; bunu ancak tam takım yakaladı
+(Aşama 27 sırasında). Test yeni dosyaya yönlendirildi.
+
+## Aşama 27 sonucu (2026-11-20)
+
+**Ne değişti:**
+
+- Her işin oturumları için ağırlıklı token, yani "kota birimi" hesaplanır. Ağırlıklar Anthropic fiyat oranlarıdır.
+- `mihenk.json` dosyasında `kota` bölümünde adı geçen ajan, ya da dolar maliyeti bilinmeyen ama token'ı ölçülen ajan, abonelikli
+  sayılır. Bu ajanların maliyeti kota payıdır; aracın bildirdiği dolar (Claude Code'un API karşılığı) öneride kullanılmaz.
+- Kapasite ayardan gelir. Ayar yoksa sürücünün gördüğü sağlayıcı hatalarından tahmin edilir: hata anında, ajanın pencere süresi içinde
+  bu projede ölçülen tüketim `kota_sinirlari` tablosuna yazılır ve en büyük gözlem kapasitenin alt sınırı sayılır.
+
+**Öneri kuralı:**
+
+- Kota payı, `pencere_usd` verilmişse dolara çevrilir.
+- Tek birim varsa (hepsi dolar ya da hepsi kota) en düşük maliyet seçilir.
+- Birimler karışıksa maliyetle seçilmez: başarı oranının alt sınırı, sonra süre belirler. Öneri en ucuz dolarlı seçeneği, en az kota
+  yiyeni ve hangi ajan için `pencere_usd` yazılması gerektiğini not olarak verir.
+- Komut satırı ve pencere aynı maliyet metnini gösterir.
+
+**Kanıt:** `test/kota.test.ts` (7 test):
+
+- Kota birimi elle hesapla aynı çıktı (3000).
+- Abonelikli seçenek "bilinmiyor" yerine "kota penceresinin %2'i/başarı" gösterdi.
+- `pencere_usd` ile 0,10 USD'lik abonelik, 0,30 USD'lik dolarlı ajana karşı seçildi; 0,05 USD'lik dolarlı ajana karşı seçilmedi.
+- Karışık birimde 20/20 abonelikli ajan, 18/20 ama çok ucuz dolarlı ajana karşı seçildi ve not yazıldı.
+- Gerçek defterde ayardan gelen kapasiteyle kota payı 0,003 ve dolar karşılığı 0,015 çıktı (elle hesap).
+- Pencere dışındaki gözlem tahmin üretmedi; pencere içindeki iki oturum 6000 birimlik tahmin verdi.
+- Sahte ajanla sürücü, 429 hatası aldığı oturumun 3000 birimini kaydetti.
+
+Ters denetim: üç kasıtlı bozmada da test kaldı. Bozmalar şunlardı: sürücüdeki kayıt çağrısı kaldırıldı; karışık birim kuralı devre
+dışı bırakıldı; `kota` ayarı abonelik sayılmadı.
+
+**Yan bulgu:** `ayarlariOku` varsayılan `fiyatlar` nesnesini kopyalamadan paylaşıyordu. Bir defterin fiyatları aynı süreçteki
+sonraki defterlere sızabilirdi. Artık her okuma yeni nesne kuruyor.
+
+**Sınır:** ağırlıklar yaklaşıktır, sağlayıcının gerçek kota hesabı bilinmez. Elle açılan oturumlar (`maliyet-topla`) yalnız işe
+bağlanırsa pencere tüketimine girer.

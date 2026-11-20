@@ -258,8 +258,30 @@ node <mihenk yolu>/dist/src/cli.js oneri --hedef <proje>
 Defterdeki kapanmış işlerden, iş türü başına hangi aracın daha az harcayarak doğrulanmış başarı getirdiğini gösterir. Başarı yalnız
 doğrulama komutunun geçmesidir; ajanın "bitti" demesi sayılmaz. Bir seçenek için en az 5 iş ve başarı oranının %95 güven aralığının alt
 ucunun %50'yi geçmesi gerekir; yoksa "veri yetersiz" yazar ve öneri vermez. Uyum testi raporu varsa (`mihenk-uyum/uyum-raporu.json`)
-uyumu %80'in altındaki araç önerilmez. Maliyeti bilinmeyen araç (ör. abonelikle çalışan Codex) maliyetle karşılaştırılamaz; bu yazılır.
+uyumu %80'in altındaki araç önerilmez.
 Öneri yalnız gösterir; aracı her zaman siz seçersiniz. Eşikler `--esik` ve `--en-az` ile değişir.
+
+**Abonelikle çalışan araçlarda maliyet kota payıdır.** Abonelikte (ör. Claude Pro/Max, ChatGPT ile Codex) dolar ödemezsiniz. Ödediğiniz
+şey, birkaç saatlik kullanım penceresinin ne kadarını harcadığınızdır. mihenk bunu şöyle ölçer:
+
+- **Kota birimi:** her oturumun token'ları ağırlıklandırılıp toplanır. Ağırlıklar: girdi 1, çıktı 5, önbellekten okuma 0,1, önbelleğe
+  yazma 1,25.
+- **Kota payı:** işin kota birimi, pencerenin kapasitesine bölünür. Sonuç, işin pencerenin yüzde kaçını yediğidir.
+
+`mihenk.json` dosyasında `kota` bölümünde adı geçen araç abonelikli sayılır. Dolar maliyeti bilinmeyen ama token'ı ölçülen araç da
+abonelikli sayılır. Abonelikli aracın bildirdiği dolar (ör. Claude Code'un API karşılığı) öneride kullanılmaz.
+
+```json
+{ "kota": { "claude": { "pencere_saat": 5, "kapasite": 2000000, "pencere_usd": 1.5 } } }
+```
+
+- `pencere_saat`: pencerenin süresi. Verilmezse 5 saattir.
+- `kapasite`: bir pencerede kullanılabilen kota birimi. Verilmezse mihenk bunu sürücünün gördüğü kota hatalarından tahmin eder: hata
+  anında pencere içinde ölçülen tüketim. Bu bir alt sınırdır, çünkü aynı hesaptan başka yerde harcanan kota görünmez. Bu yüzden
+  gösterilen kota payı gerçekte en fazla bu kadardır; öneri bunu ayrıca yazar.
+- `pencere_usd`: bir pencerenin size dolar değeri. Örneğin aylık ücreti ayda gerçekten kullandığınız pencere sayısına bölebilirsiniz.
+  Verilirse kota payı dolara çevrilir ve abonelikli araç dolarla çalışanlarla karşılaştırılır. Verilmezse dolar ve kota karşılaştırılmaz:
+  öneri başarıya göre seçer ve bu değeri yazmanızı söyler.
 
 Veri proje içinde `.mihenk/` altında durur (git dışı): `defter.db` (SQLite), `defter.jsonl` (okunur döküm), `log.jsonl` (her işlemin başla /
 bitti satırı), `surucu.jsonl` (sürücünün olay kaydı), `ciktilar/` (doğrulama ve ajan çıktılarının tamamı).

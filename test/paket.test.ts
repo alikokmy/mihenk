@@ -111,6 +111,6 @@ test('paket: AGENTS.md blogu kisa, defter araclarini ve butun skill adlarini ani
 });
 
 test('paket: plan belgesindeki tablo butun madde kodlarini iceriyor (belge ile paket ayrismaz)', () => {
-  const plan = readFileSync(join(DEPO, 'docs', 'IS_PLANI.md'), 'utf8');
-  for (const m of maddeler) assert.ok(new RegExp(`\\| ${m.kod} \\|`).test(plan), `IS_PLANI.md tablosunda ${m.kod} yok`);
+  const plan = readFileSync(join(DEPO, 'docs', 'SONUCLAR.md'), 'utf8');
+  for (const m of maddeler) assert.ok(new RegExp(`\\| ${m.kod} \\|`).test(plan), `SONUCLAR.md tablosunda ${m.kod} yok`);
 });

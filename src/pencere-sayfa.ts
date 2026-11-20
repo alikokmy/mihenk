@@ -194,7 +194,7 @@ async function oneriCiz() {
   for (const t of o.turler) {
     const kart = el('div', { class: 'kart' }, el('b', { metin: m('p_oneri_tur', { tur: t.tur, sayi: t.is_sayisi }) }),
       el('p', { metin: t.oneri ? m('p_onerilen', { ajan: t.oneri.ajan }) : m('p_oneri_yok_veri') }));
-    for (const x of t.secenekler) kart.append(el('p', { class: 'soluk', metin: m('p_oneri_satir', { ajan: x.ajan, gecen: x.gecen, toplam: x.is_sayisi, maliyet: x.basari_basina_maliyet === null ? '' : m('p_oneri_maliyet', { usd: x.basari_basina_maliyet }) }) }));
+    for (const x of t.secenekler) kart.append(el('p', { class: 'soluk', metin: m('p_oneri_satir', { ajan: x.ajan, gecen: x.gecen, toplam: x.is_sayisi, maliyet: x.maliyet_metni ? ', ' + x.maliyet_metni : '' }) }));
     kartlar.push(kart);
   }
   koy(s, ...kartlar);

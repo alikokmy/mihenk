@@ -2,6 +2,8 @@
 // Birim kapanmis istir. Basari yalniz dogrulanmis "gecti"dir; "kaldi" ve "belirsiz" basarisiz sayilir (ajanin beyani sayilmaz).
 // Secenek, basari oraninin alt guven siniri esigi gecenler arasindan, basari basina beklenen maliyeti en dusuk olandir
 // (basarisiz islerin ve yeniden denemelerin maliyeti dahil); esitlikte sure. Az veride oneri verilmez: "veri yetersiz".
+// Abonelikli ajanin maliyeti dolar degil kota payidir (Asama 27): pencere degeri verilmisse dolara cevrilir; verilmemisse kota payli
+// secenekler kendi aralarinda karsilastirilir, dolarlilarla karsilastirilmaz (birimler karisirsa maliyet yerine basari ve sure).
 // Kullanici her zaman kendi secimini yapar; bu hesap yalniz gosterir.
 import type { IsOlcumu } from './defter.js';
 import { t as ileti } from './dil.js';
@@ -43,6 +45,17 @@ export interface Secenek {
   basari_basina_sure_sn: number | null;
   uyum: (UyumOlcumu & { oran: number }) | null;
   durum: SecenekDurumu;
+  /** Abonelikli ajan: maliyeti kota payidir (Asama 27). */
+  abonelik: boolean;
+  /** Basari basina kota birimi (agirlikli token); bir isin bile olcumu yoksa null. */
+  basari_basina_kota_birimi: number | null;
+  /** Basari basina bir kota penceresinin payi (0-1); kapasite bilinmiyorsa null. */
+  basari_basina_kota_payi: number | null;
+  kota_kaynagi: 'ayar' | 'tahmin' | null;
+  /** Karsilastirmada kullanilan maliyet: dolar (aracin bildirdigi ya da kota payinin dolar karsiligi) ya da kota payi. */
+  karsilastirma: { birim: 'usd' | 'kota'; deger: number } | null;
+  /** Maliyetin duz metni (komut satiri ve pencere ayni metni gosterir). */
+  maliyet_metni: string;
 }
 
 export interface TurOnerisi {
@@ -82,13 +95,37 @@ function secenekHesapla(isler: IsOlcumu[], a: OneriAyarlari): Secenek {
   const aralik = wilson(gecen, n);
   const durum: SecenekDurumu =
     n < a.enAz ? 'veri_yetersiz' : aralik[0] < a.esik ? 'esik_alti' : uyum && uyum.oran < a.uyumEsigi ? 'uyum_dusuk' : 'aday';
+  const abonelik = isler.every((i) => i.abonelik === true);
+  // Hepsi biliniyorsa basari basina toplam; biri bile bilinmiyorsa null (kismi toplam yaniltir).
+  const basariBasina = (degerler: Array<number | null | undefined>): number | null =>
+    gecen === 0 || degerler.some((d) => d === null || d === undefined) ? null : (degerler as number[]).reduce((t, d) => t + d, 0) / gecen;
+  const dolar = abonelik ? null : bilinmeyen > 0 || gecen === 0 ? null : yuvarla(toplamMaliyet / gecen);
+  const kotaBirimi = abonelik ? basariBasina(isler.map((i) => i.kota_birimi)) : null;
+  const kotaPayi = abonelik ? basariBasina(isler.map((i) => i.kota_payi)) : null;
+  const kotaUsd = abonelik ? basariBasina(isler.map((i) => i.kota_usd)) : null;
+  const kaynaklar = new Set(isler.map((i) => i.kota_kaynagi ?? null));
+  const kota_kaynagi = kotaPayi === null ? null : kaynaklar.has('tahmin') ? 'tahmin' : 'ayar';
+  const karsilastirma = dolar !== null ? { birim: 'usd' as const, deger: dolar }
+    : kotaUsd !== null ? { birim: 'usd' as const, deger: yuvarla(kotaUsd) }
+    : kotaPayi !== null ? { birim: 'kota' as const, deger: yuvarla(kotaPayi) } : null;
+  const maliyet_araligi: [number, number] | null = maliyetler.length > 0 && !abonelik ? [Math.min(...maliyetler), Math.max(...maliyetler)] : null;
+  let maliyet_metni: string;
+  if (dolar !== null) maliyet_metni = ileti('o_maliyet', { usd: dolar }) + (maliyet_araligi ? ileti('o_maliyet_araligi', { alt: maliyet_araligi[0], ust: maliyet_araligi[1] }) : '');
+  else if (kotaPayi !== null) {
+    maliyet_metni = ileti('o_kota', { yuzde: yuvarla(kotaPayi * 100, 1) })
+      + (kotaUsd !== null ? ileti('o_kota_usd', { usd: yuvarla(kotaUsd) }) : '') + (kota_kaynagi === 'tahmin' ? ileti('o_kota_tahmin') : '');
+  } else if (kotaBirimi !== null) maliyet_metni = ileti('o_kota_birim', { birim: Math.round(kotaBirimi) });
+  else if (gecen === 0) maliyet_metni = ileti('o_maliyet_yok');
+  else maliyet_metni = ileti('o_maliyet_bilinmiyor', { sayi: abonelik ? isler.filter((i) => i.kota_birimi === null || i.kota_birimi === undefined).length : bilinmeyen });
   return {
     ajan, model, is_sayisi: n, gecen, basari: yuvarla(gecen / n, 3), aralik: [yuvarla(aralik[0], 3), yuvarla(aralik[1], 3)],
-    basari_basina_maliyet: bilinmeyen > 0 || gecen === 0 ? null : yuvarla(toplamMaliyet / gecen),
-    maliyet_araligi: maliyetler.length > 0 ? [Math.min(...maliyetler), Math.max(...maliyetler)] : null,
+    basari_basina_maliyet: dolar ?? (kotaUsd !== null ? yuvarla(kotaUsd) : null),
+    maliyet_araligi,
     maliyeti_bilinmeyen_is: bilinmeyen,
     basari_basina_sure_sn: gecen === 0 || sureler.length === 0 ? null : yuvarla(toplamSure / gecen, 1),
-    uyum, durum,
+    uyum, durum, abonelik,
+    basari_basina_kota_birimi: kotaBirimi === null ? null : Math.round(kotaBirimi),
+    basari_basina_kota_payi: kotaPayi === null ? null : yuvarla(kotaPayi), kota_kaynagi, karsilastirma, maliyet_metni,
   };
 }
 
@@ -115,22 +152,35 @@ export function oneriHesapla(olcumler: IsOlcumu[], ayarlar: Partial<OneriAyarlar
       return { tur, is_sayisi: kendi.length, secenekler, oneri: null, not };
     }
 
-    const bilinen = adaylar.filter((s) => s.basari_basina_maliyet !== null);
+    const bilinen = adaylar.filter((s) => s.karsilastirma !== null);
+    const birimler = new Set(bilinen.map((s) => s.karsilastirma!.birim));
     const sureyeGore = (x: Secenek, y: Secenek): number => (x.basari_basina_sure_sn ?? Infinity) - (y.basari_basina_sure_sn ?? Infinity);
+    const ucuz = (liste: Secenek[]): Secenek => [...liste].sort((x, y) => x.karsilastirma!.deger - y.karsilastirma!.deger || sureyeGore(x, y))[0]!;
     let secilen: Secenek;
     let gerekce: string;
-    if (bilinen.length > 0) {
-      secilen = [...bilinen].sort((x, y) => x.basari_basina_maliyet! - y.basari_basina_maliyet! || sureyeGore(x, y))[0]!;
-      gerekce = ileti('o_gerekce_maliyet', { usd: secilen.basari_basina_maliyet! });
+    const notlar: string[] = [];
+    if (birimler.size === 1) {
+      secilen = ucuz(bilinen);
+      gerekce = secilen.karsilastirma!.birim === 'usd'
+        ? ileti('o_gerekce_maliyet', { usd: secilen.karsilastirma!.deger })
+        : ileti('o_gerekce_kota', { yuzde: yuvarla(secilen.karsilastirma!.deger * 100, 1) });
+    } else if (birimler.size === 2) {
+      // Dolar ve kota payi ortak birime cevrilemiyor: maliyetle secilmez; basarinin alt siniri, sonra sure.
+      secilen = [...bilinen].sort((x, y) => y.aralik[0] - x.aralik[0] || sureyeGore(x, y))[0]!;
+      gerekce = ileti('o_gerekce_karisik');
+      const kotali = bilinen.filter((s) => s.karsilastirma!.birim === 'kota');
+      notlar.push(ileti('o_birim_karisik', {
+        usd: ad(ucuz(bilinen.filter((s) => s.karsilastirma!.birim === 'usd'))), kota: ad(ucuz(kotali)),
+        ajanlar: [...new Set(kotali.map((s) => s.ajan))].join(', '),
+      }));
     } else {
       secilen = [...adaylar].sort(sureyeGore)[0]!;
       gerekce = ileti('o_gerekce_sure');
     }
     gerekce += ileti('o_gerekce_ek', { gecen: secilen.gecen, toplam: secilen.is_sayisi, alt: Math.round(secilen.aralik[0] * 100), ust: Math.round(secilen.aralik[1] * 100) });
-    const karsilastirilamayan = adaylar.filter((s) => s.basari_basina_maliyet === null && s !== secilen).map(ad);
-    const not = karsilastirilamayan.length > 0 && bilinen.length > 0
-      ? ileti('o_karsilastirilamadi', { liste: karsilastirilamayan.join(', ') })
-      : '';
+    const karsilastirilamayan = adaylar.filter((s) => s.karsilastirma === null && s !== secilen).map(ad);
+    if (karsilastirilamayan.length > 0 && bilinen.length > 0) notlar.push(ileti('o_karsilastirilamadi', { liste: karsilastirilamayan.join(', ') }));
+    const not = notlar.join(' ');
     return { tur, is_sayisi: kendi.length, secenekler, oneri: { ajan: secilen.ajan, model: secilen.model, gerekce }, not };
   });
 }
@@ -152,9 +202,7 @@ export function oneriMetni(turler: TurOnerisi[], ayarlar: Partial<OneriAyarlari>
     satirlar.push(t.oneri ? ileti('o_oneri', { ajan: t.oneri.ajan, model: t.oneri.model, gerekce: t.oneri.gerekce }) : ileti('o_oneri_yok', { not: t.not }));
     if (t.oneri && t.not) satirlar.push(ileti('o_not', { not: t.not }));
     for (const s of t.secenekler) {
-      const maliyet = s.basari_basina_maliyet !== null
-        ? ileti('o_maliyet', { usd: s.basari_basina_maliyet }) + (s.maliyet_araligi ? ileti('o_maliyet_araligi', { alt: s.maliyet_araligi[0], ust: s.maliyet_araligi[1] }) : '')
-        : s.maliyeti_bilinmeyen_is > 0 ? ileti('o_maliyet_bilinmiyor', { sayi: s.maliyeti_bilinmeyen_is }) : ileti('o_maliyet_yok');
+      const maliyet = s.maliyet_metni;
       const sure = s.basari_basina_sure_sn !== null ? ileti('o_sure', { sn: s.basari_basina_sure_sn }) : ileti('o_sure_yok');
       const uyum = s.uyum ? ileti('o_uyum', { gecen: s.uyum.gecen, toplam: s.uyum.toplam }) : '';
       satirlar.push(ileti('o_secenek', { ajan: s.ajan, model: s.model, gecen: s.gecen, sayi: s.is_sayisi, alt: Math.round(s.aralik[0] * 100), ust: Math.round(s.aralik[1] * 100), maliyet, sure, uyum, durum: ileti(DURUM_ANAHTARI[s.durum]) }));
