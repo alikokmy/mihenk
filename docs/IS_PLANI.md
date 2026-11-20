@@ -158,7 +158,7 @@ Sıra ölçütü: önce işin doğruluğu, sonra kullanıcı deneyiminin basitli
 
 | Aşama | İş | Kabul ölçütü |
 |---|---|---|
-| 9 | **Aç-kapa ayarları:** her özellik tek bir anahtarla açılıp kapanır (kapı, araç başına kancalar, skiller, sürücünün saklama kipi, uyanık tutma, bildirim, sonraki aşamaların bekçileri). Ayar `mihenk.json`'da durur; kodlama bilmeyen kullanıcı için çift tıklanan `mihenk-ayarlar.cmd` numaralı bir menü gösterir (aç / kapa, ne işe yaradığı tek cümle). Kurulumun her oturuma eklediği bağlam yükü (token) gösterilir | her anahtar için: kapalıyken etkisi yok, açıkken var (anahtar başına test); aç-kapa-aç dosyaları bayt bayt aynı bırakıyor; menü yönetici izni istemiyor |
+| 9 | **tamam** (2026-11-20; `npm test`: 144 test geçti; bkz. "Aşama 9 sonucu"). **Aç-kapa ayarları:** her özellik tek bir anahtarla açılıp kapanır (kapı, araç başına kancalar, skiller, sürücünün saklama kipi, uyanık tutma, bildirim, sonraki aşamaların bekçileri). Ayar `mihenk.json`'da durur; kodlama bilmeyen kullanıcı için çift tıklanan `mihenk-ayarlar.cmd` numaralı bir menü gösterir (aç / kapa, ne işe yaradığı tek cümle). Kurulumun her oturuma eklediği bağlam yükü (token) gösterilir | her anahtar için: kapalıyken etkisi yok, açıkken var (anahtar başına test); aç-kapa-aç dosyaları bayt bayt aynı bırakıyor; menü yönetici izni istemiyor |
 | 10 | **Doğruluk bekçileri:** (a) test kurcalama: iş sırasında test dosyası, beklenen çıktı değiştiyse ya da `skip` eklendiyse hüküm "şüpheli" notu taşır; (b) boş kanıt: doğrulama komutu iş başlamadan zaten geçiyorsa kayıtta not; (c) kararsız test: geçen doğrulama bir kez daha koşulur, sonuç değişirse "belirsiz (kararsız)" | her bekçi için kasıtlı bozuk ajan taklidi yakalanıyor; uyumlu taklit takılmıyor |
 | 11 | **Gerileme tabanı:** listenin başında projenin bütün test takımı bir kez koşulur; iş kapanırken önceden geçen bir şey kalırsa hüküm "geçti" olmaz | taklit bir ajanın kendi testini geçirip başka testi bozduğu iş "geçti" kapanmıyor |
 | 12 | **Gözetimsiz koşu emniyeti:** liste / iş başına dolar ve süre tavanı; aynı hatayı tekrarlayan denemeyi erken kesme; abonelik limitine takılınca güvenli duraklama ve sonra kaldığı yerden sürme; yıkıcı komut bekçisi (`rm -rf`, `git reset --hard`, `push --force`, proje dışına yazma) kancaya eklenir | tavan aşılınca iş "bütçe" gerekçesiyle kapanıyor ve liste duruyor; döngü taklidi erken kesiliyor; yıkıcı komut taklidi reddediliyor |
@@ -549,6 +549,30 @@ düzenledim (koruma doğru çalıştı); tuzak ayrıca yeniden koşuldu.
 
 **Sürüm 0.1:** Aşama 1-8 kapandı; `v0.1.0` etiketi konuldu. Açık kalemler: Cline ve Qwen Code'un gerçek araçla denenmesi, Antigravity 2.0
 komut satırı, önceki aşamalardan kalanlar (uyanık tutmanın gözlenmesi, gerçek ajanla oturum devri, elle açılan oturumların maliyeti).
+
+## Aşama 9 sonucu (2026-11-20)
+
+13 anahtar (`src/ayar.ts`): `kapi`, `skiller`, `yontem_metni`, araç başına `arac_<ad>` (8), `saklama`, `uyanik_tut`. Kurulumla ilgili
+anahtar değişince `kur` ayarlara eşitlenir: kayıtta olup bu koşuda yazılmayan dosya, kaldırmanın kullandığı `dosyayiGeriAl` ile geri
+alınır. Çalışma anındaki anahtarları kapı ve sürücü okur. `mihenk ayar` (liste, `ac` / `kapa`), çift tıklanan `mihenk-ayarlar.cmd`
+(numaralı menü; değişiklik hemen uygulanır). `mihenk kur` artık `--arac` verilmezse ayarlara eşitleyerek kurar.
+
+**Kanıt:** `test/ayar.test.ts` (9 test). Her anahtar için kapalıyken etkisi yok, açıkken var (8 araç tek tek; skill, yöntem metni, kapı,
+saklama, uyanık tutma); aç-kapa-aç sonrası proje bayt bayt aynı (araç başına ayrı denetim); kullanıcının kendi `mihenk.json`'u ayar
+açılıp kapanınca kendi biçimiyle bayt bayt geri dönüyor ve ayar dışı alanlarına dokunulmuyor; menü düz bir `node` sürecinde stdin'le
+sürülüyor (yönetici izni yok; yanlış giriş uyarılıyor). Eşitlemenin geri alması kasıtlı bozulunca 9 testin 4'ü kaldı.
+
+**Bağlam yükü:** liste, kurulumun her oturuma eklediği metni gösterir. Örnek kurulumda yaklaşık 1905 token: kurallar 1178, skill özetleri
+1985, defter araçları 4456 karakter. Araç tanımlarının boyutu bir test tarafından gerçek sunucudan ölçülür ve sabitle %10 içinde
+uyuşmak zorundadır. Token = karakter / 4 kaba bir tahmindir; gerçek token sayısı modele göre değişir.
+
+**Kararlar (öneri uygulandı; veto edilebilir):**
+
+| Karar | Seçilen | En güçlü karşı görüş |
+|---|---|---|
+| Kapı kapatılınca | kanca kurulu kalır, çalışınca geçit verir ve kaydeder | Kancayı dosyadan da kaldırmak "kapalı"yı daha kesin yapardı; ama araç ayarı (ör. Codex'in kanca onayı) her aç-kapada yeniden onay isterdi |
+| Menü biçimi | konsolda numaralı liste | Bir pencere (GUI) kodlama bilmeyen için daha tanıdık olurdu; tepsi uygulaması 0.3 adayı olarak bekliyor |
+| Kur'un anlamı | `--arac` yoksa ayarlara eşitler (kapatılmış aracın dosyalarını geri alır) | Önceki davranış "her zaman hepsini kur"du; artık bir aracı kapatmış kullanıcının kurulumu onu geri getirmez |
 
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 

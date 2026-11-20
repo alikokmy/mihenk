@@ -58,6 +58,23 @@ Bu komut yedi skill'i (`.claude/skills` ve `.agents/skills`), her oturuma giren 
 Kurulum ayrıca proje klasörüne örnek bir iş listesi (`mihenk-isler.ornek.json`) ve Windows'ta çift tıklanır bir başlatma dosyası
 (`mihenk-baslat.cmd`) bırakır.
 
+## Özellikleri açıp kapatmak
+
+Proje klasöründeki `mihenk-ayarlar.cmd` dosyasına çift tıklayın. Her özellik bir numarayla listelenir; numarayı yazıp Enter'a basınca
+açılır ya da kapanır ve hemen uygulanır, yalnız Enter çıkar. (Komut satırından: `mihenk ayar`, `mihenk ayar skiller kapa`.)
+
+| Anahtar | Ne yapar | Varsayılan |
+|---|---|---|
+| `kapi` | kanıtsız "bitti" ve commit'i engelleyen kapı | açık |
+| `skiller` | ajana yöntemi öğreten beceriler | açık |
+| `yontem_metni` | AGENTS.md'deki kısa mihenk kuralları | açık |
+| `arac_<araç>` | o araç için defter bağlantısı (ve varsa kapı kancası) | açık |
+| `saklama` | geçen işten sonra: `yerel` commit, `yok`, `yerel_gonder` | `yerel` |
+| `uyanik_tut` | liste yürürken bilgisayarı uyanık tut | kapalı |
+
+Kapatılan özelliğin dosyaları kaldırmadaki gibi geri alınır; yeniden açınca dosyalar bayt bayt önceki haline döner. Ayarlar `mihenk.json`'da
+durur ve yalnız varsayılandan farklı olanlar yazılır. Liste, kurulumun her oturumda ajana eklediği yaklaşık metin yükünü de gösterir (token).
+
 ## Kaldırmak
 
 Proje klasöründeki `mihenk-kaldir.cmd` dosyasına çift tıklayın (ya da: `node <mihenk yolu>/dist/src/cli.js kaldir --hedef <proje>`).

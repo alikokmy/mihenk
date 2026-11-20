@@ -36,8 +36,25 @@ export function kayitOku(kok: string): KurulumKaydi {
 }
 
 export function kayitYaz(kok: string, k: KurulumKaydi): void {
+  if (Object.keys(k.dosyalar).length === 0 && k.dizinler.length === 0) {
+    // Bos kayit iz birakmaz: dosya ve (bos kaldiysa) yedek dizini ile .mihenk silinir.
+    rmSync(kayitYolu(kok), { force: true });
+    for (const d of [join(kok, '.mihenk', 'kurulum-yedek'), join(kok, '.mihenk')]) {
+      try {
+        if (existsSync(d) && bosAgacMi(d)) rmSync(d, { recursive: true });
+      } catch {
+        // birakilir
+      }
+    }
+    return;
+  }
   mkdirSync(join(kok, '.mihenk'), { recursive: true });
   writeFileSync(kayitYolu(kok), JSON.stringify(k, null, 2) + '\n');
+}
+
+/** Dizinde (alt dizinler dahil) hic dosya yok mu. */
+function bosAgacMi(d: string): boolean {
+  return readdirSync(d, { withFileTypes: true }).every((g) => g.isDirectory() && bosAgacMi(join(d, g.name)));
 }
 
 export function yedekYaz(kok: string, goreli: string, icerik: Buffer): void {
@@ -110,6 +127,45 @@ export function cerrahiCikar(goreli: string, metin: string): string | null {
 
 const bosMu = (metin: string): boolean => metin.trim() === '' || metin.trim() === '{}';
 
+/**
+ * Tek dosyada kurulumun yaptigini geri alir (kaldirma ve ayarla kapatilan ozellik ayni yolu kullanir):
+ * kurulumun yazdigi gibi duruyorsa silinir ya da yedekten bayt bayt geri yuklenir; kullanici degistirdiyse yalniz mihenk parcasi cikar.
+ */
+export function dosyayiGeriAl(kok: string, g: string, k: DosyaKaydi, sonuc: Pick<KaldirSonucu, 'silinen' | 'geri_yuklenen' | 'ayiklanan' | 'birakilan'>): void {
+  const yol = join(kok, g);
+  if (!existsSync(yol)) return;
+  const mevcut = readFileSync(yol);
+  if (ozet(mevcut) === k.ozet) {
+    if (!k.once_vardi) { unlinkSync(yol); sonuc.silinen.push(g); return; }
+    if (k.yedek && existsSync(yedekYolu(kok, g))) { writeFileSync(yol, readFileSync(yedekYolu(kok, g))); sonuc.geri_yuklenen.push(g); return; }
+  }
+  const yeni = cerrahiCikar(g, mevcut.toString('utf8'));
+  if (yeni === null) {
+    sonuc.birakilan.push(`${g} (kurulumdan sonra degistirilmis; mihenk'in parcasi ayiklanamiyor, dokunulmadi)`);
+    return;
+  }
+  if (!k.once_vardi && bosMu(yeni)) { unlinkSync(yol); sonuc.silinen.push(g); return; }
+  if (yeni !== mevcut.toString('utf8')) { writeFileSync(yol, yeni); sonuc.ayiklanan.push(g); }
+}
+
+/** Kurulumun olusturdugu ve artik bos olan dizinleri siler (en derinden); silinenleri kayittan da cikarir. */
+export function bosDizinleriSil(kok: string, kayit: KurulumKaydi): void {
+  for (const d of [...kayit.dizinler].sort((a, b) => b.split('/').length - a.split('/').length || b.localeCompare(a))) {
+    const yol = join(kok, d);
+    try {
+      if (existsSync(yol) && readdirSync(yol).length === 0) rmdirSync(yol);
+    } catch {
+      // bos degil ya da kilitli: birakilir
+    }
+  }
+  kayit.dizinler = kayit.dizinler.filter((d) => existsSync(join(kok, d)));
+}
+
+/** Yedegi siler (dosya kayittan cikarken). */
+export function yedegiSil(kok: string, g: string): void {
+  rmSync(yedekYolu(kok, g), { force: true });
+}
+
 // ---- kaldirma ----
 
 export interface KaldirSecenekleri {
@@ -136,7 +192,7 @@ function varsayilanArsiv(): string {
 }
 
 /** Kurulum kaydi olmayan eski kurulumlar icin: kurulumun bilinen dosyalari. */
-const BILINEN_OLUSTURULANLAR = ['mihenk-baslat.cmd', 'mihenk-kaldir.cmd', 'mihenk-isler.ornek.json'];
+const BILINEN_OLUSTURULANLAR = ['mihenk-baslat.cmd', 'mihenk-kaldir.cmd', 'mihenk-ayarlar.cmd', 'mihenk-isler.ornek.json'];
 const BILINEN_DUZENLENENLER = ['AGENTS.md', 'CLAUDE.md', '.gitignore', '.mcp.json', '.codex/config.toml', '.codex/hooks.json',
   '.claude/settings.json', '.gemini/settings.json', 'opencode.json', 'kilo.json', '.qwen/settings.json', '.cline/mcp_settings.json', '.agents/plugins/mihenk/plugin.json', '.agents/plugins/mihenk/mcp_config.json'];
 
@@ -162,27 +218,12 @@ export function kaldir(hedefDizin: string, secenek: KaldirSecenekleri = {}): Kal
   }
 
   for (const [g, k] of Object.entries(kayit.dosyalar).sort(([a], [b]) => b.localeCompare(a))) {
-    const yol = join(kok, g);
-    if (!existsSync(yol)) continue;
-    const mevcut = readFileSync(yol);
-    if (secenek.cmdDen && g === 'mihenk-kaldir.cmd') {
+    if (secenek.cmdDen && g === 'mihenk-kaldir.cmd' && existsSync(join(kok, g))) {
       sonuc.silinen.push(`${g} (pencere kapanirken)`);
       continue;
     }
-    if (ozet(mevcut) === k.ozet) {
-      // Kurulumun yazdigi gibi duruyor.
-      if (!k.once_vardi) { unlinkSync(yol); sonuc.silinen.push(g); continue; }
-      if (k.yedek && existsSync(yedekYolu(kok, g))) { writeFileSync(yol, readFileSync(yedekYolu(kok, g))); sonuc.geri_yuklenen.push(g); continue; }
-    }
-    if (!kayitVar && BILINEN_OLUSTURULANLAR.includes(g)) { unlinkSync(yol); sonuc.silinen.push(g); continue; }
-    // Kullanici degistirmis (ya da yedek gecersiz): cerrahi.
-    const yeni = cerrahiCikar(g, mevcut.toString('utf8'));
-    if (yeni === null) {
-      sonuc.birakilan.push(`${g} (kurulumdan sonra degistirilmis; mihenk'in parcasi ayiklanamiyor, dokunulmadi)`);
-      continue;
-    }
-    if (!k.once_vardi && bosMu(yeni)) { unlinkSync(yol); sonuc.silinen.push(g); continue; }
-    if (yeni !== mevcut.toString('utf8')) { writeFileSync(yol, yeni); sonuc.ayiklanan.push(g); }
+    if (!kayitVar && BILINEN_OLUSTURULANLAR.includes(g) && existsSync(join(kok, g))) { unlinkSync(join(kok, g)); sonuc.silinen.push(g); continue; }
+    dosyayiGeriAl(kok, g, k, sonuc);
   }
 
   // Kayitsiz kurulum: paketten gelen skill dizinleri, icerikleri paketle ayniysa.
@@ -197,14 +238,7 @@ export function kaldir(hedefDizin: string, secenek: KaldirSecenekleri = {}): Kal
   }
 
   // Kurulumun olusturdugu ve artik bos olan dizinler (en derinden).
-  for (const d of [...kayit.dizinler].sort((a, b) => b.split('/').length - a.split('/').length || b.localeCompare(a))) {
-    const yol = join(kok, d);
-    try {
-      if (existsSync(yol) && readdirSync(yol).length === 0) rmdirSync(yol);
-    } catch {
-      // bos degil ya da kilitli: birakilir
-    }
-  }
+  bosDizinleriSil(kok, kayit);
 
   // Defter.
   const mihenkDizini = join(kok, '.mihenk');

@@ -4,7 +4,8 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { kayitOku, kayitYaz, ozet, yedekYaz } from './kaldir.js';
+import { ayarlariOku } from './ayar.js';
+import { bosDizinleriSil, dosyayiGeriAl, kayitOku, kayitYaz, ozet, yedegiSil, yedekYaz } from './kaldir.js';
 
 export type Arac = 'claude' | 'codex' | 'gemini' | 'antigravity' | 'opencode' | 'kilo' | 'cline' | 'qwen';
 export const ARACLAR: readonly Arac[] = ['claude', 'codex', 'gemini', 'antigravity', 'opencode', 'kilo', 'cline', 'qwen'];
@@ -15,12 +16,19 @@ export interface KurSecenekleri {
   paketDizini?: string;
   /** Defter sunucusunun giris dosyasi; varsayilan bu deponun dist/src/bin.js dosyasi. */
   sunucuYolu?: string;
+  /**
+   * Kurulumu ayarlara esitle: bu kosuda yazilmayan (kapatilmis ozelliklere ait) dosyalar geri alinir. Ayar menusu ve
+   * "mihenk kur" komutu bunu kullanir; ozel bir arac listesiyle cagrilan kur (ornegin uyum senaryolari) eskileri silmez.
+   */
+  esitle?: boolean;
 }
 
 export interface KurSonucu {
   yazilan: string[];
   degismeyen: string[];
   uyarilar: string[];
+  /** Esitlemede geri alinan dosyalar (kapatilan ozelliklerin). */
+  geri_alinan?: string[];
 }
 
 const BURASI = dirname(fileURLToPath(import.meta.url)); // dist/src
@@ -28,7 +36,11 @@ const egik = (yol: string): string => yol.replace(/\\/g, '/');
 
 export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu {
   const hedef = resolve(hedefDizin);
-  const araclar = secenek.araclar ?? ARACLAR;
+  const ayar = ayarlariOku(hedef);
+  const araclar = secenek.araclar ?? ARACLAR.filter((a) => ayar[`arac_${a}`] !== false);
+  const skiller = ayar.skiller !== false;
+  const yontemMetni = ayar.yontem_metni !== false;
+  const istenen = new Set<string>();
   const paket = secenek.paketDizini ?? resolve(BURASI, '..', '..', 'paket');
   const sunucu = secenek.sunucuYolu ?? join(BURASI, 'bin.js');
   const sonuc: KurSonucu = { yazilan: [], degismeyen: [], uyarilar: [] };
@@ -57,6 +69,7 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
   };
 
   const yaz = (goreli: string, icerik: string): void => {
+    istenen.add(egik(goreli));
     const yol = join(hedef, goreli);
     if (existsSync(yol) && readFileSync(yol, 'utf8') === icerik) {
       sonuc.degismeyen.push(goreli);
@@ -107,6 +120,7 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
         const goreli = join(goreliDizin, d.name, kaynak.slice(join(paket, 'skills', d.name).length + 1));
         const icerik = readFileSync(kaynak);
         const yol = join(hedef, goreli);
+        istenen.add(egik(goreli));
         if (existsSync(yol) && readFileSync(yol).equals(icerik)) {
           sonuc.degismeyen.push(egik(goreli));
         } else {
@@ -121,21 +135,22 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
   };
 
   // Her oturuma giren kisa blok: Codex ve Antigravity AGENTS.md'yi dogrudan okur.
-  blokGuncelle('AGENTS.md', '<!-- mihenk:basla -->', '<!-- mihenk:bitti -->', readFileSync(join(paket, 'AGENTS.md'), 'utf8'));
+  if (yontemMetni) blokGuncelle('AGENTS.md', '<!-- mihenk:basla -->', '<!-- mihenk:bitti -->', readFileSync(join(paket, 'AGENTS.md'), 'utf8'));
 
-  // Codex, Gemini CLI ve Antigravity ortak .agents/skills dizinini okur (OpenCode icin belgeden dogrulanmadi; denemede bakilacak).
-  if (araclar.some((a) => a !== 'claude')) skilleriKur('.agents/skills');
+  // Codex, Gemini CLI, Antigravity, OpenCode, Kilo ve Qwen ortak .agents/skills dizinini okur; Claude Code ve Cline okumaz.
+  if (skiller && araclar.some((a) => a !== 'claude' && a !== 'cline')) skilleriKur('.agents/skills');
 
   if (araclar.includes('claude')) {
-    skilleriKur('.claude/skills'); // Claude Code yalniz .claude/skills okur.
+    if (skiller) skilleriKur('.claude/skills'); // Claude Code yalniz .claude/skills okur.
     jsonGuncelle('.mcp.json', (n) => {
       n.mcpServers = { ...(n.mcpServers ?? {}), mihenk: mcpKaydi };
     });
     // Claude Code, CLAUDE.md varken AGENTS.md'yi kendiliginden okumaz: icerme satiri gerekir.
     const claudeMd = oku('CLAUDE.md');
-    if (claudeMd === undefined) yaz('CLAUDE.md', '@AGENTS.md\n');
+    if (!yontemMetni) { /* AGENTS.md blogu yok: icerme satiri da yazilmaz */ }
+    else if (claudeMd === undefined) yaz('CLAUDE.md', '@AGENTS.md\n');
     else if (!/^@AGENTS\.md\s*$/m.test(claudeMd)) yaz('CLAUDE.md', claudeMd.replace(/\n*$/, '\n\n') + '@AGENTS.md\n');
-    else sonuc.degismeyen.push('CLAUDE.md');
+    else { sonuc.degismeyen.push('CLAUDE.md'); istenen.add('CLAUDE.md'); }
   }
 
   if (araclar.includes('codex')) {
@@ -225,7 +240,7 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
   if (araclar.includes('cline')) {
     // Cline 3.0.74 (docs.cline.bot): skill'leri .cline/skills ve .claude/skills'ten okur (.agents/skills'i okumaz); AGENTS.md'yi okur.
     // MCP kaydi kullanici duzeyindedir; proje icindeki bu dosya CLINE_MCP_SETTINGS_PATH ile gosterilir (surucu bunu yapar).
-    skilleriKur('.cline/skills');
+    if (skiller) skilleriKur('.cline/skills');
     jsonGuncelle('.cline/mcp_settings.json', (n) => {
       n.mcpServers = { ...(n.mcpServers ?? {}), mihenk: mcpKaydi };
     });
@@ -255,13 +270,30 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
   if (process.platform === 'win32') {
     const cli = egik(join(BURASI, 'cli.js'));
     yaz('mihenk-baslat.cmd', ['@echo off', 'rem mihenk: is listesini (mihenk-isler.json) yurutur. Cift tiklayin.', `node --disable-warning=ExperimentalWarning "${cli}" sur --hedef "%~dp0."`, 'echo.', 'pause', ''].join('\r\n'));
+    yaz('mihenk-ayarlar.cmd', ['@echo off', 'rem mihenk: ozellikleri acip kapatir (numara yazin, Enter). Cift tiklayin.',
+      `node --disable-warning=ExperimentalWarning "${cli}" ayar --hedef "%~dp0." --menu`, 'echo.', 'pause', ''].join('\r\n'));
     // Bu dosya en sonda kendini siler: "(goto) 2>nul & del" kalibi cmd'nin "batch file cannot be found" uyarisini onler.
     // Kaldirma (--cmd-den) bu dosyaya dokunmaz; icerik kurulumun yazdigi gibi degilse cmd de silmez.
     yaz('mihenk-kaldir.cmd', ['@echo off', 'rem mihenk: mihenk\'in bu projeye ekledigi her seyi geri alir; sizin dosyalariniza dokunmaz. Cift tiklayin.',
       `node --disable-warning=ExperimentalWarning "${cli}" kaldir --hedef "%~dp0." --cmd-den`, 'echo.', 'pause', '(goto) 2>nul & del "%~f0"', ''].join('\r\n'));
   }
 
-  if (sonuc.yazilan.length > 0) kayitYaz(hedef, kayit);
+  // Esitleme: kayitta olup bu kosuda istenmeyen dosyalar (kapatilan ozellik ya da arac) geri alinir. mihenk.json ayarlarin kendisidir.
+  const geriAlinan: string[] = [];
+  if (secenek.esitle) {
+    for (const [g, k] of Object.entries(kayit.dosyalar).sort(([a], [b]) => b.localeCompare(a))) {
+      if (istenen.has(g) || g === 'mihenk.json') continue;
+      const s = { silinen: [] as string[], geri_yuklenen: [] as string[], ayiklanan: [] as string[], birakilan: [] as string[] };
+      dosyayiGeriAl(hedef, g, k, s);
+      geriAlinan.push(...s.silinen, ...s.geri_yuklenen, ...s.ayiklanan);
+      sonuc.uyarilar.push(...s.birakilan);
+      delete kayit.dosyalar[g];
+      yedegiSil(hedef, g);
+    }
+    bosDizinleriSil(hedef, kayit);
+  }
+  sonuc.geri_alinan = geriAlinan;
+  if (sonuc.yazilan.length > 0 || geriAlinan.length > 0) kayitYaz(hedef, kayit);
   return sonuc;
 }
 

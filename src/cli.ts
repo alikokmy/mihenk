@@ -8,12 +8,13 @@ import { join, resolve } from 'node:path';
 import { AJANLAR } from './ajanlar.js';
 import { ARACLAR, kur, type Arac } from './kur.js';
 import { SAKLAMA_KIPLERI, type SaklamaKipi } from './saklama.js';
-import { listeOku, listeyiYurut } from './surucu.js';
+import { listeOku, listeyiYurut, uyanikIstendiMi } from './surucu.js';
 import { uyanikTut, uykuAyariniOku, uykuUyarisi } from './uyanik.js';
 import { KONTROL_ACIKLAMASI, raporMetni, SENARYOLAR, senaryoKostur, uyumOzeti, type SenaryoSonucu } from './uyum.js';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { Defter } from './defter.js';
 import { kaldir } from './kaldir.js';
+import { ayarKomutu } from './ayar-cli.js';
 import { oneriHesapla, oneriMetni, VARSAYILAN_ONERI_AYARLARI, type OneriAyarlari } from './oneri.js';
 
 const [komut, ...gerisi] = process.argv.slice(2);
@@ -35,6 +36,7 @@ function kullanim(): void {
   console.error('  mihenk sur [--hedef <proje klasoru>] [--liste <dosya>] [--ajan claude|codex|opencode|kilo]');
   console.error('             [--saklama yok|yerel|yerel_gonder] [--uyanik-tut]');
   console.error('  mihenk uyum [--arac claude,codex,opencode,kilo] [--senaryo duzeltme,tuzak,karar] [--cikis <klasor>]');
+  console.error('  mihenk ayar [--hedef <proje klasoru>] [<ayar> ac|kapa|<deger>] [--menu]   ozellikleri acip kapatir');
   console.error('  mihenk kaldir [--hedef <proje klasoru>] [--defter-dahil]   kurulumun ekledigi her seyi geri alir');
   console.error('  mihenk oneri [--hedef <proje klasoru>] [--esik 0.5] [--en-az 5] [--uyum <uyum-raporu.json>] [--json]');
   console.error('Defter sunucusu ayri calisir: mihenk-defter [--kok <proje klasoru>]');
@@ -128,7 +130,11 @@ function kurKomutu(): number {
   const istenen = (secenek('--arac') ?? ARACLAR.join(',')).split(',').map((a) => a.trim()).filter(Boolean);
   const bilinmeyen = istenen.filter((a) => !ARACLAR.includes(a as Arac));
   if (bilinmeyen.length > 0) throw new Error(`bilinmeyen arac: ${bilinmeyen.join(', ')}. Gecerli: ${ARACLAR.join(', ')}`);
-  const sonuc = kur(secenek('--hedef') ?? process.cwd(), { araclar: istenen as Arac[] });
+  // --arac verilmezse kurulum ayarlara (mihenk.json) esitlenir: kapatilmis ozelliklerin dosyalari geri alinir.
+  const sonuc = secenek('--arac') === undefined
+    ? kur(secenek('--hedef') ?? process.cwd(), { esitle: true })
+    : kur(secenek('--hedef') ?? process.cwd(), { araclar: istenen as Arac[] });
+  for (const d of sonuc.geri_alinan ?? []) console.log(`geri alindi ${d}`);
   for (const d of sonuc.yazilan) console.log(`yazildi    ${d}`);
   for (const u of sonuc.uyarilar) console.log(`UYARI      ${u}`);
   console.log(`${sonuc.yazilan.length} dosya yazildi, ${sonuc.degismeyen.length} dosya zaten gunceldi.`);
@@ -154,7 +160,7 @@ async function surKomutu(): Promise<number> {
     throw new Error('Kullanilabilecek bir ajan araci bulunamadi. Codex, OpenCode ya da Claude Code kurun, ya da --ajan ile secin.');
   }
 
-  const uyanikIstendi = gerisi.includes('--uyanik-tut') || liste.uyanik_tut === true;
+  const uyanikIstendi = uyanikIstendiMi({ bayrak: gerisi.includes('--uyanik-tut'), liste, kok });
   let durdur = (): void => undefined;
   if (uyanikIstendi) {
     const u = await uyanikTut();
@@ -190,6 +196,7 @@ try {
   else if (komut === 'uyum') process.exitCode = await uyumKomutu();
   else if (komut === 'oneri') process.exitCode = oneriKomutu();
   else if (komut === 'kaldir') process.exitCode = kaldirKomutu();
+  else if (komut === 'ayar') process.exitCode = await ayarKomutu();
   else {
     kullanim();
     process.exitCode = komut === undefined || komut === '--help' ? 0 : 2;

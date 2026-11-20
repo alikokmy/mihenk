@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { ayarlariOku } from './ayar.js';
 
 /** Ust uste bu kadar engelden sonra kapi gecit verir ve bunu kaydeder (sonsuz donguyu onler). */
 export const ENGEL_SINIRI = 3;
@@ -43,11 +44,7 @@ function olayYaz(kok: string, olay: Record<string, unknown>): void {
 
 /** mihenk.json icinde "kapi": false varsa kapi kapali (kullanicinin bilerek actigi atlama yolu; her seferinde kaydedilir). */
 export function kapiKapaliMi(kok: string): boolean {
-  try {
-    return (JSON.parse(readFileSync(join(kok, 'mihenk.json'), 'utf8')) as { kapi?: unknown }).kapi === false;
-  } catch {
-    return false;
-  }
+  return ayarlariOku(kok).kapi === false;
 }
 
 function durumOku(kok: string, oturum: string): OturumDurumu | undefined {

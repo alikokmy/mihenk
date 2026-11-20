@@ -14,6 +14,7 @@ import { Defter, SURUCU_ISTEMCISI, type Durum, type IsKaydi } from './defter.js'
 import { agaciOldur } from './dogrulama.js';
 import { Ret } from './hata.js';
 import { depoDurumu, sakla, SAKLAMA_KIPLERI, type SaklamaKipi } from './saklama.js';
+import { ayarlariOku } from './ayar.js';
 import { kisalt } from './sinir.js';
 
 export interface ListeIsi {
@@ -245,6 +246,16 @@ export function ajaniKostur(
   });
 }
 
+/** Saklama kipi: komut satiri, sonra is listesi, sonra projenin ayari (mihenk.json "saklama"; varsayilan "yerel"). */
+export function saklamaKipiSec(o: { bayrak?: SaklamaKipi | undefined; liste: IsListesi; kok: string }): SaklamaKipi {
+  return o.bayrak ?? o.liste.saklama ?? (ayarlariOku(o.kok).saklama as SaklamaKipi);
+}
+
+/** Uyanik tutma: komut satiri ya da is listesi acikca istediyse; liste bir sey demiyorsa projenin ayari ("uyanik_tut"). */
+export function uyanikIstendiMi(o: { bayrak: boolean; liste: IsListesi; kok: string }): boolean {
+  return o.bayrak || o.liste.uyanik_tut === true || (o.liste.uyanik_tut === undefined && ayarlariOku(o.kok).uyanik_tut === true);
+}
+
 function gitignoreSagla(kok: string): void {
   // Defter klasoru projeyle birlikte commit edilmez.
   const yol = join(kok, '.gitignore');
@@ -255,7 +266,7 @@ function gitignoreSagla(kok: string): void {
 export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> {
   const kok = resolve(s.kok);
   const ajanlar = s.ajanlar ?? AJANLAR;
-  const kip: SaklamaKipi = s.saklama ?? s.liste.saklama ?? 'yerel';
+  const kip = saklamaKipiSec({ bayrak: s.saklama, liste: s.liste, kok });
   const denemeSiniri = s.denemeSiniri ?? 3;
   const devirSiniri = s.devirSiniri ?? 3;
   const ajanZamanAsimiMs = (s.ajanZamanAsimiSn ?? 900) * 1000;
