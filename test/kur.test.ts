@@ -47,7 +47,7 @@ test('kur: kapi kancalari Claude Code ve Codex icin yazilir; baska kancalar koru
   assert.deepEqual(stop.args.slice(2, 4), ['claude', 'bitir']);
   const codex = JSON.parse(oku(h, '.codex', 'hooks.json'));
   assert.match(codex.hooks.Stop[0].hooks[0].command, /kapi-bin\.js" codex bitir --kok "/);
-  assert.equal(codex.hooks.PreToolUse[0].matcher, '^Bash$');
+  assert.equal(codex.hooks.PreToolUse[0].matcher, '.*');
   assert.ok(sonuc.uyarilar.some((u) => u.includes('/hooks')));
 });
 
@@ -69,7 +69,7 @@ test('kur: Cline (skill .cline/skills, MCP proje icinde) ve Qwen Code (.qwen/set
   const q = JSON.parse(oku(h, '.qwen', 'settings.json'));
   assert.equal(q.mcpServers.mihenk.command, NODE);
   assert.match(q.hooks.Stop[0].hooks[0].command, /kapi-bin\.js" qwen bitir/);
-  assert.equal(q.hooks.PreToolUse[0].matcher, 'run_shell_command');
+  assert.equal(q.hooks.PreToolUse[0].matcher, '.*');
   const { kaldir } = await import('../src/kaldir.js');
   kaldir(h, { arsivDizini: hedef() });
   assert.deepEqual(readdirSync(h), []);

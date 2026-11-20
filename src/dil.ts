@@ -172,6 +172,9 @@ export const METINLER = {
   l_paket_yok: { tr: '"{komut}" icin package.json yok', en: 'there is no package.json for "{komut}"' },
   l_dosya_yok: { tr: '"{komut}" calistirilamaz: {dosya} dosyasi yok', en: '"{komut}" cannot run: file {dosya} does not exist' },
   l_ajan_yok: { tr: '"{ajan}" araci bu bilgisayarda bulunamadi', en: 'the tool "{ajan}" was not found on this computer' },
+  // oturum dongu bekcisi (Asama 22; ajana giden metin)
+  k_dongu_uyari: { tr: 'mihenk: ayni cagriyi arka arkaya {sayi}. kez yapiyorsunuz ve sonuc degismiyor. Bu kez reddedildi: farkli bir yol deneyin (once hatanin nedenini okuyun, kodu degistirin ya da isi gerekcesiyle "kaldi" diye kapatin).', en: 'mihenk: you are making the same call for the {sayi}th time in a row and nothing changes. Refused this time: try a different approach (read the cause of the error, change the code, or close the job as failed with a reason).' },
+  k_dongu_ret: { tr: 'mihenk: ayni cagri arka arkaya {sayi}. kez; dongu durduruldu. Farkli bir cagri yapana dek bu cagri reddedilecek.', en: 'mihenk: the same call {sayi} times in a row; the loop was stopped. This call will be refused until you make a different one.' },
   // oneri
   o_veri_yetersiz: { tr: 'veri yetersiz: secenek basina en cok {en_cok} kapanmis is var, en az {en_az} gerekir', en: 'not enough data: at most {en_cok} closed jobs per option, at least {en_az} needed' },
   o_esik_yok: { tr: 'esigi gecen secenek yok: yeterli verisi olanlarin hicbirinde basari oraninin alt siniri %{esik}\'u gecmiyor{uyum}', en: 'no option passes the threshold: for none with enough data does the lower bound of the success rate exceed {esik}%{uyum}' },

@@ -183,7 +183,7 @@ Kaynak: superpowers ve CodeBurn depolarının README, sürüm notları, belgeler
 | 19 | **tamam** (2026-11-20; `npm test`: 204 test geçti; bkz. "Aşama 19 sonucu"). **Doktor ve hata paketi:** `mihenk doktor` ve pencerede "Durum": Node sürümü, bulunan araçlar, MCP kaydı okunuyor mu, kancanın son çalışması, Codex kanca onayı, uyku; her satırda TAMAM ya da SORUN ve ne yapılacağı. Kişisel yol ve anahtarları temizlenmiş tek dosyalık hata paketi | kasıtlı bozulan dört kurulum (MCP kaydı silinmiş, kanca silinmiş, ajan yok, eski Node) doğru satırda SORUN veriyor; temiz kurulumda hepsi TAMAM; komut dosya yazmıyor; pakette ev dizini yolu ve gizli anahtar deseni yok |
 | 20 | **tamam** (2026-11-20; `npm test`: 208 test geçti; bkz. "Aşama 20 sonucu"). **Başlatmadan önce liste denetimi ("yapıcı denetimi"):** her işte eksik alan, izinsiz program, projede tanımlı olmayan betik (ör. `npm test` yok) için anlaşılır uyarı; pencerede ve komut satırında | tanımsız betik ve izinsiz program içeren liste başlamadan iş başına uyarı veriyor; temiz liste uyarısız |
 | 21 | **tamam** (2026-11-20; `npm test`: 210 test geçti; bkz. "Aşama 21 sonucu"). **Öneride geri alma sinyali:** sonradan geri alınan "geçti" işi öneri hesabında başarı sayılmaz; rapor onu "geri alındı" gösterir | sentetik defterde geri alınan işin seçeneğinin başarı oranı düşüyor, öteki işler etkilenmiyor |
-| 22 | **Elle açılan oturumda döngü bekçisi (Claude Code, Codex):** aynı araç çağrısı ya da aynı başarısız komut tekrarlanınca önce uyarır, sonra durdurur; tek oturumluk izin | taklit kanca girdisiyle eşikte uyarı, sonra ret; farklı çağrı sayacı sıfırlıyor; anahtar kapalıyken etkisiz; bekçi kendisi bozulursa geçit verip kaydediyor |
+| 22 | **tamam, bir notla** (2026-11-20; `npm test`: 214 test geçti; bkz. "Aşama 22 sonucu"). **Elle açılan oturumda döngü bekçisi (Claude Code, Codex):** aynı araç çağrısı ya da aynı başarısız komut tekrarlanınca önce uyarır, sonra durdurur; tek oturumluk izin | taklit kanca girdisiyle eşikte uyarı, sonra ret; farklı çağrı sayacı sıfırlıyor; anahtar kapalıyken etkisiz; bekçi kendisi bozulursa geçit verip kaydediyor |
 | 23 | **Elle açılan oturumların maliyeti** (Aşama 5'ten açık): CodeBurn ya da ccusage çıktısı zaman aralığıyla işe bağlanır; README'ye kullanıcı sorularıyla "Sorular" bölümü | kayıtlı CodeBurn çıktısı örneğinde iş aralığına düşen maliyet elle hesapla uyuşuyor; araç yoksa "bilinmiyor"; her soru bir komuta ya da sekmeye bağlı |
 
 **Karar (kullanıcı, 2026-11-20):** `gerileme` varsayılanı `liste_sonunda` oldu (superpowers bulgusu: görev tek test dosyası
@@ -861,6 +861,22 @@ kaldırır.
 **Kanıt:** `test/geri-sinyal.test.ts` (2 test): sentetik veride geri alınan üç iş başarı sayılmadı, öteki seçenek etkilenmedi ve öneri ona
 döndü; gerçek defterde önizleme işaretlemedi, gerçek geri alma işaretledi, öteki iş etkilenmedi, öneri ve rapor yansıttı. Öneri
 hesabındaki koşul kaldırılınca iki test de kaldı.
+
+## Aşama 22 sonucu (2026-11-20)
+
+Kancanın araç olayı (`PreToolUse`) artık bütün araçlarda çalışır (Claude Code `*`, Codex ve Qwen `.*`). Aynı çağrı (araç adı + girdi,
+anahtar sırasından bağımsız) arka arkaya tekrarlanırsa 4. kerede bir kez reddedilir ve ajana "farklı bir yol deneyin" denir; 8. kereden
+itibaren farklı bir çağrı gelene dek reddedilir. Arada farklı bir çağrı (ör. dosya düzenleme) sayacı sıfırlar; düzeltip testi yeniden
+koşmak cezalandırılmaz. Oturumlar ayrı sayılır. Anahtar: `bekci_oturum_dongu` (açık). Bekçi kendi hatasında geçit verir, kaydeder.
+
+**Kanıt:** `test/oturum-dongu.test.ts` (4 test): kancaya Claude Code biçiminde taklit girdi; 1-3 izin, 4 ret, 5-7 izin, 8 ve sonrası ret;
+farklı çağrı ve farklı oturum sıfırlıyor; anahtar kapalıyken hiç ret yok; ileti Türkçe ve İngilizce; durum dizini yazılamazken geçit ve
+`kapi_hatasi` kaydı. Sayaç kasıtlı bozulunca 2 test kaldı.
+
+**Not ve bedel:** gerçek bir Claude Code ya da Codex oturumunda denenmedi (ücretli); eşleyici biçimleri araçların belgesine dayanır. Kanca
+her araç çağrısında bir Node süreci başlatır; bu her çağrıya kısa bir gecikme ekler (anahtar kapatılsa da kanca çalışır, yalnız karar
+vermez). Eşikler CodeBurn'ün varsayılanıdır, mihenk için ölçülmedi. "Aynı başarısız komut" ayrı izlenmez; arka arkaya aynı çağrı yeterli
+sayıldı.
 
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 

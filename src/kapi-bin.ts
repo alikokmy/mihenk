@@ -7,7 +7,8 @@
 import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { ayarlariOku } from './ayar.js';
-import { bilesikCommitMi, commitMi, kapiDenetimi, oturumBaslat, yikiciKomut } from './kapi.js';
+import { bilesikCommitMi, cagriImzasi, commitMi, donguDenetimi, kapiDenetimi, oturumBaslat, yikiciKomut } from './kapi.js';
+import { dilAyarla, sistemDili, t } from './dil.js';
 
 const [arac = 'bilinmiyor', olay = ''] = process.argv.slice(2);
 const i = process.argv.indexOf('--kok');
@@ -21,6 +22,10 @@ const girdi = ((): Record<string, any> => {
 const kok = resolve(i >= 0 ? process.argv[i + 1]! : process.env.CLAUDE_PROJECT_DIR ?? girdi.cwd ?? process.cwd());
 const oturum = String(girdi.session_id ?? girdi.sessionId ?? 'adsiz');
 
+const dilKur = (): void => {
+  const d = ayarlariOku(kok).dil;
+  dilAyarla(d === 'en' || d === 'tr' ? d : sistemDili());
+};
 const reddet = (neden: string): void => {
   process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: neden } }));
 };
@@ -30,7 +35,14 @@ try {
   const yikici = olay === 'arac' && ayarlariOku(kok).bekci_yikici !== false
     ? yikiciKomut(((c) => (Array.isArray(c) ? c.join(' ') : String(c ?? '')))(girdi.tool_input?.command), kok)
     : null;
-  if (yikici) {
+  // Dongu bekcisi (Asama 22): ayni cagri arka arkaya tekrarlaniyorsa once uyarir, sonra durdurur.
+  const dongu = !yikici && olay === 'arac' && ayarlariOku(kok).bekci_oturum_dongu !== false
+    ? donguDenetimi(kok, oturum, arac, cagriImzasi(String(girdi.tool_name ?? ''), girdi.tool_input ?? null))
+    : null;
+  if (dongu && dongu.karar !== 'izin') {
+    dilKur();
+    reddet(t(dongu.karar === 'ret' ? 'k_dongu_ret' : 'k_dongu_uyari', { sayi: dongu.sayi }));
+  } else if (yikici) {
     mkdirSync(join(kok, '.mihenk'), { recursive: true });
     appendFileSync(join(kok, '.mihenk', 'kapi.jsonl'), JSON.stringify({ zaman: new Date().toISOString(), olay: 'yikici_engel', arac, oturum, neden: yikici }) + '\n');
     reddet(`mihenk: yikici komut reddedildi: ${yikici}. Proje icinde kalan, geri alinabilir bir yol kullanin.`);

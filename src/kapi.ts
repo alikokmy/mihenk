@@ -170,6 +170,37 @@ export function kapiDenetimi(kok: string, oturum: string, arac: string, eylem: '
   return { izin: false, neden: onEk + sorunlar.join(' '), acik_isler: acik, degisen: degisen.map((d) => d.yol) };
 }
 
+/** Dongu bekcisi esikleri (Asama 22; CodeBurn Guard'in varsayilanlari, mihenk icin olculmedi). */
+export const DONGU_UYARI = 4;
+export const DONGU_DUR = 8;
+
+/** Arac cagrisinin imzasi: arac adi ve girdisi (anahtar sirasi bagimsiz). */
+export function cagriImzasi(arac: string, girdi: unknown): string {
+  const sirali = (x: unknown): unknown => (Array.isArray(x) ? x.map(sirali) : x && typeof x === 'object'
+    ? Object.fromEntries(Object.keys(x as object).sort().map((k) => [k, sirali((x as Record<string, unknown>)[k])])) : x);
+  return `${arac}:${JSON.stringify(sirali(girdi))}`;
+}
+
+/**
+ * Elle acilan oturumda dongu bekcisi (Asama 22): ayni cagri arka arkaya tekrarlanirsa DONGU_UYARI'nci kerede bir kez reddedilir (uyari),
+ * DONGU_DUR'uncu kereden itibaren farkli bir cagri gelene dek reddedilir. Arada farkli bir cagri sayaci sifirlar.
+ */
+export function donguDenetimi(kok: string, oturum: string, arac: string, imza: string): { karar: 'izin' | 'uyari' | 'ret'; sayi: number } {
+  const yol = join(dizin(kok), dosyaAdi(oturum).replace(/\.json$/, '-dongu.json'));
+  let d = { imza: '', sayi: 0 };
+  try {
+    d = JSON.parse(readFileSync(yol, 'utf8')) as typeof d;
+  } catch {
+    // ilk cagri
+  }
+  const sayi = d.imza === imza ? d.sayi + 1 : 1;
+  mkdirSync(dizin(kok), { recursive: true });
+  writeFileSync(yol, JSON.stringify({ imza, sayi }));
+  const karar = sayi >= DONGU_DUR ? 'ret' : sayi === DONGU_UYARI ? 'uyari' : 'izin';
+  if (karar !== 'izin') olayYaz(kok, { olay: karar === 'ret' ? 'dongu_ret' : 'dongu_uyari', oturum, arac, sayi });
+  return { karar, sayi };
+}
+
 /** Kabuk komutu bir git commit mi (kaba ama kacirmamaya yonelik: "git ... commit" her bicimi). */
 export function commitMi(komut: string): boolean {
   // git, ardindan secenekler (-C <yol>, -c a=b, --no-pager ...), ardindan alt komut olarak commit.

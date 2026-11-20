@@ -170,6 +170,13 @@ export const AYARLAR: readonly AyarTanimi[] = [
     varsayilan_aciklama: { tr: 'Ayni hata iki kez gelirse is "kaldi" kapanir.', en: 'If the same error comes twice, the job closes as failed.' },
   },
   {
+    ad: 'bekci_oturum_dongu', baslik: { tr: 'Oturumda döngüyü durdur', en: 'Stop loops in a session' }, varsayilan: true, etki: 'calisma',
+    aciklama: { tr: 'Kendi actiginiz oturumda ajan ayni cagriyi arka arkaya tekrarlarsa once uyarilir, sonra durdurulur.', en: 'In a session you open, if the agent repeats the same call in a row, it is warned first, then stopped.' },
+    amac: { tr: 'Ilerlemeden ayni seyi tekrarlayan ajana zaman ve para harcamamak icin (Claude Code, Codex, Qwen Code kancasi).', en: 'Not to spend time and money on an agent repeating the same thing without progress (Claude Code, Codex, Qwen Code hook).' },
+    sonuc: { tr: 'Kapatinca tekrarlar engellenmez. Acikken kanca her arac cagrisinda calisir; bu her cagriya kisa bir gecikme ekler.', en: 'When off, repetitions are not blocked. When on, the hook runs on every tool call, which adds a short delay to each call.' },
+    varsayilan_aciklama: { tr: '4. ayni cagride bir kez uyarir, 8. ayni cagriden itibaren durdurur; arada farkli bir cagri sayaci sifirlar.', en: 'Warns once at the 4th identical call and stops from the 8th; a different call in between resets the count.' },
+  },
+  {
     ad: 'bekci_yikici', baslik: { tr: 'Tehlikeli silme komutlarını engelle', en: 'Block dangerous delete commands' }, varsayilan: true, etki: 'calisma',
     aciklama: { tr: 'Kancada ve surucude: proje disini ya da kokunu silen, git gecmisini ezen komutlar (rm -rf, reset --hard, push --force) reddedilir.', en: 'In the hook and the driver: commands that delete outside the project or its root, or overwrite git history (rm -rf, reset --hard, push --force), are refused.' },
     amac: { tr: 'Ajanin geri donussuz silme ve gecmis ezme komutlarini durdurmak icin.', en: 'To stop the agent\'s irreversible delete and history-overwrite commands.' },

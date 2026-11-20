@@ -185,7 +185,7 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
     jsonGuncelle('.claude/settings.json', (n) => {
       kancaEkle(n, 'SessionStart', { hooks: [k('oturum')] });
       kancaEkle(n, 'Stop', { hooks: [k('bitir')] });
-      kancaEkle(n, 'PreToolUse', { matcher: 'Bash|PowerShell', hooks: [k('arac')] });
+      kancaEkle(n, 'PreToolUse', { matcher: '*', hooks: [k('arac')] }); // butun araclar: commit, yikici komut ve dongu bekcisi
     });
   }
   if (araclar.includes('codex')) {
@@ -197,7 +197,7 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
     jsonGuncelle('.codex/hooks.json', (n) => {
       kancaEkle(n, 'SessionStart', { hooks: [k('oturum')] });
       kancaEkle(n, 'Stop', { hooks: [k('bitir')] });
-      kancaEkle(n, 'PreToolUse', { matcher: '^Bash$', hooks: [k('arac')] });
+      kancaEkle(n, 'PreToolUse', { matcher: '.*', hooks: [k('arac')] });
     });
     sonuc.uyarilar.push(t('kur_codex_onay'));
   }
@@ -258,7 +258,7 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
       n.mcpServers = { ...(n.mcpServers ?? {}), mihenk: mcpKaydi };
       kancaEkle(n, 'SessionStart', { hooks: [k('oturum')] });
       kancaEkle(n, 'Stop', { hooks: [k('bitir')] });
-      kancaEkle(n, 'PreToolUse', { matcher: 'run_shell_command', hooks: [k('arac')] });
+      kancaEkle(n, 'PreToolUse', { matcher: '.*', hooks: [k('arac')] });
     });
   }
 
