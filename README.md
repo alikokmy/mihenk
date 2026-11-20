@@ -71,6 +71,9 @@ açılır ya da kapanır ve hemen uygulanır, yalnız Enter çıkar. (Komut sat�
 | `arac_<araç>` | o araç için defter bağlantısı (ve varsa kapı kancası) | açık |
 | `saklama` | geçen işten sonra: `yerel` commit, `yok`, `yerel_gonder` | `yerel` |
 | `uyanik_tut` | liste yürürken bilgisayarı uyanık tut | kapalı |
+| `bekci_test_kurcalama` | iş sırasında var olan test değişti, silindi ya da atlandıysa "geçti"ye şüpheli notu | açık |
+| `bekci_bos_kanit` | doğrulama iş başlamadan zaten geçiyorsa "geçti"ye şüpheli notu | açık |
+| `bekci_kararsiz` | geçen doğrulama bir kez daha koşulur; sonuç değişirse iş "belirsiz (kararsız)" | açık |
 
 Kapatılan özelliğin dosyaları kaldırmadaki gibi geri alınır; yeniden açınca dosyalar bayt bayt önceki haline döner. Ayarlar `mihenk.json`'da
 durur ve yalnız varsayılandan farklı olanlar yazılır. Liste, kurulumun her oturumda ajana eklediği yaklaşık metin yükünü de gösterir (token).

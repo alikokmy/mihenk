@@ -7,7 +7,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } 
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { AjanTanimi } from './ajanlar.js';
-import { Defter, type IsKaydi, type KanitKaydi, type KararKaydi } from './defter.js';
+import { Defter, type IsGorunumu, type KanitKaydi, type KararKaydi } from './defter.js';
 import { komutuCalistir, komutuCoz, gectiMi, VARSAYILAN_IZINLI } from './dogrulama.js';
 import { kur, type Arac } from './kur.js';
 import { depoDurumu } from './saklama.js';
@@ -142,12 +142,12 @@ function degisenDosyalar(dizin: string): string[] {
 /** Senaryo kosusundan sonra kontrolleri hesaplar. `istemci`: ajanin deftere bildirdigi ad ile eslesen desen. */
 export async function degerlendir(dizin: string, s: Senaryo, arac: string, istemci: RegExp, sonMetin: string): Promise<SenaryoSonucu> {
   const defter = new Defter(dizin);
-  let isler: IsKaydi[];
+  let isler: IsGorunumu[];
   let kanitlar: KanitKaydi[];
   let kararlar: KararKaydi[];
   try {
     isler = (defter.rapor({ sinir: 100 }).isler ?? [])
-      .map((i) => defter.rapor({ is_id: i.id }).is as IsKaydi)
+      .map((i) => defter.rapor({ is_id: i.id }).is as IsGorunumu)
       .filter((i) => istemci.test(i.istemci ?? ''));
     kanitlar = isler.flatMap((i) => defter.rapor({ is_id: i.id }).kanitlar ?? []);
     kararlar = isler.flatMap((i) => defter.rapor({ is_id: i.id }).kararlar ?? []);

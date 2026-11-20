@@ -6,6 +6,8 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { gectiMi, komutuCalistir, komutuCoz, VARSAYILAN_IZINLI } from './dogrulama.js';
+import { kurcalamaFarki, testOzeti, type TestDosyasi } from './bekci.js';
+import { ayarlariOku as ozellikleriOku } from './ayar.js';
 import { Ret } from './hata.js';
 import { Log } from './log.js';
 import { kisalt } from './sinir.js';
@@ -96,6 +98,12 @@ export interface IsKaydi {
   bitis: string | null;
   deneme_sayisi: number;
   gerekce: string | null;
+  /** Acilistaki test dosyalari ozeti (JSON; bekci kapaliysa null). Rapora girmez. */
+  testler_ozeti?: string | null;
+  /** Acilista dogrulama kosuldu mu: 1 gecti, 0 kaldi, null kosulmadi. */
+  baslangic_dogrulama?: number | null;
+  /** Bekcilerin "gecti" kapanisina dustugu notlar (JSON dizi) ya da null. */
+  supheler?: string | null;
 }
 
 export interface KanitKaydi {
@@ -139,6 +147,8 @@ export interface HukumSonucu {
     cikti_dosyasi: string;
     baslatma_hatasi?: string;
   };
+  /** Dogruluk bekcilerinin "gecti" kapanisina dustugu notlar (bos: suphe yok). */
+  supheler: string[];
   mesaj: string;
 }
 
@@ -190,15 +200,18 @@ export interface IsOlcumu {
   maliyet_usd: number | null;
 }
 
+/** Raporun ve dokumun gosterdigi is (test ozeti cikmis, supheler dizi). */
+export type IsGorunumu = NonNullable<Rapor['is']>;
+
 export interface Rapor {
   ozet: { toplam: number; acik: number; gecti: number; kaldi: number; belirsiz: number };
   /** Butun defterin kullanim toplami. */
   kullanim: KullanimToplami;
-  is?: IsKaydi & { sure_sn: number | null; kullanim_toplami: KullanimToplami };
+  is?: Omit<IsKaydi, 'testler_ozeti' | 'supheler'> & { supheler: string[]; sure_sn: number | null; kullanim_toplami: KullanimToplami };
   kanitlar?: KanitKaydi[];
   kararlar?: KararKaydi[];
   kullanimlar?: KullanimKaydi[];
-  isler?: Array<Pick<IsKaydi, 'id' | 'tur' | 'durum' | 'ajan' | 'model' | 'deneme_sayisi'> & { soru: string; sure_sn: number | null; maliyet_usd: number | null }>;
+  isler?: Array<Pick<IsKaydi, 'id' | 'tur' | 'durum' | 'ajan' | 'model' | 'deneme_sayisi'> & { soru: string; sure_sn: number | null; maliyet_usd: number | null; supheli: boolean }>;
 }
 
 const SEMA = `
@@ -302,6 +315,12 @@ function dolu(ad: string, deger: unknown, enUzun: number): string {
   return d;
 }
 
+/** Rapora ve dokume giden hali: buyuk test ozeti cikar, supheler diziye cevrilir. */
+function disaAcik(is: IsKaydi): Omit<IsKaydi, 'testler_ozeti' | 'supheler'> & { supheler: string[] } {
+  const { testler_ozeti: _ozet, supheler, ...geri } = is;
+  return { ...geri, supheler: supheler ? (JSON.parse(supheler) as string[]) : [] };
+}
+
 function sureSn(is: IsKaydi): number | null {
   if (!is.bitis) return null;
   return Math.round((Date.parse(is.bitis) - Date.parse(is.baslangic)) / 100) / 10;
@@ -324,16 +343,23 @@ export class Defter {
     // Birden cok surec (her ajan araci kendi sunucusunu baslatir) ayni dosyaya yazar.
     this.db.exec('PRAGMA busy_timeout = 10000; PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
     this.db.exec(SEMA);
-    // Sema gocu: etiket sutunu Asama 3'te eklendi; eski defterler acilirken tamamlanir.
+    // Sema gocu: etiket (Asama 3), bekci sutunlari (Asama 10) sonradan eklendi; eski defterler acilirken tamamlanir.
     const sutunlar = this.db.prepare('PRAGMA table_info(isler)').all() as Array<{ name: string }>;
-    if (!sutunlar.some((s) => s.name === 'etiket')) {
+    for (const [ad, tur] of [['etiket', 'TEXT'], ['testler_ozeti', 'TEXT'], ['baslangic_dogrulama', 'INTEGER'], ['supheler', 'TEXT']] as const) {
+      if (sutunlar.some((s) => s.name === ad)) continue;
       try {
-        this.db.exec('ALTER TABLE isler ADD COLUMN etiket TEXT');
+        this.db.exec(`ALTER TABLE isler ADD COLUMN ${ad} ${tur}`);
       } catch (e) {
         // Ayni anda acilan ikinci surec sutunu eklemis olabilir.
         if (!String(e).includes('duplicate column')) throw e;
       }
     }
+    // Bekcinin kaydi da sonradan degistirilemez: test ozeti acilista yazilir; baslangic dogrulamasi bir kez yazilir.
+    this.db.exec(`CREATE TRIGGER IF NOT EXISTS test_ozeti_degismez BEFORE UPDATE OF testler_ozeti ON isler
+      BEGIN SELECT RAISE(ABORT, 'mihenk: test ozeti acilista yazilir, degismez'); END;
+      CREATE TRIGGER IF NOT EXISTS baslangic_dogrulama_bir_kez BEFORE UPDATE OF baslangic_dogrulama ON isler
+      WHEN OLD.baslangic_dogrulama IS NOT NULL
+      BEGIN SELECT RAISE(ABORT, 'mihenk: baslangic dogrulamasi bir kez yazilir'); END;`);
     this.db.exec(`CREATE TRIGGER IF NOT EXISTS etiket_degismez BEFORE UPDATE OF etiket ON isler
       BEGIN SELECT RAISE(ABORT, 'mihenk: is kaydi acildiktan sonra degismez'); END;`);
   }
@@ -374,10 +400,11 @@ export class Defter {
       }
       const sonuc = this.db
         .prepare(
-          `INSERT INTO isler (tur, soru, beklenti, yanlissa, dogrulama_komutu, zaman_asimi_sn, ajan, model, istemci, etiket, baslangic)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO isler (tur, soru, beklenti, yanlissa, dogrulama_komutu, zaman_asimi_sn, ajan, model, istemci, etiket, baslangic, testler_ozeti)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .run(tur, soru, beklenti, yanlissa, komut, zamanAsimi, ajan, model, g.istemci ?? null, etiket, new Date().toISOString());
+        .run(tur, soru, beklenti, yanlissa, komut, zamanAsimi, ajan, model, g.istemci ?? null, etiket, new Date().toISOString(),
+          ozellikleriOku(this.kok).bekci_test_kurcalama === false ? null : JSON.stringify(testOzeti(this.kok)));
       const is = this.isGetir(Number(sonuc.lastInsertRowid));
       this.dokumYaz();
       return is;
@@ -411,6 +438,39 @@ export class Defter {
         .run(g.is_id, new Date().toISOString(), konu, JSON.stringify(secenekler), secilen, karsi);
       this.dokumYaz();
       return { karar_id: Number(sonuc.lastInsertRowid), is_id: g.is_id };
+    });
+  }
+
+  /** Dogrulama komutunu bir kez kosar (hukum disi kosular: baslangic ve tekrar). */
+  private async dogrulamaKos(is: IsKaydi, dosyaAdi: string): Promise<{ gecti: boolean; cikis_kodu: number | null; zaman_asimi: boolean; sure_ms: number; ozet: string; goreliDosya: string }> {
+    const goreliDosya = `.mihenk/ciktilar/${dosyaAdi}`;
+    const kosu = await komutuCalistir(komutuCoz(is.dogrulama_komutu, this.ayarlar.izinli_programlar), {
+      cwd: this.kok, zamanAsimiMs: is.zaman_asimi_sn * 1000, ciktiDosyasi: join(this.kok, goreliDosya),
+    });
+    let ham = '';
+    try {
+      ham = readFileSync(kosu.cikti_dosyasi, 'utf8');
+    } catch {
+      ham = '';
+    }
+    if (kosu.baslatma_hatasi) ham = `[komut baslatilamadi: ${kosu.baslatma_hatasi}]\n${ham}`;
+    return { gecti: gectiMi(kosu), cikis_kodu: kosu.cikis_kodu, zaman_asimi: kosu.zaman_asimi, sure_ms: kosu.sure_ms, ozet: kisalt(ham.trim(), this.ayarlar.ozet_siniri).metin, goreliDosya };
+  }
+
+  /**
+   * Bos kanit bekcisi (Asama 10): is acilinca, ajan dosyaya dokunmadan once dogrulama bir kez kosulur ve sonucu kayda gecer.
+   * Is baslamadan zaten gecen bir dogrulama, "gecti" hukmunun neyi kanitladigini belirsizlestirir. Kapaliysa (ayar) hicbir sey yapmaz.
+   */
+  baslangicDogrula(isId: number): Promise<{ is_id: number; kosuldu: boolean; gecti: boolean | null }> {
+    return this.log.sarAsenk('baslangic_dogrula', { is_id: isId }, async () => {
+      const is = this.acikIs(isId);
+      if (ozellikleriOku(this.kok).bekci_bos_kanit === false || is.baslangic_dogrulama !== null) {
+        return { is_id: isId, kosuldu: false, gecti: is.baslangic_dogrulama === null ? null : is.baslangic_dogrulama === 1 };
+      }
+      const k = await this.dogrulamaKos(is, `is-${is.id}-baslangic-${process.pid}.txt`);
+      this.db.prepare('UPDATE isler SET baslangic_dogrulama = ? WHERE id = ? AND baslangic_dogrulama IS NULL').run(k.gecti ? 1 : 0, is.id);
+      this.dokumYaz();
+      return { is_id: isId, kosuldu: true, gecti: k.gecti };
     });
   }
 
@@ -459,6 +519,27 @@ export class Defter {
       else if (istenen === 'kaldi' && gecti) celiski = true;
       else if (istenen === 'belirsiz') yeniDurum = 'belirsiz';
 
+      // Dogruluk bekcileri (Asama 10): yalniz "gecti" kapanisinda.
+      let tekrar: Awaited<ReturnType<Defter['dogrulamaKos']>> | undefined;
+      let kapanisGerekcesi = gerekce;
+      const supheler: string[] = [];
+      if (yeniDurum === 'gecti') {
+        const oz = ozellikleriOku(this.kok);
+        if (oz.bekci_kararsiz !== false) {
+          tekrar = await this.dogrulamaKos(is, `is-${is.id}-deneme-${deneme}-tekrar-${process.pid}.txt`);
+          if (!tekrar.gecti) {
+            yeniDurum = 'belirsiz';
+            kapanisGerekcesi = 'kararsiz test: dogrulama ayni kodla once gecti, hemen ardindan kaldi; sonuc guvenilir degil. Kararsizligi giderip yeni kayit acin.';
+          }
+        }
+        if (yeniDurum === 'gecti' && oz.bekci_test_kurcalama !== false && is.testler_ozeti) {
+          supheler.push(...kurcalamaFarki(JSON.parse(is.testler_ozeti) as Record<string, TestDosyasi>, testOzeti(this.kok)));
+        }
+        if (yeniDurum === 'gecti' && oz.bekci_bos_kanit !== false && is.baslangic_dogrulama === 1) {
+          supheler.push('dogrulama is baslamadan da geciyordu: bu kanit yapilan isi gostermeyebilir');
+        }
+      }
+
       const simdi = new Date().toISOString();
       this.db.exec('BEGIN IMMEDIATE');
       try {
@@ -469,11 +550,19 @@ export class Defter {
              VALUES (?, ?, 'sunucu', ?, ?, ?, ?, ?, ?, ?)`,
           )
           .run(is.id, simdi, is.dogrulama_komutu, gecti ? 1 : 0, kosu.cikis_kodu, kosu.zaman_asimi ? 1 : 0, kosu.sure_ms, ozet, goreliDosya);
+        if (tekrar) {
+          this.db
+            .prepare(
+              `INSERT INTO kanitlar (is_id, zaman, kaynak, komut, gecti, cikis_kodu, zaman_asimi, sure_ms, cikti_ozeti, cikti_dosyasi)
+               VALUES (?, ?, 'sunucu', ?, ?, ?, ?, ?, ?, ?)`,
+            )
+            .run(is.id, simdi, is.dogrulama_komutu, tekrar.gecti ? 1 : 0, tekrar.cikis_kodu, tekrar.zaman_asimi ? 1 : 0, tekrar.sure_ms, `[tekrar kosusu] ${tekrar.ozet}`, tekrar.goreliDosya);
+        }
         this.db.prepare('UPDATE isler SET deneme_sayisi = deneme_sayisi + 1 WHERE id = ?').run(is.id);
         if (yeniDurum !== 'acik') {
           this.db
-            .prepare('UPDATE isler SET durum = ?, bitis = ?, gerekce = ? WHERE id = ?')
-            .run(yeniDurum, simdi, gerekce === '' ? null : gerekce, is.id);
+            .prepare('UPDATE isler SET durum = ?, bitis = ?, gerekce = ?, supheler = ? WHERE id = ?')
+            .run(yeniDurum, simdi, kapanisGerekcesi === '' ? null : kapanisGerekcesi, supheler.length > 0 ? JSON.stringify(supheler) : null, is.id);
         }
         this.db.exec('COMMIT');
       } catch (e) {
@@ -492,7 +581,9 @@ export class Defter {
       const son = this.isGetir(is.id);
       const mesaj =
         yeniDurum === 'gecti'
-          ? `Dogrulama gecti; is ${is.id} "gecti" diye kapandi.`
+          ? `Dogrulama gecti; is ${is.id} "gecti" diye kapandi.` + (supheler.length > 0 ? ` SUPHELI: ${supheler.join('; ')}.` : '')
+          : tekrar && !tekrar.gecti
+            ? `Is ${is.id} "belirsiz" diye kapandi: ${kapanisGerekcesi}`
           : yeniDurum === 'acik'
             ? `DOGRULAMA KALDI; is ${is.id} kapanmadi, acik duruyor (deneme ${son.deneme_sayisi}). Isi duzeltip hukum_ver'i yeniden cagirin; ` +
               'vazgeciyorsaniz hukum "kaldi" ve gerekce ile kapatin.'
@@ -513,6 +604,7 @@ export class Defter {
           cikti_dosyasi: goreliDosya,
           ...(kosu.baslatma_hatasi ? { baslatma_hatasi: kosu.baslatma_hatasi } : {}),
         },
+        supheler,
         mesaj,
       };
     }, (h) => ({ is_id: h.is_id, durum: h.durum, gecti: h.dogrulama.gecti, cikis_kodu: h.dogrulama.cikis_kodu, sure_ms: h.dogrulama.sure_ms }));
@@ -530,7 +622,7 @@ export class Defter {
         const is = this.isGetir(g.is_id);
         return {
           ozet, kullanim,
-          is: { ...is, sure_sn: sureSn(is), kullanim_toplami: this.kullanimToplami(is.id) },
+          is: { ...disaAcik(is), sure_sn: sureSn(is), kullanim_toplami: this.kullanimToplami(is.id) },
           kanitlar: this.kanitlar(is.id), kararlar: this.kararlar(is.id), kullanimlar: this.kullanimlar(is.id),
         };
       }
@@ -547,7 +639,7 @@ export class Defter {
         ozet, kullanim,
         isler: satirlar.map((is) => ({
           id: is.id, tur: is.tur, durum: is.durum, ajan: is.ajan, model: is.model, deneme_sayisi: is.deneme_sayisi,
-          sure_sn: sureSn(is), maliyet_usd: this.kullanimToplami(is.id).maliyet_usd, soru: kisalt(is.soru, 120).metin,
+          sure_sn: sureSn(is), maliyet_usd: this.kullanimToplami(is.id).maliyet_usd, supheli: is.supheler != null, soru: kisalt(is.soru, 120).metin,
         })),
       };
     }, (r) => r.ozet);
@@ -660,7 +752,7 @@ export class Defter {
   private dokumYaz(): void {
     try {
       const isler = this.db.prepare('SELECT * FROM isler ORDER BY id').all() as unknown as IsKaydi[];
-      const metin = isler.map((is) => JSON.stringify({ ...is, kanitlar: this.kanitlar(is.id), kararlar: this.kararlar(is.id), kullanim_toplami: this.kullanimToplami(is.id), kullanimlar: this.kullanimlar(is.id) })).join('\n');
+      const metin = isler.map((is) => JSON.stringify({ ...disaAcik(is), kanitlar: this.kanitlar(is.id), kararlar: this.kararlar(is.id), kullanim_toplami: this.kullanimToplami(is.id), kullanimlar: this.kullanimlar(is.id) })).join('\n');
       const gecici = join(this.dizin, `defter.jsonl.${process.pid}.tmp`);
       writeFileSync(gecici, metin === '' ? '' : metin + '\n');
       renameSync(gecici, join(this.dizin, 'defter.jsonl'));

@@ -36,6 +36,9 @@ export const AYARLAR: readonly AyarTanimi[] = [
   { ad: 'saklama', aciklama: 'Gecen isten sonra: yerel = yalniz bu bilgisayarda commit; yok = hicbir sey; yerel_gonder = commit ve uzak depoya gonder.',
     varsayilan: 'yerel', secenekler: ['yerel', 'yok', 'yerel_gonder'], etki: 'calisma' },
   { ad: 'uyanik_tut', aciklama: 'Is listesi yururken bilgisayari uyanik tut (yalniz Windows; yonetici izni istemez).', varsayilan: false, etki: 'calisma' },
+  { ad: 'bekci_test_kurcalama', aciklama: 'Is sirasinda var olan testler degistiyse, silindiyse ya da test atlandiysa "gecti" hukmune supheli notu duser.', varsayilan: true, etki: 'calisma' },
+  { ad: 'bekci_bos_kanit', aciklama: 'Is acilinca dogrulama bir kez kosulur; is baslamadan zaten geciyorsa "gecti" hukmune supheli notu duser.', varsayilan: true, etki: 'calisma' },
+  { ad: 'bekci_kararsiz', aciklama: 'Gecen dogrulama ikinci kez kosulur; sonuc degisirse is "belirsiz (kararsiz test)" diye kapanir.', varsayilan: true, etki: 'calisma' },
 ];
 
 const DOSYA = 'mihenk.json';

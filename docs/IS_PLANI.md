@@ -159,7 +159,7 @@ Sıra ölçütü: önce işin doğruluğu, sonra kullanıcı deneyiminin basitli
 | Aşama | İş | Kabul ölçütü |
 |---|---|---|
 | 9 | **tamam** (2026-11-20; `npm test`: 144 test geçti; bkz. "Aşama 9 sonucu"). **Aç-kapa ayarları:** her özellik tek bir anahtarla açılıp kapanır (kapı, araç başına kancalar, skiller, sürücünün saklama kipi, uyanık tutma, bildirim, sonraki aşamaların bekçileri). Ayar `mihenk.json`'da durur; kodlama bilmeyen kullanıcı için çift tıklanan `mihenk-ayarlar.cmd` numaralı bir menü gösterir (aç / kapa, ne işe yaradığı tek cümle). Kurulumun her oturuma eklediği bağlam yükü (token) gösterilir | her anahtar için: kapalıyken etkisi yok, açıkken var (anahtar başına test); aç-kapa-aç dosyaları bayt bayt aynı bırakıyor; menü yönetici izni istemiyor |
-| 10 | **Doğruluk bekçileri:** (a) test kurcalama: iş sırasında test dosyası, beklenen çıktı değiştiyse ya da `skip` eklendiyse hüküm "şüpheli" notu taşır; (b) boş kanıt: doğrulama komutu iş başlamadan zaten geçiyorsa kayıtta not; (c) kararsız test: geçen doğrulama bir kez daha koşulur, sonuç değişirse "belirsiz (kararsız)" | her bekçi için kasıtlı bozuk ajan taklidi yakalanıyor; uyumlu taklit takılmıyor |
+| 10 | **tamam** (2026-11-20; `npm test`: 152 test geçti; bkz. "Aşama 10 sonucu"). **Doğruluk bekçileri:** (a) test kurcalama: iş sırasında test dosyası, beklenen çıktı değiştiyse ya da `skip` eklendiyse hüküm "şüpheli" notu taşır; (b) boş kanıt: doğrulama komutu iş başlamadan zaten geçiyorsa kayıtta not; (c) kararsız test: geçen doğrulama bir kez daha koşulur, sonuç değişirse "belirsiz (kararsız)" | her bekçi için kasıtlı bozuk ajan taklidi yakalanıyor; uyumlu taklit takılmıyor |
 | 11 | **Gerileme tabanı:** listenin başında projenin bütün test takımı bir kez koşulur; iş kapanırken önceden geçen bir şey kalırsa hüküm "geçti" olmaz | taklit bir ajanın kendi testini geçirip başka testi bozduğu iş "geçti" kapanmıyor |
 | 12 | **Gözetimsiz koşu emniyeti:** liste / iş başına dolar ve süre tavanı; aynı hatayı tekrarlayan denemeyi erken kesme; abonelik limitine takılınca güvenli duraklama ve sonra kaldığı yerden sürme; yıkıcı komut bekçisi (`rm -rf`, `git reset --hard`, `push --force`, proje dışına yazma) kancaya eklenir | tavan aşılınca iş "bütçe" gerekçesiyle kapanıyor ve liste duruyor; döngü taklidi erken kesiliyor; yıkıcı komut taklidi reddediliyor |
 | 13 | **İş başına geri alma:** her işin başında bir geri dönüş noktası (git varsa geçici dal / stash, yoksa gölge kopya); `mihenk geri-al <iş>` o işin değişikliklerini geri alır | "kaldı" kapanan işin değişiklikleri tek komutla geri alınıyor; başka işlerin değişikliklerine dokunulmuyor; git'siz projede de çalışıyor |
@@ -573,6 +573,35 @@ uyuşmak zorundadır. Token = karakter / 4 kaba bir tahmindir; gerçek token say
 | Kapı kapatılınca | kanca kurulu kalır, çalışınca geçit verir ve kaydeder | Kancayı dosyadan da kaldırmak "kapalı"yı daha kesin yapardı; ama araç ayarı (ör. Codex'in kanca onayı) her aç-kapada yeniden onay isterdi |
 | Menü biçimi | konsolda numaralı liste | Bir pencere (GUI) kodlama bilmeyen için daha tanıdık olurdu; tepsi uygulaması 0.3 adayı olarak bekliyor |
 | Kur'un anlamı | `--arac` yoksa ayarlara eşitler (kapatılmış aracın dosyalarını geri alır) | Önceki davranış "her zaman hepsini kur"du; artık bir aracı kapatmış kullanıcının kurulumu onu geri getirmez |
+
+## Aşama 10 sonucu (2026-11-20)
+
+Üç bekçi (`src/bekci.ts`, `Defter.baslangicDogrula`, `hukumVer`), her biri bir ayar anahtarıyla (varsayılan açık):
+- **Test kurcalama** (`bekci_test_kurcalama`): iş açılırken test ve beklenen çıktı dosyalarının özeti ile atlama işareti sayısı
+  (`.skip(`, `xit(`, `@pytest.mark.skip/xfail`, `t.Skip(`, `#[ignore]`...) deftere yazılır (tetikleyiciyle değişmez). "Geçti"
+  kapanışında var olan test dosyası değişmiş ya da silinmişse ya da atlama işareti artmışsa hükme şüphe notu düşer. Yeni test dosyası
+  eklemek şüphe değildir.
+- **Boş kanıt** (`bekci_bos_kanit`): iş açılınca (MCP `is_ac` yanıt vermeden önce; sürücüde ajan başlamadan önce) doğrulama bir kez
+  koşulur. Geçiyorsa ajana hemen söylenir ve "geçti" kapanışına şüphe notu düşer.
+- **Kararsız test** (`bekci_kararsiz`): geçen doğrulama hemen bir kez daha koşulur; ikincisi kalırsa iş "belirsiz" ve "kararsız test"
+  gerekçesiyle kapanır. İki koşu da kanıt olarak girer.
+
+Şüpheler hükmü engellemez: işin `supheler` alanına yazılır, rapor listesinde `supheli` görünür, sürücü "GECTI: SUPHELI: ..." yazar.
+
+**Kanıt:** `test/bekci.test.ts` (8 test): uyumlu taklit (kodu düzeltir, yeni test ekler) şüphesiz "geçti"; testi zayıflatan, silen ve
+`skip` ekleyen taklitler şüpheli; iş başlamadan geçen doğrulama şüpheli; bir geçip bir kalan doğrulama "belirsiz (kararsız)"; üç bekçi
+kapalıyken hiçbiri iz bırakmıyor. Kurcalama notu ve kararsızlık kapanışı kasıtlı bozulunca 3 test kaldı. Gerçek araçla (Kilo, bekçiler
+açık): düzeltme senaryosu "geçti", başlangıç doğrulaması kaldı (beklenen), şüphe yok, iki kanıt; tuzak senaryosu 5/5 uydu. Bir düzeltme
+koşusu Kilo'nun ücretsiz modeli yanıt vermediği için 10 dakikada zaman aşımına düştü (bekçi 0,6 saniyede bitmişti).
+
+**Bedel ve kararlar:**
+
+| Karar | Seçilen | En güçlü karşı görüş |
+|---|---|---|
+| Şüphe hükmü engeller mi | hayır, not düşer | Testi zayıflatıp "geçti" almak engellenmeli; ama testi gerçekten düzeltmek de meşru, ayırt edemeyen bir engel dürüst ajanı cezalandırır |
+| Doğrulama kaç kez koşar | açılışta 1, "geçti"de 2 (eskiden 1) | Uzun test takımında süre üçe katlanır; her bekçi ayrı kapatılabilir |
+| Kararsızda | "belirsiz" kapanır | Açık bırakıp ajana düzeltme şansı vermek; ama kararsız test ajanın işi değil, ayrı bir iş olmalı |
+| "Belirsiz" ve öneri | şüpheli "geçti" öneri hesabında hâlâ başarı sayılır | Şüpheliyi başarı saymamak daha temkinli olurdu; veri birikince ölçülerek karar verilecek |
 
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 

@@ -10,7 +10,7 @@ import { appendFileSync, closeSync, existsSync, openSync, readFileSync, writeFil
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AJANLAR, type AjanTanimi } from './ajanlar.js';
-import { Defter, SURUCU_ISTEMCISI, type Durum, type IsKaydi } from './defter.js';
+import { Defter, SURUCU_ISTEMCISI, type Durum, type IsGorunumu } from './defter.js';
 import { agaciOldur } from './dogrulama.js';
 import { Ret } from './hata.js';
 import { depoDurumu, sakla, SAKLAMA_KIPLERI, type SaklamaKipi } from './saklama.js';
@@ -103,7 +103,7 @@ function tekSatir(metin: string, n: number): string {
   return duz.length <= n ? duz : `${duz.slice(0, n - 3)}...`;
 }
 
-function istemYaz(is: IsKaydi, devirNotu: string | null): string {
+function istemYaz(is: IsGorunumu, devirNotu: string | null): string {
   const satirlar = [
     `Bu bir mihenk is kaydidir (is_id=${is.id}). Yalniz bu isi yap.`,
     `Is turu: ${is.tur}`,
@@ -327,6 +327,11 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
       }
       const isId = is.id;
       yaz(`${baslik} basliyor (is ${isId}, ajan: ${ajanAdi || 'yok'}): ${tekSatir(listeIsi.soru, 70)}`);
+      // Bos kanit bekcisi: ajan baslamadan dogrulama bir kez kosulur (yeniden baslatilan listede ikinci kez kosulmaz).
+      const baslangic = await defter.baslangicDogrula(isId);
+      if (baslangic.kosuldu && baslangic.gecti) {
+        yaz(`${baslik}   UYARI: dogrulama komutu is baslamadan geciyor; gecerse hukum "supheli" notu tasiyacak.`);
+      }
 
       let deneme = 0;
       let devir = 0;
@@ -343,7 +348,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
         const once = korunan.map((d) => depoDurumu(d));
         const ciktiDosyasi = join(defter.dizin, 'ciktilar', `ajan-is-${isId}-oturum-${deneme + devir + 1}.txt`);
         olay('oturum_basla', { is_id: isId, ajan: tanim.ad, deneme: deneme + 1, devir });
-        const kosu = await ajaniKostur(tanim, istemYaz(defter.rapor({ is_id: isId }).is as IsKaydi, devirNotu), {
+        const kosu = await ajaniKostur(tanim, istemYaz(defter.rapor({ is_id: isId }).is as IsGorunumu, devirNotu), {
           cwd: kok, zamanAsimiMs: ajanZamanAsimiMs, baglamEsigi, ciktiDosyasi,
         });
         olay('oturum_bitti', { is_id: isId, ajan: tanim.ad, cikis_kodu: kosu.cikis_kodu, zaman_asimi: kosu.zaman_asimi, esik_asildi: kosu.esik_asildi, baglam: kosu.baglam, sure_ms: kosu.sure_ms, hata: kosu.baslatma_hatasi ?? null });
@@ -380,7 +385,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
         }
 
         deneme += 1;
-        if ((defter.rapor({ is_id: isId }).is as IsKaydi).durum !== 'acik') break; // ajan defteri kullanip isi kendisi kapatti
+        if ((defter.rapor({ is_id: isId }).is as IsGorunumu).durum !== 'acik') break; // ajan defteri kullanip isi kendisi kapatti
         const hukum = await defter.hukumVer({ is_id: isId, surucu: true });
         if (hukum.kapandi) break;
         const neden = kosu.zaman_asimi
@@ -398,7 +403,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
       }
 
       // Kapanis: ya gecti, ya ajan kapatti, ya da takildi.
-      let son = defter.rapor({ is_id: isId }).is as IsKaydi;
+      let son = defter.rapor({ is_id: isId }).is as IsGorunumu;
       if (son.durum === 'acik') {
         const gerekce = gecersiz ? not : `takildi: ${not || `${deneme} denemede dogrulama gecmedi`}`;
         try {
@@ -408,7 +413,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
           if (!(e instanceof Ret) || e.kod !== 'HUKUM_CELISKILI') throw e;
           await defter.hukumVer({ is_id: isId, surucu: true });
         }
-        son = defter.rapor({ is_id: isId }).is as IsKaydi;
+        son = defter.rapor({ is_id: isId }).is as IsGorunumu;
       }
       if (son.durum === 'gecti' && !gecersiz) {
         const saklama = sakla(kok, kip, `mihenk: is ${isId} gecti: ${tekSatir(listeIsi.soru, 60)}`);
@@ -417,6 +422,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
       } else if (not === '') {
         not = son.gerekce ?? '';
       }
+      if (son.supheler.length > 0) not = `SUPHELI: ${son.supheler.join('; ')}. ${not}`;
       yaz(`${baslik} ${son.durum.toUpperCase()}${gecersiz ? ' (GECERSIZ)' : ''}: ${not}`);
       olay('is_bitti', { is_id: isId, kimlik, durum: son.durum, deneme, devir, gecersiz });
       sonuclar.push({ kimlik, is_id: isId, durum: son.durum, atlandi: false, deneme, devir, gecersiz, not });

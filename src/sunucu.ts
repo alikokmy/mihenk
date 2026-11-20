@@ -89,11 +89,14 @@ export function sunucuKur(defter: Defter): McpServer {
       }),
     },
     (g, ctx) =>
-      calistir('is_ac', ctx, () => {
+      calistir('is_ac', ctx, async () => {
         const kimlik = istemci(ctx);
         const is = defter.isAc({ ...g, ...(kimlik ? { istemci: kimlik } : {}) });
+        // Bos kanit bekcisi: ajan dosyaya dokunmadan once dogrulama bir kez kosulur (yanit bu bitince doner).
+        const b = await defter.baslangicDogrula(is.id);
         return {
           is_id: is.id, durum: is.durum, dogrulama_komutu: is.dogrulama_komutu, zaman_asimi_sn: is.zaman_asimi_sn,
+          ...(b.kosuldu ? { baslangic_dogrulamasi: b.gecti ? 'GECTI (is baslamadan): bu komut yapacaginiz degisikligi olcmuyor olabilir; daha iyi bir dogrulama icin isi kaldi diye kapatip yeni kayit acin' : 'kaldi (beklenen)' } : {}),
           mesaj: `Kayit acildi. Is bitince hukum_ver(is_id=${is.id}) cagirin; dogrulamayi sunucu kosar.`,
         };
       }),
