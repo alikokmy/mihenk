@@ -73,6 +73,7 @@ açılır ya da kapanır ve hemen uygulanır, yalnız Enter çıkar. (Komut sat�
 | `uyanik_tut` | liste yürürken bilgisayarı uyanık tut | kapalı |
 | `bekci_test_kurcalama` | iş sırasında var olan test değişti, silindi ya da atlandıysa "geçti"ye şüpheli notu | açık |
 | `bekci_bos_kanit` | doğrulama iş başlamadan zaten geçiyorsa "geçti"ye şüpheli notu | açık |
+| `bekci_gerileme` | iş listesinde, önceden geçen bütün testleri bozan iş "geçti" sayılmaz | açık |
 | `bekci_kararsiz` | geçen doğrulama bir kez daha koşulur; sonuç değişirse iş "belirsiz (kararsız)" | açık |
 
 Kapatılan özelliğin dosyaları kaldırmadaki gibi geri alınır; yeniden açınca dosyalar bayt bayt önceki haline döner. Ayarlar `mihenk.json`'da
@@ -100,6 +101,9 @@ Sürücü, yazdığınız iş listesini sırayla bir ajan aracına verir ve list
 Bilmeniz gerekenler:
 
 - **İşin bittiğine ajan değil sürücü karar verir:** doğrulama komutunu kendisi koşar. Ajan "bitti" dese de komut geçmeden iş kapanmaz.
+- **Başka yeri bozan iş geçmez:** liste başlarken projenin bütün testleri bir kez koşulur (`gerileme_komutu`; yazmazsanız
+  `package.json`'daki test betiği). Bir iş kendi doğrulamasını geçse de, önceden geçen testleri bozduysa "geçti" sayılmaz; ajana
+  bozduğu söylenir ve düzeltmesi istenir. Testler liste başlamadan zaten kalıyorsa bu denetim yapılamaz ve bu söylenir.
 - **Liste tek iş yüzünden durmaz:** bir iş üç denemede geçmezse "kaldı" diye kapanır, sıradakine geçilir. Yarıda kesilen liste yeniden
   başlatılınca biten işleri atlar.
 - **Hangi araç:** listede `ajan` yazarsınız (`codex`, `opencode`, `kilo`, `claude`; denenmemiş: `cline`, `qwen`); yazmazsanız kurulu olan ilk araç kullanılır. İş başına ayrı

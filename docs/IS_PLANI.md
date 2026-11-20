@@ -160,7 +160,7 @@ Sıra ölçütü: önce işin doğruluğu, sonra kullanıcı deneyiminin basitli
 |---|---|---|
 | 9 | **tamam** (2026-11-20; `npm test`: 144 test geçti; bkz. "Aşama 9 sonucu"). **Aç-kapa ayarları:** her özellik tek bir anahtarla açılıp kapanır (kapı, araç başına kancalar, skiller, sürücünün saklama kipi, uyanık tutma, bildirim, sonraki aşamaların bekçileri). Ayar `mihenk.json`'da durur; kodlama bilmeyen kullanıcı için çift tıklanan `mihenk-ayarlar.cmd` numaralı bir menü gösterir (aç / kapa, ne işe yaradığı tek cümle). Kurulumun her oturuma eklediği bağlam yükü (token) gösterilir | her anahtar için: kapalıyken etkisi yok, açıkken var (anahtar başına test); aç-kapa-aç dosyaları bayt bayt aynı bırakıyor; menü yönetici izni istemiyor |
 | 10 | **tamam** (2026-11-20; `npm test`: 152 test geçti; bkz. "Aşama 10 sonucu"). **Doğruluk bekçileri:** (a) test kurcalama: iş sırasında test dosyası, beklenen çıktı değiştiyse ya da `skip` eklendiyse hüküm "şüpheli" notu taşır; (b) boş kanıt: doğrulama komutu iş başlamadan zaten geçiyorsa kayıtta not; (c) kararsız test: geçen doğrulama bir kez daha koşulur, sonuç değişirse "belirsiz (kararsız)" | her bekçi için kasıtlı bozuk ajan taklidi yakalanıyor; uyumlu taklit takılmıyor |
-| 11 | **Gerileme tabanı:** listenin başında projenin bütün test takımı bir kez koşulur; iş kapanırken önceden geçen bir şey kalırsa hüküm "geçti" olmaz | taklit bir ajanın kendi testini geçirip başka testi bozduğu iş "geçti" kapanmıyor |
+| 11 | **tamam, bir sınırla** (2026-11-20; `npm test`: 156 test geçti; bkz. "Aşama 11 sonucu"). **Gerileme tabanı:** listenin başında projenin bütün test takımı bir kez koşulur; iş kapanırken önceden geçen bir şey kalırsa hüküm "geçti" olmaz | taklit bir ajanın kendi testini geçirip başka testi bozduğu iş "geçti" kapanmıyor |
 | 12 | **Gözetimsiz koşu emniyeti:** liste / iş başına dolar ve süre tavanı; aynı hatayı tekrarlayan denemeyi erken kesme; abonelik limitine takılınca güvenli duraklama ve sonra kaldığı yerden sürme; yıkıcı komut bekçisi (`rm -rf`, `git reset --hard`, `push --force`, proje dışına yazma) kancaya eklenir | tavan aşılınca iş "bütçe" gerekçesiyle kapanıyor ve liste duruyor; döngü taklidi erken kesiliyor; yıkıcı komut taklidi reddediliyor |
 | 13 | **İş başına geri alma:** her işin başında bir geri dönüş noktası (git varsa geçici dal / stash, yoksa gölge kopya); `mihenk geri-al <iş>` o işin değişikliklerini geri alır | "kaldı" kapanan işin değişiklikleri tek komutla geri alınıyor; başka işlerin değişikliklerine dokunulmuyor; git'siz projede de çalışıyor |
 | 14 | **Kullanıcıya ulaşan yüz:** liste bitince ya da durunca Windows bildirimi; çift tıklanan tek sayfalık düz dil raporu (ne yapıldı, ne kaldı ve neden, süre, maliyet) | bildirim yönetici izni istemeden çıkıyor; rapor kodlama terimi bilmeyen birinin okuyacağı dilde ve defterle sayıca uyuşuyor |
@@ -602,6 +602,22 @@ koşusu Kilo'nun ücretsiz modeli yanıt vermediği için 10 dakikada zaman aş�
 | Doğrulama kaç kez koşar | açılışta 1, "geçti"de 2 (eskiden 1) | Uzun test takımında süre üçe katlanır; her bekçi ayrı kapatılabilir |
 | Kararsızda | "belirsiz" kapanır | Açık bırakıp ajana düzeltme şansı vermek; ama kararsız test ajanın işi değil, ayrı bir iş olmalı |
 | "Belirsiz" ve öneri | şüpheli "geçti" öneri hesabında hâlâ başarı sayılır | Şüpheliyi başarı saymamak daha temkinli olurdu; veri birikince ölçülerek karar verilecek |
+
+## Aşama 11 sonucu (2026-11-20)
+
+Sürücü liste başında projenin bütün test takımını koşar (listede `gerileme_komutu`; yoksa `package.json` test betiği varsa `npm test`;
+kabuksuz ve izin listesine tabi). Geçerse, her denemede işin hükmünden önce yeniden koşar. Kalırsa o deneme başarısızdır: deftere
+sürücü notu düşer, ajana "onceden gecen testleri bozdun, testleri degistirme" geri bildirimi gider. Deneme hakkı biterse iş
+"belirsiz" kapanır, gerekçesi "takildi: gerileme". "Kaldı" değil, çünkü işin kendi doğrulaması geçiyor ve bu "kaldı" hükmüyle çelişirdi.
+Anahtar: `bekci_gerileme` (varsayılan açık).
+
+**Kanıt:** `test/gerileme.test.ts` (4 test): kendi doğrulamasını geçip ortak dosyayı bozan sahte ajanın işi 3 denemede "belirsiz"
+kapandı; geri bildirimle onaran ajan 2. denemede, temiz ajan 1. denemede "geçti"; taban baştan kalıyorsa denetimin yapılamadığı
+söylendi; anahtar kapalıyken denetim yok; komut yazılmayınca `npm test` seçildi. Denetim kasıtlı etkisizleştirilince 4 testin 3'ü kaldı.
+
+**Sınır:** taban, test takımının çıkış koduyla çalışır; test bazında ayrım yapmaz. Proje liste başlamadan kalan bir test taşıyorsa
+gerileme denetimi o listede kapanır. Test bazında karşılaştırma (ör. `node --test` TAP çıktısı, pytest JUnit raporu) sonraki iş.
+Gerileme komutu her denemede bir kez daha koşar; uzun test takımında süre artar.
 
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 

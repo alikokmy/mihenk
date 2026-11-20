@@ -11,7 +11,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AJANLAR, type AjanTanimi } from './ajanlar.js';
 import { Defter, SURUCU_ISTEMCISI, type Durum, type IsGorunumu } from './defter.js';
-import { agaciOldur } from './dogrulama.js';
+import { agaciOldur, gectiMi, komutuCalistir, komutuCoz } from './dogrulama.js';
 import { Ret } from './hata.js';
 import { depoDurumu, sakla, SAKLAMA_KIPLERI, type SaklamaKipi } from './saklama.js';
 import { ayarlariOku } from './ayar.js';
@@ -33,6 +33,9 @@ export interface IsListesi {
   ajan?: string;
   saklama?: SaklamaKipi;
   uyanik_tut?: boolean;
+  /** Projenin butun test takimi (gerileme tabani, Asama 11). Yoksa package.json'da test betigi varsa "npm test". */
+  gerileme_komutu?: string;
+  gerileme_zaman_asimi_sn?: number;
   isler: ListeIsi[];
 }
 
@@ -256,6 +259,57 @@ export function uyanikIstendiMi(o: { bayrak: boolean; liste: IsListesi; kok: str
   return o.bayrak || o.liste.uyanik_tut === true || (o.liste.uyanik_tut === undefined && ayarlariOku(o.kok).uyanik_tut === true);
 }
 
+/**
+ * Gerileme tabani (Asama 11): listenin basinda projenin butun test takimi bir kez kosulur. Gecerse, her isin "gecti" hukmunden once
+ * yeniden kosulur; kalirsa o deneme basarisizdir. Taban zaten kaliyorsa denetim bu listede yapilamaz (cikis koduyla calisir; hangi
+ * testin onceden kaldigini ayirt etmez) ve bu soylenir. Komut yoksa, bekci kapaliysa ya da izinsizse null.
+ */
+async function gerilemeTabani(kok: string, liste: IsListesi, defter: Defter, yaz: (s: string) => void):
+  Promise<{ komut: string; kos(ad: string): Promise<{ gecti: boolean; ozet: string; dosya: string }> } | null> {
+  if (ayarlariOku(kok).bekci_gerileme === false) return null;
+  let komut = liste.gerileme_komutu?.trim();
+  if (!komut) {
+    try {
+      const paket = JSON.parse(readFileSync(join(kok, 'package.json'), 'utf8')) as { scripts?: Record<string, string> };
+      if (paket.scripts?.test && !/no test specified/.test(paket.scripts.test)) komut = 'npm test';
+    } catch {
+      // package.json yok ya da okunamadi
+    }
+  }
+  if (!komut) {
+    yaz('Gerileme denetimi yok: listede "gerileme_komutu" yazili degil ve projede test betigi bulunamadi.');
+    return null;
+  }
+  let parcalar: ReturnType<typeof komutuCoz>;
+  try {
+    parcalar = komutuCoz(komut, defter.ayarlar.izinli_programlar);
+  } catch (e) {
+    yaz(`Gerileme denetimi yok: "${komut}" calistirilamaz (${e instanceof Error ? e.message : String(e)}).`);
+    return null;
+  }
+  const zamanAsimiMs = (liste.gerileme_zaman_asimi_sn ?? 600) * 1000;
+  const kos = async (ad: string): Promise<{ gecti: boolean; ozet: string; dosya: string }> => {
+    const dosya = join(defter.dizin, 'ciktilar', `gerileme-${ad}.txt`);
+    const k = await komutuCalistir(parcalar, { cwd: kok, zamanAsimiMs, ciktiDosyasi: dosya });
+    let ham = '';
+    try {
+      ham = readFileSync(dosya, 'utf8');
+    } catch {
+      ham = k.baslatma_hatasi ?? '';
+    }
+    return { gecti: gectiMi(k), ozet: kisalt(ham.trim(), 800).metin, dosya: goreli(kok, dosya) };
+  };
+  const taban = await kos('taban');
+  if (!taban.gecti) {
+    yaz(`Gerileme denetimi yok: "${komut}" liste baslamadan da kaliyor (${taban.dosya}); onceden kalan testler varken gerileme ayirt edilemez.`);
+    return null;
+  }
+  yaz(`Gerileme tabani: "${komut}" liste baslamadan geciyor; her iste yeniden kosulacak.`);
+  return { komut, kos };
+}
+
+const goreli = (kok: string, yol: string): string => yol.slice(kok.length + 1).replace(/\\/g, '/');
+
 function gitignoreSagla(kok: string): void {
   // Defter klasoru projeyle birlikte commit edilmez.
   const yol = join(kok, '.gitignore');
@@ -296,6 +350,8 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
   const sonuclar: IsSonucu[] = [];
   try {
     olay('liste_basla', { is_sayisi: s.liste.isler.length, saklama: kip, baglam_esigi: baglamEsigi });
+    const gerileme = await gerilemeTabani(kok, s.liste, defter, yaz);
+    olay('gerileme_tabani', { komut: gerileme?.komut ?? null, etkin: gerileme !== null });
     for (const [sira, listeIsi] of s.liste.isler.entries()) {
       const kimlik = isKimligi(listeIsi);
       const baslik = `[${sira + 1}/${s.liste.isler.length}]`;
@@ -338,6 +394,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
       let devirNotu: string | null = null;
       let gecersiz = false;
       let not = '';
+      let gerilemeNotu = '';
 
       while (deneme < denemeSiniri) {
         if (!tanim) {
@@ -386,6 +443,19 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
 
         deneme += 1;
         if ((defter.rapor({ is_id: isId }).is as IsGorunumu).durum !== 'acik') break; // ajan defteri kullanip isi kendisi kapatti
+        // Gerileme bekcisi: listenin basinda gecen butun test takimi simdi kaliyorsa is bu denemede gecemez.
+        if (gerileme) {
+          const g = await gerileme.kos(`is-${isId}-deneme-${deneme}`);
+          if (!g.gecti) {
+            gerilemeNotu = `gerileme: listenin basinda gecen butun test takimi (${gerileme.komut}) simdi kaliyor; is kendi dogrulamasini gecse de "gecti" sayilmaz`;
+            surucuNotu(isId, `${deneme}. deneme: ${gerilemeNotu}. Cikti: ${g.dosya}`);
+            yaz(`${baslik}   ${deneme}. deneme: ${gerilemeNotu}`);
+            devirNotu = kisalt(`Bu is daha once denendi (${deneme}. deneme). Senin degisikligin, onceden gecen testleri bozdu: ${gerileme.komut} kaliyor. ` +
+              `Bozdugun yeri duzelt; testleri degistirme. Ciktinin sonu: ${g.ozet}`, 1500).metin;
+            continue;
+          }
+          gerilemeNotu = '';
+        }
         const hukum = await defter.hukumVer({ is_id: isId, surucu: true });
         if (hukum.kapandi) break;
         const neden = kosu.zaman_asimi
@@ -405,9 +475,11 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
       // Kapanis: ya gecti, ya ajan kapatti, ya da takildi.
       let son = defter.rapor({ is_id: isId }).is as IsGorunumu;
       if (son.durum === 'acik') {
-        const gerekce = gecersiz ? not : `takildi: ${not || `${deneme} denemede dogrulama gecmedi`}`;
+        // Gerilemeyle biten is "belirsiz" kapanir: kendi dogrulamasi gecebilir, "kaldi" ile celisir ve "gecti"ye dusmemeli.
+        const belirsiz = gecersiz || gerilemeNotu !== '';
+        const gerekce = gecersiz ? not : gerilemeNotu !== '' ? `takildi: ${gerilemeNotu}` : `takildi: ${not || `${deneme} denemede dogrulama gecmedi`}`;
         try {
-          await defter.hukumVer({ surucu: true, is_id: isId, hukum: gecersiz ? 'belirsiz' : 'kaldi', gerekce: kisalt(gerekce, 900).metin });
+          await defter.hukumVer({ surucu: true, is_id: isId, hukum: belirsiz ? 'belirsiz' : 'kaldi', gerekce: kisalt(gerekce, 900).metin });
         } catch (e) {
           // Son anda dogrulama gecerse "kaldi" verilemez: is gercekten gecmistir.
           if (!(e instanceof Ret) || e.kod !== 'HUKUM_CELISKILI') throw e;
