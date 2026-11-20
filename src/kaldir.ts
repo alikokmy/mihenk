@@ -193,7 +193,7 @@ function varsayilanArsiv(): string {
 }
 
 /** Kurulum kaydi olmayan eski kurulumlar icin: kurulumun bilinen dosyalari. */
-const BILINEN_OLUSTURULANLAR = ['mihenk-baslat.cmd', 'mihenk-kaldir.cmd', 'mihenk-ayarlar.cmd', 'mihenk-rapor.cmd', 'mihenk-isler.ornek.json'];
+const BILINEN_OLUSTURULANLAR = ['mihenk-baslat.cmd', 'mihenk-kaldir.cmd', 'mihenk-ayarlar.cmd', 'mihenk-rapor.cmd', 'mihenk-pencere.cmd', 'mihenk-isler.ornek.json'];
 const BILINEN_DUZENLENENLER = ['AGENTS.md', 'CLAUDE.md', '.gitignore', '.mcp.json', '.codex/config.toml', '.codex/hooks.json',
   '.claude/settings.json', '.gemini/settings.json', 'opencode.json', 'kilo.json', '.qwen/settings.json', '.cline/mcp_settings.json', '.agents/plugins/mihenk/plugin.json', '.agents/plugins/mihenk/mcp_config.json'];
 

@@ -271,6 +271,8 @@ export function kur(hedefDizin: string, secenek: KurSecenekleri = {}): KurSonucu
   if (process.platform === 'win32') {
     const cli = egik(join(BURASI, 'cli.js'));
     yaz('mihenk-baslat.cmd', ['@echo off', 'rem mihenk: is listesini (mihenk-isler.json) yurutur. Cift tiklayin.', `node --disable-warning=ExperimentalWarning "${cli}" sur --hedef "%~dp0."`, 'echo.', 'pause', ''].join('\r\n'));
+    yaz('mihenk-pencere.cmd', ['@echo off', 'rem mihenk: projeyi yoneteceginiz pencereyi tarayicida acar. Cift tiklayin; isiniz bitince bu siyah pencereyi kapatin.',
+      `node --disable-warning=ExperimentalWarning "${cli}" pencere --hedef "%~dp0."`, ''].join('\r\n'));
     yaz('mihenk-rapor.cmd', ['@echo off', 'rem mihenk: ne yapildigini duz dilde gosteren raporu acar. Cift tiklayin.',
       `node --disable-warning=ExperimentalWarning "${cli}" rapor --hedef "%~dp0." --ac`, ''].join('\r\n'));
     yaz('mihenk-ayarlar.cmd', ['@echo off', 'rem mihenk: ozellikleri acip kapatir (numara yazin, Enter). Cift tiklayin.',

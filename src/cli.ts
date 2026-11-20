@@ -16,6 +16,7 @@ import { Defter } from './defter.js';
 import { kaldir } from './kaldir.js';
 import { geriAl } from './geri.js';
 import { raporYaz } from './rapor.js';
+import { pencereAc } from './pencere.js';
 import { spawnSync } from 'node:child_process';
 import { ayarKomutu } from './ayar-cli.js';
 import { ayarlariOku } from './ayar.js';
@@ -42,7 +43,7 @@ const sayi = (ad: string): number | undefined => {
 };
 
 function kullanim(): void {
-  for (const k of ['kullanim', 'kullanim_kur', 'kullanim_sur', 'kullanim_uyum', 'kullanim_ayar', 'kullanim_rapor', 'kullanim_geri', 'kullanim_kaldir', 'kullanim_oneri', 'kullanim_defter'] as const) {
+  for (const k of ['kullanim', 'kullanim_kur', 'kullanim_sur', 'kullanim_uyum', 'kullanim_ayar', 'kullanim_rapor', 'kullanim_geri', 'kullanim_kaldir', 'kullanim_oneri', 'kullanim_pencere', 'kullanim_defter'] as const) {
     console.error(t(k));
   }
 }
@@ -238,6 +239,16 @@ try {
   else if (komut === 'kaldir') process.exitCode = kaldirKomutu();
   else if (komut === 'geri-al') process.exitCode = geriAlKomutu();
   else if (komut === 'rapor') process.exitCode = raporKomutu();
+  else if (komut === 'pencere') {
+    const p = await pencereAc(resolve(secenek('--hedef') ?? process.cwd()), { port: sayi('--port') ?? 0 });
+    console.log(t('pencere_acildi', { url: p.url }));
+    console.log(t('pencere_kapat'));
+    if (!gerisi.includes('--acma')) {
+      if (process.platform === 'win32') spawnSync('cmd.exe', ['/d', '/c', 'start', '""', `"${p.url}"`], { windowsHide: true, windowsVerbatimArguments: true });
+      else spawnSync(process.platform === 'darwin' ? 'open' : 'xdg-open', [p.url]);
+    }
+    await new Promise(() => undefined); // Ctrl+C ya da pencerenin kapanmasina dek
+  }
   else if (komut === 'ayar') process.exitCode = await ayarKomutu();
   else {
     kullanim();

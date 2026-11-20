@@ -6,7 +6,7 @@ Kodlama ajanlarının bağlandığı, işi kayda alan, kanıtı kendisi denetley
 Ad: mihenk taşı, altının ayarını sınamak için kullanılan taştır. Proje iki şeyi sınar: yapılan işin doğruluğunu ve işi yapan ajanın o iş türündeki
 değerini (doğruluk, süre, maliyet).
 
-**Durum: sürüm 0.1.** Defter, yöntem paketi, sürücü, uyum testleri, süre ve maliyet, öneri, kanıtsız "bitti"ye kapı ve temiz kaldırma
+**Durum: sürüm 0.2.** Defter, yöntem paketi, sürücü, uyum testleri, süre ve maliyet, öneri, kanıtsız "bitti"ye kapı ve temiz kaldırma
 yazıldı ve denendi. Açık kalemler ve sürüm 0.2 taslağı [docs/IS_PLANI.md](docs/IS_PLANI.md) içinde.
 
 | Araç | Kurulum | Gerçek denemede | Kapı (kanca) |
@@ -58,6 +58,14 @@ Bu komut yedi skill'i (`.claude/skills` ve `.agents/skills`), her oturuma giren 
 
 Kurulum ayrıca proje klasörüne örnek bir iş listesi (`mihenk-isler.ornek.json`) ve Windows'ta çift tıklanır bir başlatma dosyası
 (`mihenk-baslat.cmd`) bırakır.
+
+## Pencere: her şeyi tek yerden yönetmek
+
+Proje klasöründeki `mihenk-pencere.cmd` dosyasına çift tıklayın. Tarayıcıda beş sekmeli bir pencere açılır: **Proje** (kur, güncelle,
+kaldır), **İş listesi** (işleri yazın, başlatın, ilerlemeyi canlı izleyin, durdurun), **Defter** (geçmiş işler, nedenleri, şüpheler,
+tek tıkla geri alma, rapor), **Ayarlar** (bütün anahtarlar; her birinin altında amacı, sonucu ve varsayılanın ne yaptığı; bu notlar
+en üstteki kutuyla gizlenir) ve **Öneri ve maliyet**. Pencere yalnız bu bilgisayardan açılır (127.0.0.1) ve her açılışta değişen bir
+anahtarla korunur; başka bir web sitesi ona ulaşamaz. Kurulum ve yönetici izni gerekmez. İşiniz bitince siyah komut penceresini kapatın.
 
 ## Özellikleri açıp kapatmak
 

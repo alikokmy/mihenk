@@ -165,7 +165,7 @@ Sıra ölçütü: önce işin doğruluğu, sonra kullanıcı deneyiminin basitli
 | 13 | **tamam** (2026-11-20; `npm test`: 167 test geçti; bkz. "Aşama 13 sonucu"). **İş başına geri alma:** her işin başında bir geri dönüş noktası (git varsa geçici dal / stash, yoksa gölge kopya); `mihenk geri-al <iş>` o işin değişikliklerini geri alır | "kaldı" kapanan işin değişiklikleri tek komutla geri alınıyor; başka işlerin değişikliklerine dokunulmuyor; git'siz projede de çalışıyor |
 | 14 | **tamam, bir notla** (2026-11-20; `npm test`: 177 test geçti; bkz. "Aşama 14 sonucu"). **Kullanıcıya ulaşan yüz:** liste bitince ya da durunca Windows bildirimi; çift tıklanan tek sayfalık düz dil raporu (ne yapıldı, ne kaldı ve neden, süre, maliyet) | bildirim yönetici izni istemeden çıkıyor; rapor kodlama terimi bilmeyen birinin okuyacağı dilde ve defterle sayıca uyuşuyor |
 | 15 | **tamam, iki sınırla** (2026-11-20; `npm test`: 183 test geçti; bkz. "Aşama 15 sonucu"). **İngilizce dil desteği:** kullanıcıya görünen bütün iletiler (komut satırı, menü, sürücü, kapı ve kaldırma çıktıları, rapor) Türkçe ve İngilizce; dil `mihenk.json`'da `dil` ayarıyla seçilir (varsayılan: sistemin dili, bulunamazsa Türkçe). Belgeler (README, AGENTS.md bloğu) iki dilde. Ajana giden skill metinleri zaten İngilizce | her ileti iki dilde var (eksik çeviriyi bulan test); dil değişince aynı komutun çıktısı o dilde; kod tanımlayıcıları ASCII kalıyor |
-| 16 | **Uygulama penceresi:** kodlama bilmeyen kullanıcı için tek pencere, sekmeli: Proje (kurulum, kaldırma, durum), İş listesi (işleri ekle / düzenle / başlat, canlı ilerleme), Defter (geçmiş işler, kanıtlar, şüpheler, geri al), Ayarlar (bütün aç-kapa anahtarları, tavanlar), Öneri ve maliyet. Yönetici izni yok, kurulum yok: çift tıklanan dosya yerel bir sunucu açar ve pencereyi tarayıcıda gösterir (yalnız bu bilgisayardan erişilir) | CLI'de yapılabilen her yönetim işi ve her ayar pencereden de yapılabiliyor (eşleme tablosu ve test); her ayarın altında bilgi notu: amacı, sonuçları ve varsayılan değerin ne yaptığı (`AyarTanimi.amac / sonuc / varsayilan_aciklama`); notlar bir onay kutusuyla gizlenebiliyor, kutu varsayılan açık (`bilgi_notlari`); pencere yalnız 127.0.0.1'e bağlanıyor; uçtan uca tarayıcı testinde bir ayar değiştirilip sonucu dosyada görülüyor; iki dilde |
+| 16 | **tamam** (2026-11-20; `npm test`: 190 test geçti; bkz. "Aşama 16 sonucu"). **Uygulama penceresi:** kodlama bilmeyen kullanıcı için tek pencere, sekmeli: Proje (kurulum, kaldırma, durum), İş listesi (işleri ekle / düzenle / başlat, canlı ilerleme), Defter (geçmiş işler, kanıtlar, şüpheler, geri al), Ayarlar (bütün aç-kapa anahtarları, tavanlar), Öneri ve maliyet. Yönetici izni yok, kurulum yok: çift tıklanan dosya yerel bir sunucu açar ve pencereyi tarayıcıda gösterir (yalnız bu bilgisayardan erişilir) | CLI'de yapılabilen her yönetim işi ve her ayar pencereden de yapılabiliyor (eşleme tablosu ve test); her ayarın altında bilgi notu: amacı, sonuçları ve varsayılan değerin ne yaptığı (`AyarTanimi.amac / sonuc / varsayilan_aciklama`); notlar bir onay kutusuyla gizlenebiliyor, kutu varsayılan açık (`bilgi_notlari`); pencere yalnız 127.0.0.1'e bağlanıyor; uçtan uca tarayıcı testinde bir ayar değiştirilip sonucu dosyada görülüyor; iki dilde |
 
 **Karar (Aşama 16):** pencere, yerel sunucu + tarayıcı sayfası olarak yapılacak. Karşı görüş: gerçek bir masaüstü uygulaması (Electron,
 Tauri) daha tanıdık görünür; ama yükleme gerektirir, boyutu büyüktür ve imzasız uygulama Windows'ta uyarı verir. Tarayıcı sayfası Node
@@ -736,6 +736,30 @@ ya da `dil en` ile tek adımda değişir.
   bunlara bakar; gerekçelerin bir kısmı (örneğin deneme nedenleri) defterde Türkçe kalır ve sürücü satırında öyle görünür.
 - Ajana giden metinler (kapının ve defterin ret iletileri, MCP araç açıklamaları) Türkçedir; skill'ler ve AGENTS.md bloğu İngilizcedir.
   Uyum raporu (`mihenk uyum`, geliştirici aracı) Türkçedir.
+
+## Aşama 16 sonucu (2026-11-20)
+
+`mihenk pencere` ve çift tıklanan `mihenk-pencere.cmd`: yerel bir sunucu (`src/pencere.ts`) yalnız 127.0.0.1'e bağlanır, sayfayı
+(`src/pencere-sayfa.ts`, dış kaynaksız tek dosya, açık / koyu tema, dar ekranda çalışır) tarayıcıda açar. Her açılışta rastgele 48
+haneli anahtar; API anahtarsız ya da yabancı `Host` başlığıyla (DNS yeniden bağlama) gelirse 403. Beş sekme: Proje (kur / güncelle,
+iki adımlı kaldırma), İş listesi (düzenle; geçersiz liste kaydedilmez; başlat, canlı çıktı, durdur), Defter (işler, neden, şüphe, tek
+tıkla geri alma, düz dil raporu), Ayarlar (bütün anahtarlar; onay kutusu, seçim ya da sayı; altında amaç, sonuç, varsayılan ve kurulum
+notu; en üstteki kutu `bilgi_notlari` ile notları gizler, varsayılan açık), Öneri ve maliyet. Pencere CLI'nin kullandığı işlevlerin
+aynısını çağırır; eşleme `PENCERE_ESLEME`'de (uyum, geliştirici aracı olduğu için pencerede yok). Metinler iki dilde.
+
+**Kanıt:** `test/pencere.test.ts` (7 test): güvenlik (anahtarsız, yanlış anahtar, yabancı Host, anahtarsız sayfa: 403); `cli.ts`'teki her
+komutun eşlemesi var, GET karşılıkları 404 değil, sekmesi sayfada; onaysız kaldırma ve listesiz başlatma reddediliyor; ayar pencereden
+değişince `mihenk.json`'da ve kurulumda görülüyor, geçersiz değer 400; geçersiz iş listesi dosyaya yazılmıyor; defter, geri alma,
+rapor, öneri; İngilizce. Host denetimi kasıtlı kaldırılınca güvenlik testi kaldı. **Tarayıcıda uçtan uca:** gerçek sunucu, uygulamanın
+tarayıcı panelinde açıldı; Ayarlar sekmesinde "kapı" kutusu tıklandı, `mihenk.json` `{"kapi": false}` oldu ve `mihenk ayar` KAPALI
+gösterdi; beş sekme açıldı, konsolda hata yok. Bu denemede iki kusur bulunup düzeltildi ve teste bağlandı: kaldırma onay düğmesi
+tıklanmadan görünüyordu (`display:flex` `hidden`'ı eziyordu); kurulum notu olmayan ayarların altında "null" yazıyordu.
+
+**Sınırlar:** iş listesi düzenleyicisi düz JSON metnidir (alan alan form değil); liste penceredeyken başlatılırsa çıktı pencere
+kapanınca kaybolmaz ama sunucu kapatılırsa sürücü de durur. Ayar notlarının Türkçesi komut satırı için Türkçe harfsiz yazılmıştır.
+
+**Sürüm 0.2:** Aşama 9-16 kapandı; `v0.2.0` etiketi konuldu. Açık kalemler: Cline ve Qwen Code'un gerçek araçla denenmesi, Antigravity
+2.0, gerileme denetiminin test bazına inmesi, iş listesinin form ile düzenlenmesi, 0.3 adayları.
 
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 
