@@ -7,7 +7,7 @@ Ad: mihenk taşı, altının ayarını sınamak için kullanılan taştır. Proj
 değerini (doğruluk, süre, maliyet).
 
 **Durum:** Aşama 1 (defter), Aşama 2 (yöntem paketi ve kurulum) ve Aşama 3 (sürücü) yazıldı. Sürücü on işlik bir listeyi Codex ve OpenCode ile
-girdisiz bitirdi. Açık kalemler planda yazılı. Maliyet ölçümü ve öneri henüz yok.
+girdisiz bitirdi. Aşama 4 (uyum testleri: `mihenk uyum`) üç araçta koşuldu. Açık kalemler planda yazılı. Maliyet ölçümü ve öneri henüz yok.
 
 - [docs/ARASTIRMA.md](docs/ARASTIRMA.md): benzer açık kaynak projelerin taraması ve hüküm.
 - [docs/IS_PLANI.md](docs/IS_PLANI.md): onaylı iş planı, iki bağlayıcı ilke, aşama sonuçları ve açık kararlar.
