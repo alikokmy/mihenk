@@ -1281,3 +1281,27 @@ Doktor, son 50 oturumun özetini bilgi satırı olarak gösteriyor.
 yalnız 140 ms var, yani yarış dar. Önleme gerçek kullanımdaki ölçüme göre karar verilecek.
 
 `npm test` 276/276.
+
+## Test artığı temizliği (2026-11-22, kullanıcı: "Evet, ikisini de")
+
+**Bulgu.** Testler sahte proje klasörlerini Windows'un geçici klasöründe açıyor, hiçbirini silmiyordu. 19-21 Kasım arasında 19.397
+`mihenk-*` klasörü, yaklaşık 8 GB birikti. Ürün kodunda da bir sızıntı vardı: fikri işlere bölme (`fikriBol`) her seferinde bir
+`mihenk-planlama-*` klasörü bırakıyordu.
+
+**Düzeltme.**
+- `npm test`, `test:bilgi` ve `test:engel` artık `test/takim.ts` kosucusundan geçiyor. Kosucu her koşuya kendi geçici klasörünü veriyor
+  (TEMP / TMP / TMPDIR), koşu bitince onu siliyor. Gerçek geçici klasörde koşu sırasında yeni `mihenk-*` kalırsa ya da koşunun klasörü
+  silinemezse koşu başarısız sayılıyor (İlke 1).
+- `fikriBol` geçici planlama klasörünü iş bitince siliyor; klasör kilitliyse işi bozmadan kalıyor.
+- Birikmiş klasörler silindi.
+
+**Kanıt.**
+- `test/takim.test.ts`: kendi klasörüne yazan test artık bırakmıyor; gerçek klasöre sızan test `artik` listesinde çıkıyor; koşudan önce
+  var olan klasör artık sayılmıyor.
+- İç koşu bir testin içinden çağrılınca `NODE_TEST_CONTEXT` yüzünden dosyaları kendi başına koşmuyordu, sızıntı görünmüyordu. Ortamdan
+  silindi.
+- Ters denetim: artık listesi boş döndürülünce `takim.test` kaldı; `fikriBol`'daki silme çıkarılınca `fikir.test` kaldı.
+- `npm test` 277/277, ARTIK uyarısı yok.
+
+**Sınır.** Ajan alt süreçleri de bu geçici klasörü kullanır. Gerçek araçla koşan testler (OpenCode) bu kosucu altında bir kez geçti;
+kilitli dosya yüzünden "silinemedi" çıkarsa koşu düşer, bu kasıtlı.

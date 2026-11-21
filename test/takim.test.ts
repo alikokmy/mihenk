@@ -2,12 +2,12 @@
 // betigi birlikte butun test dosyalarini tam bir kez kapsiyor.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Defter } from '../src/defter.js';
 import { raporHtml } from '../src/rapor.js';
-import { takimlar } from './takim.js';
+import { takimlar, yalitikKos } from './takim.js';
 
 const KAYNAK = join(import.meta.dirname, '..', '..', 'test');
 
@@ -43,4 +43,21 @@ test('KABUL iki takim butun test dosyalarini tam bir kez kapsar; bilgi takimi li
   assert.equal(bilgi.filter((x) => engel.includes(x)).length, 0);
   assert.ok(bilgi.length >= 2);
   for (const d of bilgi) assert.ok(existsSync(join(KAYNAK, d)), d);
+});
+
+test('KABUL artik denetimi: kosu kendi gecici klasorunde calisir ve onu siler; gercek gecici klasore sizan test kosuyu dusurur', () => {
+  const gercek = mkdtempSync(join(tmpdir(), 'mihenk-sahte-temp-'));
+  const betik = mkdtempSync(join(tmpdir(), 'mihenk-artik-betik-'));
+  const uslu = join(betik, 'uslu.test.mjs');
+  const sizan = join(betik, 'sizan.test.mjs');
+  writeFileSync(uslu, "import { test } from 'node:test'; import { mkdtempSync } from 'node:fs'; import { tmpdir } from 'node:os'; import { join } from 'node:path';\ntest('u', () => { mkdtempSync(join(tmpdir(), 'mihenk-uslu-')); });\n");
+  writeFileSync(sizan, "import { test } from 'node:test'; import { mkdirSync } from 'node:fs'; import { join } from 'node:path';\ntest('s', () => { mkdirSync(join(process.env.SIZINTI, 'mihenk-sizinti')); });\n");
+  const a = yalitikKos([uslu], { gercek, stdio: 'pipe' });
+  assert.deepEqual(a, { kod: 0, artik: [], silinemedi: false });
+  assert.deepEqual(readdirSync(gercek), [], 'kosunun kendi klasoru silindi; uslu testin klasoru onunla gitti');
+  const b = yalitikKos([uslu, sizan], { gercek, stdio: 'pipe', env: { SIZINTI: gercek } });
+  assert.equal(b.kod, 0);
+  assert.deepEqual(b.artik, ['mihenk-sizinti']);
+  mkdirSync(join(gercek, 'mihenk-onceden'));
+  assert.deepEqual(yalitikKos([uslu], { gercek, stdio: 'pipe' }).artik, [], 'kosudan once var olan klasor artik sayilmaz');
 });

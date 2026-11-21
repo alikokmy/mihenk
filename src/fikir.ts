@@ -3,7 +3,7 @@
 // duzeltir ya da siler; kaydedip baslatir.
 // Planlama proje klasorunde degil bos gecici bir klasorde calisir: ajan bolme sirasinda projeye dokunamaz. Projenin dosya adlari istemde
 // verilir. Karsi gorus: proje klasorunde calisan ajan kodu okuyup daha iyi bolerdi; ama bu adimda degisiklik yapmasi engellenemezdi.
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AjanTanimi } from './ajanlar.js';
@@ -86,7 +86,13 @@ export async function fikriBol(o: {
     dosyalar = [];
   }
   const bos = mkdtempSync(join(tmpdir(), 'mihenk-planlama-'));
-  const kosu = await o.kosucu(o.tanim, fikirIstemi(fikir.slice(0, 4000), dosyalar), bos);
+  let kosu: HazirlikKosusu;
+  try {
+    kosu = await o.kosucu(o.tanim, fikirIstemi(fikir.slice(0, 4000), dosyalar), bos);
+  } finally {
+    // Gecici planlama klasoru is bitince silinir (kullanim olcutu, Asama 39); kilitliyse kalir, isi bozmaz.
+    try { rmSync(bos, { recursive: true, force: true, maxRetries: 3 }); } catch { /* kilitli */ }
+  }
   if (kosu.baslatma_hatasi) return { tamam: false, neden: t('to_baslamadi', { hata: kosu.baslatma_hatasi }) };
   const isler = isleriAyikla(kosu.son_metin);
   return isler ? { tamam: true, isler } : { tamam: false, neden: t('fk_ayiklanamadi') };

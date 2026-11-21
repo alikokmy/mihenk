@@ -2,7 +2,7 @@
 // uctan uca akis; planlama projenin icinde calismaz; islerin durumu duz dille (sirada, bitti, baslayamadi ve nedeni).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -38,6 +38,7 @@ test('KABUL planlama projenin icinde calismaz; istem fikri ve projenin dosya adl
   } });
   assert.equal(r.tamam, true);
   assert.notEqual(resolve(gelen.cwd).toLowerCase(), resolve(kok).toLowerCase(), 'planlama gecici bos klasorde');
+  assert.equal(existsSync(gelen.cwd), false, 'gecici planlama klasoru is bitince silinir');
   assert.match(gelen.istem, /FIKIR: Tariflerimi saklayan/);
   assert.match(gelen.istem, /tarifler\.txt/);
   assert.deepEqual(await fikriBol({ kok, fikir: 'kisa', tanim, kosucu: async () => { throw new Error('cagrilmamali'); } }), { tamam: false, neden: 'Fikir çok kısa; ne istediğinizi bir iki cümleyle anlatın.' });
