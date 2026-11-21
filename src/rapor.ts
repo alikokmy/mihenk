@@ -70,6 +70,7 @@ export function raporHtml(kok: string, zaman = new Date()): { html: string; ozet
   <p><b>${kacis(t('r_neden'))}:</b> ${kacis(neden(is))}</p>
   ${supheler}
   ${geriAlindi}
+  ${is.bilgi_notu ? `<p class="kucuk" data-bilgi-notu="${is.id}">${kacis(t('r_bilgi_notu', { not: is.bilgi_notu }))}</p>` : ''}
   ${secimNotu.get(is.id) ? `<p class="kucuk" data-ajan-secimi="${is.id}">${kacis(t('r_ajan_secimi', { not: secimNotu.get(is.id)! }))}</p>` : ''}
   <p class="kucuk">${kacis(t('r_satir', { sure: sure(is.sure_sn), maliyet: para(is.kullanim_toplami.maliyet_usd, is.kullanim_toplami.maliyeti_bilinmeyen_oturum), ajan: is.ajan, deneme: is.deneme_sayisi }))}</p>
   ${geriAl}

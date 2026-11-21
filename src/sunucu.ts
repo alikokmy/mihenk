@@ -87,6 +87,7 @@ export function sunucuKur(defter: Defter): McpServer {
         ajan: z.string().describe('Isi yuruten ajan araci, or. claude-code, codex, gemini-cli'),
         model: z.string().describe('Kullanilan model kimligi'),
         zaman_asimi_sn: z.number().int().optional().describe('Dogrulama komutunun zaman asimi, saniye (varsayilan 120)'),
+        bilgi_komutu: z.string().optional().describe('Istege bagli bilgi denetimi (bicim, lint): kalirsa is yine gecer ama kayda not duser.'),
         vites: z.enum(['kesif', 'hukum']).optional().describe('hukum (varsayilan): tam yontem, dogrulama komutu zorunlu. kesif: hafif kayit (soru, beklenti, yanlissa); komut istege bagli; komutsuz kesif "gecti" diye kapanmaz ve oneride basari sayilmaz.'),
         aile: z.string().optional().describe('Is ailesi adi: birbirine bagli isler (ayni kok neden, birbirini gerektiren parcalar) tek aile olarak birlikte yapilir. Verilirse bolme_plani zorunlu.'),
         bolme_plani: z.string().optional().describe('Aile isi icin: sonuc kotu cikarsa aileyi hangi iki parcaya bolersiniz.'),

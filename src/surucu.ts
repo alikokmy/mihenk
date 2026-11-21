@@ -37,6 +37,8 @@ export interface ListeIsi {
   zaman_asimi_sn?: number;
   /** Isin zorlugu (Asama 28): kolay, orta, zor. Oneri ajanlari ayni zorluk karisiminda karsilastirir. */
   zorluk?: Zorluk;
+  /** Bilgi denetimi (Asama 37): kalirsa is durmaz, kayda not duser. */
+  bilgi_komutu?: string;
   /** Bilinen bir kusuru gideren is (Asama 34, "once kusur"): listede nerede olursa olsun once yurutulur. */
   kusur?: boolean;
   /** Is ailesi (Asama 33) ve sonuc kotu cikarsa ikiye bolme plani (aile verilirse zorunlu). */
@@ -550,6 +552,7 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
             ...(listeIsi.zaman_asimi_sn === undefined ? {} : { zaman_asimi_sn: listeIsi.zaman_asimi_sn }),
             ...(listeIsi.zorluk === undefined ? {} : { zorluk: listeIsi.zorluk }),
             ...(listeIsi.aile === undefined ? {} : { aile: listeIsi.aile }),
+            ...(listeIsi.bilgi_komutu === undefined ? {} : { bilgi_komutu: listeIsi.bilgi_komutu }),
             ...(listeIsi.bolme_plani === undefined ? {} : { bolme_plani: listeIsi.bolme_plani }),
           });
         } catch (e) {

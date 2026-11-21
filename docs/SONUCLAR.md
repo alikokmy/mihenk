@@ -1179,3 +1179,29 @@ K13 yeni bir işaret ekliyor ve eskimiş bir kuralın yerine geçmiyor; `kaldirm
 **Uygulanmayan.** "Toplu onay listesi" ve "ara değerlendirme" metamorfik'in süreç belgeleridir; mihenk'te karşılığı rapor ve pencere sayısıdır.
 
 Ters denetim: işaret yazılmayınca kabul testi kaldı. `npm test` 270/270.
+
+## Aşama 37 sonucu (2026-11-21)
+
+**Karar 5'in taşınması.** metamorfik kararı 5 ("iki takım", kullanıcı onayı 2026-11-20) iki yerde taşındı.
+
+**Ürün tarafı.**
+- `is_ac`, iş listesi ve pencerenin işe özel bölümü isteğe bağlı bir `bilgi_komutu` alıyor.
+- Ana doğrulama geçtikten sonra bilgi komutu koşuluyor. Kalırsa iş yine "geçti" kapanıyor, ama kayda `bilgi_notu` düşüyor; rapor bunu
+  gösteriyor.
+- Bilgi komutu kanıt tablosuna yazılmıyor. Yazılsaydı "son doğrulama geçti" tetikleyicisi kapanışı bozardı.
+
+**mihenk'in kendi testleri.**
+- `test/takimlar.json` bilgi takımını listeliyor: `paket.test.ts` (skill biçimi, kurallar ve sonuç tablosu) ve `dil.test.ts`
+  (ileti kataloğu).
+- Geri kalan her şey engelleyen takımda.
+- `npm run test:bilgi` 14 test, `npm run test:engel` 258 test koştu; `npm test` 272.
+
+**Kanıt:** `test/takim.test.ts`.
+- Bilgi komutu kalan iş "geçti" kapandı ve not çıkış kodunu yazdı. Bilgi komutu geçen ya da hiç olmayan işte not yok. İzinsiz bilgi
+  komutu kayıtta reddedildi.
+- İki takım bütün test dosyalarını tam bir kez kapsıyor.
+- Ters denetim: not yazılmayınca test kaldı.
+
+**Sınır.** Ayrım dosya düzeyindedir. `el-oturumu.test.ts` içindeki README "Sorular" denetimi bir belge testidir, ama dosyanın geri
+kalanı ürün testi olduğu için engelleyen takımda kaldı. mihenk'in bu depoda kendi commit kancası yok; ayrımı bir kancanın zorlaması
+metamorfik'teki gibi yapılmadı.

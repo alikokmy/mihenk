@@ -15,7 +15,9 @@
     "build": "tsc -p .",
     "test": "tsc -p . && node --test --test-reporter=spec \"dist/test/**/*.test.js\"",
     "duman": "tsc -p . && node dist/test/duman.js",
-    "paketle": "tsc -p . && node --disable-warning=ExperimentalWarning dist/src/cli.js paketle"
+    "paketle": "tsc -p . && node --disable-warning=ExperimentalWarning dist/src/cli.js paketle",
+    "test:engel": "tsc -p . && node dist/test/takim.js engel",
+    "test:bilgi": "tsc -p . && node dist/test/takim.js bilgi"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.4.0",

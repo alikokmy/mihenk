@@ -170,7 +170,7 @@ async function listeCiz() {
         el('label', { class: 'alan' }, el('span', { metin: m('p_alan_is_ajan') }), isAjan),
         el('label', { class: 'alan' }, el('span', { metin: m('p_alan_zaman_asimi') }), zaman),
         (() => { const k = el('input', { type: 'checkbox', 'data-alan': 'kusur' }); k.checked = is.kusur === true; k.onchange = () => { if (k.checked) is.kusur = true; else delete is.kusur; }; return el('label', { class: 'satir' }, k, document.createTextNode(' ' + m('p_alan_kusur'))); })(),
-        ...[['aile', 'p_alan_aile'], ['bolme_plani', 'p_alan_bolme']].map(([k, mt]) => { const g = el('input', { 'data-alan': k }); g.value = is[k] || ''; g.oninput = () => { if (g.value.trim()) is[k] = g.value; else delete is[k]; }; return el('label', { class: 'alan' }, el('span', { metin: m(mt) }), g); })));
+        ...[['aile', 'p_alan_aile'], ['bolme_plani', 'p_alan_bolme'], ['bilgi_komutu', 'p_alan_bilgi']].map(([k, mt]) => { const g = el('input', { 'data-alan': k }); g.value = is[k] || ''; g.oninput = () => { if (g.value.trim()) is[k] = g.value; else delete is[k]; }; return el('label', { class: 'alan' }, el('span', { metin: m(mt) }), g); })));
       kutu.append(kart);
     });
   }

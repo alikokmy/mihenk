@@ -1,0 +1,4 @@
+{
+  "aciklama": "Iki takim (Asama 37; metamorfik karari 5). bilgi: belge bicimi ve aracin ic tutarliligi; kirmizisi isi durdurmaz, not olur ve sonraki belge isinde duzeltilir. engel: geri kalan butun testler; kirmizisi isi durdurur. test/takim.test.ts iki takimin butun test dosyalarini tam bir kez kapsadigini denetler.",
+  "bilgi": ["paket.test.ts", "dil.test.ts"]
+}

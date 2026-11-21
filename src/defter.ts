@@ -122,6 +122,11 @@ export interface IsGirdisi {
    * kapanamaz, oneri kesif islerini dogrulanmis basari saymaz.
    */
   vites?: Vites;
+  /**
+   * Bilgi denetimi (Asama 37, iki takim): istege bagli ikinci komut (bicim, lint). Ana dogrulama gecer, bu kalirsa is yine "gecti" kapanir
+   * ama kayda "bilgi denetimi kaldi" notu duser; is durmaz.
+   */
+  bilgi_komutu?: string;
   /** Is ailesi (Asama 33): birbirine bagli isler tek aile olarak yapilir; aile adi verilirse bolme plani zorunludur. */
   aile?: string;
   bolme_plani?: string;
@@ -147,6 +152,9 @@ export interface IsKaydi {
   aile: string | null;
   bolme_plani: string | null;
   vites: Vites | null;
+  bilgi_komutu: string | null;
+  /** Bilgi denetimi kaldiysa kapanista dusulen not; gecti ya da yoksa null. */
+  bilgi_notu: string | null;
   durum: Durum;
   baslangic: string;
   bitis: string | null;
@@ -468,7 +476,7 @@ export class Defter {
       }
     }
     const sutunlar = this.db.prepare('PRAGMA table_info(isler)').all() as Array<{ name: string }>;
-    for (const [ad, tur] of [['etiket', 'TEXT'], ['testler_ozeti', 'TEXT'], ['baslangic_dogrulama', 'INTEGER'], ['supheler', 'TEXT'], ['zorluk', 'TEXT'], ['aile', 'TEXT'], ['bolme_plani', 'TEXT'], ['vites', 'TEXT']] as const) {
+    for (const [ad, tur] of [['etiket', 'TEXT'], ['testler_ozeti', 'TEXT'], ['baslangic_dogrulama', 'INTEGER'], ['supheler', 'TEXT'], ['zorluk', 'TEXT'], ['aile', 'TEXT'], ['bolme_plani', 'TEXT'], ['vites', 'TEXT'], ['bilgi_komutu', 'TEXT'], ['bilgi_notu', 'TEXT']] as const) {
       if (sutunlar.some((s) => s.name === ad)) continue;
       try {
         this.db.exec(`ALTER TABLE isler ADD COLUMN ${ad} ${tur}`);
@@ -520,6 +528,8 @@ export class Defter {
       const ajan = dolu('ajan', g.ajan, SINIRLAR.kisa);
       const model = dolu('model', g.model, SINIRLAR.kisa);
       if (!komutsuzKesif) komutuCoz(komut, this.ayarlar.izinli_programlar);
+      const bilgiKomutu = g.bilgi_komutu === undefined || String(g.bilgi_komutu).trim() === '' ? null : dolu('bilgi_komutu', g.bilgi_komutu, SINIRLAR.komut);
+      if (bilgiKomutu !== null) komutuCoz(bilgiKomutu, this.ayarlar.izinli_programlar);
       const etiket = g.etiket === undefined ? null : dolu('etiket', g.etiket, SINIRLAR.kisa);
       const zorluk = g.zorluk === undefined || g.zorluk === null ? null : g.zorluk;
       // Is ailesi (K10): aile adi verilirse sonuc kotu cikarsa ikiye bolme plani da yazilir.
@@ -537,10 +547,10 @@ export class Defter {
       }
       const sonuc = this.db
         .prepare(
-          `INSERT INTO isler (tur, soru, beklenti, yanlissa, dogrulama_komutu, zaman_asimi_sn, ajan, model, istemci, etiket, zorluk, aile, bolme_plani, vites, baslangic, testler_ozeti)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO isler (tur, soru, beklenti, yanlissa, dogrulama_komutu, zaman_asimi_sn, ajan, model, istemci, etiket, zorluk, aile, bolme_plani, vites, bilgi_komutu, baslangic, testler_ozeti)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .run(tur, soru, beklenti, yanlissa, komut, zamanAsimi, ajan, model, g.istemci ?? null, etiket, zorluk, aile, bolmePlani, vites, new Date().toISOString(),
+        .run(tur, soru, beklenti, yanlissa, komut, zamanAsimi, ajan, model, g.istemci ?? null, etiket, zorluk, aile, bolmePlani, vites, bilgiKomutu, new Date().toISOString(),
           ozellikleriOku(this.kok).bekci_test_kurcalama === false ? null : JSON.stringify(testOzeti(this.kok)));
       const is = this.isGetir(Number(sonuc.lastInsertRowid));
       this.fotograf(is.id, 'bas');
@@ -706,6 +716,13 @@ export class Defter {
           supheler.push('dogrulama is baslamadan da geciyordu: bu kanit yapilan isi gostermeyebilir');
         }
       }
+      // Iki takim (Asama 37): bilgi denetimi isi durdurmaz; kalirsa "gecti" kapanisina not duser.
+      let bilgiNotu: string | null = null;
+      if (yeniDurum === 'gecti' && is.bilgi_komutu) {
+        const bd = `.mihenk/ciktilar/is-${is.id}-bilgi-${deneme}-${process.pid}.txt`;
+        const b = await komutuCalistir(komutuCoz(is.bilgi_komutu, this.ayarlar.izinli_programlar), { cwd: this.kok, zamanAsimiMs: is.zaman_asimi_sn * 1000, ciktiDosyasi: join(this.kok, bd) });
+        if (!gectiMi(b)) bilgiNotu = `bilgi denetimi kaldi (${is.bilgi_komutu}; cikis kodu ${b.cikis_kodu ?? '-'}); is durmadi, sonraki belge isinde duzeltilecek. Cikti: ${bd}`;
+      }
 
       const simdi = new Date().toISOString();
       this.db.exec('BEGIN IMMEDIATE');
@@ -728,8 +745,8 @@ export class Defter {
         this.db.prepare('UPDATE isler SET deneme_sayisi = deneme_sayisi + 1 WHERE id = ?').run(is.id);
         if (yeniDurum !== 'acik') {
           this.db
-            .prepare('UPDATE isler SET durum = ?, bitis = ?, gerekce = ?, supheler = ? WHERE id = ?')
-            .run(yeniDurum, simdi, kapanisGerekcesi === '' ? null : kapanisGerekcesi, supheler.length > 0 ? JSON.stringify(supheler) : null, is.id);
+            .prepare('UPDATE isler SET durum = ?, bitis = ?, gerekce = ?, supheler = ?, bilgi_notu = ? WHERE id = ?')
+            .run(yeniDurum, simdi, kapanisGerekcesi === '' ? null : kapanisGerekcesi, supheler.length > 0 ? JSON.stringify(supheler) : null, bilgiNotu, is.id);
         }
         this.db.exec('COMMIT');
       } catch (e) {
