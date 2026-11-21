@@ -20,6 +20,7 @@ import { pencereAc, VARSAYILAN_PORT } from './pencere.js';
 import { doktor, doktorMetni, hataPaketi } from './doktor.js';
 import { elOturumlariniTopla } from './el-oturumu.js';
 import { paketle } from './paketle.js';
+import { projeOnerisi } from './proje-onerisi.js';
 import { TERCIH_SIRASI } from './kesif.js';
 import { listeDenetimi, listeDenetimMetni } from './liste-denetim.js';
 import { spawnSync } from 'node:child_process';
@@ -113,7 +114,7 @@ function oneriKomutu(): number {
   };
   const uyum = ayarlar.uyum;
   const defter = new Defter(kok);
-  const turler = oneriHesapla(defter.olcumler(), ayarlar);
+  const turler = projeOnerisi(defter, ayarlar);
   defter.kapat();
   if (gerisi.includes('--json')) console.log(JSON.stringify(turler, null, 2));
   else {

@@ -1119,3 +1119,39 @@ klasöründe yapıldı; "başlayamadı" durumu kaldırıldı.
 başlamadan bilinmiyor. Uyarı bu yüzden kusurun adıyla genel olarak veriliyor.
 
 İki ters denetim de yakalandı: öneriden keşif süzgeci kaldırıldı; kusur sıralaması kaldırıldı. `npm test` 265/265.
+
+## Aşama 35 sonucu (2026-11-21)
+
+**Karar 3'ün taşınması.** metamorfik kararı 3 ("ölçütün kaynağı ve amacı", kullanıcı onayı 2026-11-21) taşındı.
+
+**Eşiklerin kaynağı.** Öneri eşiklerinin hepsi (başarı alt sınırı, en az iş, uyum) tahmindir. Öneri çıktısı ve ayar notları bunu
+"Kaynak: tahmin" diye yazıyor.
+
+**Tahmin eşiği kalıcı dışlamaz.** Eşiğin altında kalan kurulu ajan, keşif adımında verisi az olanlardan sonra yine aday. Mutlak kalan
+kapılar şunlar: geçersiz koşu, test kurcalama ve proje dışına yazma (bunlar başarıyı zaten düşürür). Uyum eşiğinin altındaki ajan keşif
+adayı yapılmadı; bu tutucu bir seçim.
+
+**Şampiyon düzeni** (`src/sampiyon.ts`, `src/proje-onerisi.ts`).
+- Saf öneri hesabı değişmedi; üstüne bir katman eklendi.
+- İş türü başına şampiyon defterde, değişmez ve silinmez bir tabloda tutuluyor.
+- Yeni hesaplanan en iyi seçenek şampiyonun yerine yalnız iki durumda geçiyor: başarı alt sınırı şampiyonun üst sınırını aşarsa
+  (aralıklar ayrışırsa) ya da şampiyon artık aday değilse.
+- Öteki durumlarda öneri şampiyonda kalıyor ve hesaplanan aday gerekçede yazıyor.
+- Komut satırı, pencere ve sürücünün keşfi aynı katmanı kullanıyor.
+
+**Kanıt:** `test/sampiyon.test.ts` (3 test).
+- İlk öneri şampiyon oluyor. Çakışan aralıkta (9/10 pahalı ile 10/10 ucuz) öneri şampiyonda kalıyor.
+- İkisi de aday ve aralıklar ayrışık (40/60 ile 60/60) olduğunda değişiyor; gerekçe "%94 > %77".
+- Şampiyon eşiğin altına düşünce değişiyor.
+- Gerçek defterde geçmiş iki satır oldu. Aynı hesabı tekrar etmek satır eklemiyor. Silme ve değiştirme tetikleyiciyle reddediliyor.
+- Çıktıda "Kaynak: tahmin" görünüyor. 10 işte 3 başarılı ajan, beşinci (keşif) adımda seçiliyor.
+
+İki ters denetim de yakalandı: ayrışma koşulu her zaman doğru yapıldı; eşik altı keşif adayları çıkarıldı. `npm test` 268/268.
+
+**Plandan sapma ve bekleyen.**
+- Karar "eşli ve şansa göre düzeltilmiş kıyas" diyor. mihenk her işi bir ajana yaptırdığı için eşli veri yok; kullanılan ölçüt eşsiz
+  %95 aralıklarının ayrışması. Bu tutucu, ama eşli değil.
+- Eşli kıyas için aynı işin iki ajana yaptırılması gerekir (maliyetli); kullanıcıya bırakıldı.
+- Maliyetle şampiyon devirmek karar 4'e (net katkı) bağlı; uygulanmadı.
+- "Ölçüt kusurlu çıkarsa eski sayım silinmez": defter zaten değişmez. Ölçüt düzeltmesinin ayrı bir kaydı yok; şampiyon gerekçesi bu
+  işi kısmen görüyor.

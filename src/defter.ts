@@ -6,6 +6,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { gectiMi, komutuCalistir, komutuCoz, VARSAYILAN_IZINLI } from './dogrulama.js';
+import type { SampiyonDegisimi, SampiyonKaydi } from './sampiyon.js';
 import { kurcalamaFarki, testOzeti, type TestDosyasi } from './bekci.js';
 import { fotografCek, fotograflariBuda, geriAlinanIsler } from './geri.js';
 import { ayarlariOku as ozellikleriOku } from './ayar.js';
@@ -339,6 +340,18 @@ CREATE TABLE IF NOT EXISTS kullanim (
   maliyet_usd REAL CHECK (maliyet_usd IS NULL OR maliyet_usd >= 0),
   maliyet_kaynagi TEXT CHECK (maliyet_kaynagi IS NULL OR maliyet_kaynagi IN ('arac', 'fiyat_tablosu'))
 );
+CREATE TABLE IF NOT EXISTS sampiyonlar (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tur TEXT NOT NULL,
+  ajan TEXT NOT NULL,
+  model TEXT NOT NULL,
+  zaman TEXT NOT NULL,
+  gerekce TEXT NOT NULL
+);
+CREATE TRIGGER IF NOT EXISTS sampiyon_degismez BEFORE UPDATE ON sampiyonlar
+BEGIN SELECT RAISE(ABORT, 'mihenk: sampiyon kaydi degismez; yeni satir yazilir'); END;
+CREATE TRIGGER IF NOT EXISTS sampiyon_silinmez BEFORE DELETE ON sampiyonlar
+BEGIN SELECT RAISE(ABORT, 'mihenk: sampiyon gecmisi silinmez'); END;
 CREATE TABLE IF NOT EXISTS kota_sinirlari (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   zaman TEXT NOT NULL,
@@ -888,6 +901,22 @@ export class Defter {
     const tuketim = kotaBirimi({ girdi: Number(t.girdi), cikti: Number(t.cikti), onbellek_okuma: Number(t.onbellek_okuma), onbellek_yazma: Number(t.onbellek_yazma) });
     const r = this.db.prepare('INSERT INTO kota_sinirlari (zaman, ajan, pencere_saat, tuketim) VALUES (?, ?, ?, ?)').run(zaman.toISOString(), ajan, pencere, tuketim);
     return this.db.prepare('SELECT * FROM kota_sinirlari WHERE id = ?').get(Number(r.lastInsertRowid)) as unknown as KotaSiniri;
+  }
+
+  /** Is turu basina guncel sampiyon (Asama 35): her turun en son satiri. */
+  sampiyonlar(): Map<string, SampiyonKaydi> {
+    const satirlar = this.db.prepare('SELECT tur, ajan, model, zaman, gerekce FROM sampiyonlar ORDER BY id').all() as unknown as SampiyonKaydi[];
+    return new Map(satirlar.map((s) => [s.tur, s]));
+  }
+
+  /** Sampiyon gecmisi (degisimler, eskiden yeniye). */
+  sampiyonGecmisi(tur: string): SampiyonKaydi[] {
+    return this.db.prepare('SELECT tur, ajan, model, zaman, gerekce FROM sampiyonlar WHERE tur = ? ORDER BY id').all(tur) as unknown as SampiyonKaydi[];
+  }
+
+  sampiyonYaz(d: SampiyonDegisimi): void {
+    this.db.prepare('INSERT INTO sampiyonlar (tur, ajan, model, zaman, gerekce) VALUES (?, ?, ?, ?, ?)').run(d.tur, d.ajan, d.model, new Date().toISOString(), d.gerekce);
+    this.dokumYaz();
   }
 
   /** Ajanin bir kota penceresindeki kapasitesi: ayar varsa o; yoksa gorulen kota hatalarindaki en buyuk tuketim (alt sinir). */

@@ -18,7 +18,8 @@ import { agaciOldur, PROGRAM_ADI, VARSAYILAN_IZINLI } from './dogrulama.js';
 import { geriAl, geriAlinanIsler } from './geri.js';
 import { kaldir } from './kaldir.js';
 import { kur } from './kur.js';
-import { oneriHesapla, oneriMetni, projeOneriAyarlari } from './oneri.js';
+import { oneriMetni, projeOneriAyarlari } from './oneri.js';
+import { projeOnerisi } from './proje-onerisi.js';
 import { isNedeni, raporHtml } from './rapor.js';
 import { ajaniKostur, isKimligi, LISTE_ALANLARI, listeAlaniDenetle, listeOku, type ListeIsi } from './surucu.js';
 import { fikriBol } from './fikir.js';
@@ -431,7 +432,7 @@ export function pencereAc(hedef: string | null, o: PencereSecenekleri = {}): Pro
         if (!existsSync(join(kok, '.mihenk', 'defter.db'))) return json(res, 200, { metin: METINLER.p_defter_bos[hangiDil()], turler: [] });
         const d = new Defter(kok);
         try {
-          const turler = oneriHesapla(d.olcumler(), projeOneriAyarlari(kok, { kurulu: Object.keys(AJANLAR).filter((a) => AJANLAR[a]!.komutBul() !== null) }));
+          const turler = projeOnerisi(d, projeOneriAyarlari(kok, { kurulu: Object.keys(AJANLAR).filter((a) => AJANLAR[a]!.komutBul() !== null) }));
           return json(res, 200, { metin: oneriMetni(turler, projeOneriAyarlari(kok)), turler, kullanim: d.rapor({}).kullanim });
         } finally {
           d.kapat();

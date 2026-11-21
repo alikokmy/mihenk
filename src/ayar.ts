@@ -138,14 +138,14 @@ export const AYARLAR: readonly AyarTanimi[] = [
     aciklama: { tr: 'Bir aracin onerilebilmesi icin basari oraninin guvenle en az bu kadar olmasi gerekir.', en: 'A tool can be recommended only if its success rate is confidently at least this high.' },
     amac: { tr: 'Az ama sansli sonuclarla zayif bir aracin onerilmesini onlemek.', en: 'To avoid recommending a weak tool on a few lucky results.' },
     sonuc: { tr: 'Yukseltince oneri daha secici olur ve daha gec gelir; dusurunce daha erken ama daha az guvenilir gelir.', en: 'Higher makes recommendations stricter and later; lower makes them earlier but less reliable.' },
-    varsayilan_aciklama: { tr: 'Basari oraninin %95 guven araliginin alt ucu en az %50 olmali.', en: 'The lower end of the 95% confidence interval of the success rate must be at least 50%.' },
+    varsayilan_aciklama: { tr: 'Basari oraninin %95 guven araliginin alt ucu en az %50 olmali. Kaynak: tahmin (veriyle kurulmadi); bu yuzden esigin altinda kalan arac elenmez, kesifte denenmeye devam eder.', en: 'The lower end of the 95% confidence interval of the success rate must be at least 50%. Source: estimate (not set from data); so a tool below it is not eliminated and keeps being explored.' },
   },
   {
     ad: 'oneri_en_az', baslik: { tr: 'Öneri için en az iş', en: 'Minimum jobs for a recommendation' }, varsayilan: 5, sayi: { en_az: 1, en_cok: 100 }, etki: 'calisma',
     aciklama: { tr: 'Bir arac bu is turunde en az bu kadar is bitirmeden onerilmez; keşif de bu sayiya bakar.', en: 'A tool is not recommended for a job type before it finished at least this many jobs of it; exploration uses this number too.' },
     amac: { tr: 'Tek iki isle karar vermemek.', en: 'Not to decide on one or two jobs.' },
     sonuc: { tr: 'Buyudukce oneri daha gec ama daha saglam gelir ve kesif daha uzun surer.', en: 'Larger means later but sounder recommendations and longer exploration.' },
-    varsayilan_aciklama: { tr: 'Her arac her is turunde en az 5 is bitirmeli.', en: 'Each tool must finish at least 5 jobs of a type.' },
+    varsayilan_aciklama: { tr: 'Her arac her is turunde en az 5 is bitirmeli. Kaynak: tahmin (veriyle kurulmadi).', en: 'Each tool must finish at least 5 jobs of a type. Source: estimate (not set from data).' },
   },
   {
     ad: 'kesif_orani', baslik: { tr: 'Keşif oranı (yüzde)', en: 'Exploration rate (percent)' }, varsayilan: 20, sayi: { en_az: 0, en_cok: 100 }, etki: 'calisma',

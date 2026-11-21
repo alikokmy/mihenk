@@ -130,6 +130,8 @@ export interface TurOnerisi {
   not: string;
   /** Kurulu ama bu turde verisi az (en az is sayisindan az) ajanlar, azdan coga (Asama 29). */
   kesif: Array<{ ajan: string; is_sayisi: number }>;
+  /** Is turunun sampiyonu (Asama 35); sampiyon duzeni uygulanmamissa yok. */
+  sampiyon?: { ajan: string; model: string; zaman: string };
 }
 
 /** Basari oraninin %95 Wilson araligi. Hic veri yoksa [0, 1]. */
@@ -291,6 +293,7 @@ export function oneriMetni(turler: TurOnerisi[], ayarlar: Partial<OneriAyarlari>
   ];
   for (const t of turler) {
     satirlar.push('', ileti('o_tur', { tur: t.tur, sayi: t.is_sayisi }));
+    if (t.sampiyon) satirlar.push(ileti('o_sampiyon', { ajan: t.sampiyon.ajan, model: t.sampiyon.model }));
     satirlar.push(t.oneri ? ileti('o_oneri', { ajan: t.oneri.ajan, model: t.oneri.model, gerekce: t.oneri.gerekce }) : ileti('o_oneri_yok', { not: t.not }));
     if (t.oneri && t.not) satirlar.push(ileti('o_not', { not: t.not }));
     if (t.kesif.length > 0) satirlar.push(ileti('o_kesif', { liste: t.kesif.map((k) => `${k.ajan} (${k.is_sayisi})`).join(', ') }));
