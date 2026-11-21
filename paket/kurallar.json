@@ -146,6 +146,17 @@
       "denetim": { "dosya": "test/vites.test.ts",
         "test": "KABUL komutsuz kesif isi acilir, \"gecti\" kapanmaz, gerekceyle \"belirsiz\" kapanir; hukum vitesinde komut zorunlu"
       }
+    },
+    {
+      "kod": "K13",
+      "etiket": "kural",
+      "skill": "mihenk-karar-notu",
+      "surum": "0.7",
+      "kaldirmama_nedeni": "Yeni bir isaret ekliyor; eskimis bir kurali karsilamiyor.",
+      "metin": "Sira, on kosul ya da yeni basamak ekleyen karar \"kisit ekler\" diye isaretlenir; rapor ve pencere bunlari ayri listeler ve sayar.",
+      "denetim": { "dosya": "test/kisit.test.ts",
+        "test": "KABUL kisit ekleyen karar raporda ayri bolumde ve sayida; isaretsiz karar o bolume girmez"
+      }
     }
   ],
   "cikanlar": [

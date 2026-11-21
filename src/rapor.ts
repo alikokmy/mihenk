@@ -75,6 +75,7 @@ export function raporHtml(kok: string, zaman = new Date()): { html: string; ozet
   ${geriAl}
 </section>`;
     }).join('\n');
+    const kisitlar = defter.kisitKararlari();
     const ozetCumle = o.toplam === 0
       ? t('r_bos')
       : t('r_ozet', { toplam: o.toplam, gecti: o.gecti, kaldi: o.kaldi, belirsiz: o.belirsiz, acik: o.acik ? t('r_ozet_acik', { acik: o.acik }) : '' });
@@ -101,6 +102,7 @@ code{background:var(--cizgi);padding:1px 5px;border-radius:4px}
   <p>${kacis(t('r_toplam', { sure: sure(k.ajan_sure_sn), maliyet: para(k.maliyet_usd, k.maliyeti_bilinmeyen_oturum) }))}</p>
   <p class="kucuk">${kacis(t('r_aciklama'))}</p>
 </div>
+${kisitlar.length ? `<section class="is" id="kisitlar" data-kisit-sayisi="${kisitlar.length}"><h2>${kacis(t('r_kisit_baslik', { sayi: kisitlar.length }))}</h2><ul>${kisitlar.map((k) => `<li>${kacis(t('r_kisit_satir', { id: k.is_id, konu: k.konu, secilen: k.secilen }))}</li>`).join('')}</ul></section>` : ''}
 ${satirlar}
 </main></body></html>
 `;

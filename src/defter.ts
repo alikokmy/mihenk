@@ -183,6 +183,8 @@ export interface KararKaydi {
   secenekler: string[];
   secilen: string;
   karsi_gorus: string;
+  /** Karar sira, on kosul ya da yeni basamak ekliyor mu (Asama 36, "kisit ekler"). */
+  kisit_ekler: boolean;
 }
 
 export interface HukumSonucu {
@@ -457,6 +459,14 @@ export class Defter {
       }
     }
     // Sema gocu: etiket (Asama 3), bekci sutunlari (Asama 10) sonradan eklendi; eski defterler acilirken tamamlanir.
+    // Kararlar gocu (Asama 36): kisit_ekler sutunu.
+    if (!(this.db.prepare('PRAGMA table_info(kararlar)').all() as Array<{ name: string }>).some((s) => s.name === 'kisit_ekler')) {
+      try {
+        this.db.exec('ALTER TABLE kararlar ADD COLUMN kisit_ekler INTEGER NOT NULL DEFAULT 0');
+      } catch (e) {
+        if (!String(e).includes('duplicate column')) throw e;
+      }
+    }
     const sutunlar = this.db.prepare('PRAGMA table_info(isler)').all() as Array<{ name: string }>;
     for (const [ad, tur] of [['etiket', 'TEXT'], ['testler_ozeti', 'TEXT'], ['baslangic_dogrulama', 'INTEGER'], ['supheler', 'TEXT'], ['zorluk', 'TEXT'], ['aile', 'TEXT'], ['bolme_plani', 'TEXT'], ['vites', 'TEXT']] as const) {
       if (sutunlar.some((s) => s.name === ad)) continue;
@@ -551,7 +561,7 @@ export class Defter {
     });
   }
 
-  kararYaz(g: { is_id: number; konu: string; secenekler: string[]; secilen: string; karsi_gorus: string }): { karar_id: number; is_id: number } {
+  kararYaz(g: { is_id: number; konu: string; secenekler: string[]; secilen: string; karsi_gorus: string; kisit_ekler?: boolean }): { karar_id: number; is_id: number } {
     return this.log.sar('karar_yaz', g, () => {
       this.acikIs(g.is_id);
       const konu = dolu('konu', g.konu, SINIRLAR.kayit);
@@ -562,8 +572,8 @@ export class Defter {
       const secilen = dolu('secilen', g.secilen, SINIRLAR.kayit);
       const karsi = dolu('karsi_gorus', g.karsi_gorus, SINIRLAR.kayit);
       const sonuc = this.db
-        .prepare(`INSERT INTO kararlar (is_id, zaman, konu, secenekler, secilen, karsi_gorus) VALUES (?, ?, ?, ?, ?, ?)`)
-        .run(g.is_id, new Date().toISOString(), konu, JSON.stringify(secenekler), secilen, karsi);
+        .prepare(`INSERT INTO kararlar (is_id, zaman, konu, secenekler, secilen, karsi_gorus, kisit_ekler) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+        .run(g.is_id, new Date().toISOString(), konu, JSON.stringify(secenekler), secilen, karsi, g.kisit_ekler === true ? 1 : 0);
       this.dokumYaz();
       return { karar_id: Number(sonuc.lastInsertRowid), is_id: g.is_id };
     });
@@ -957,7 +967,12 @@ export class Defter {
     const satirlar = this.db.prepare('SELECT * FROM kararlar WHERE is_id = ? ORDER BY id').all(isId) as unknown as Array<
       Omit<KararKaydi, 'secenekler'> & { secenekler: string }
     >;
-    return satirlar.map((k) => ({ ...k, secenekler: JSON.parse(k.secenekler) as string[] }));
+    return satirlar.map((k) => ({ ...k, secenekler: JSON.parse(k.secenekler) as string[], kisit_ekler: Number((k as unknown as { kisit_ekler?: number | null }).kisit_ekler ?? 0) === 1 }));
+  }
+
+  /** Kisit ekleyen kararlar (Asama 36): sira, on kosul ya da yeni basamak ekleyenler; rapor ve pencere ayri listeler. */
+  kisitKararlari(): Array<{ id: number; is_id: number; zaman: string; konu: string; secilen: string }> {
+    return this.db.prepare('SELECT id, is_id, zaman, konu, secilen FROM kararlar WHERE kisit_ekler = 1 ORDER BY id').all() as unknown as Array<{ id: number; is_id: number; zaman: string; konu: string; secilen: string }>;
   }
 
   /** Okunur dokum: her is, kanitlari ve kararlariyla tek satir. Her degisiklikte bastan yazilir; kaynak veritabanidir. */

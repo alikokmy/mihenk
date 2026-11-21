@@ -250,7 +250,8 @@ async function defterCiz() {
       i.geri_alinabilir ? el('button', { class: 'dugme ikincil', 'data-eylem': 'geri-al', metin: m('p_geri_al'), onclick: () => onizle(i.id, onizleme, sonuc) }) : null,
       onizleme, sonuc);
   });
-  koy(s, el('div', { class: 'kart' }, ust), ...kartlar);
+  const kisit = D.kisitlar && D.kisitlar.length ? el('div', { class: 'kart uyari', id: 'kisitlar' }, el('b', { metin: m('p_kisit_baslik', { sayi: D.kisitlar.length }) }), el('ul', {}, ...D.kisitlar.map((k) => el('li', { metin: m('p_kisit_satir', { id: k.is_id, konu: k.konu, secilen: k.secilen }) })))) : null;
+  koy(s, el('div', { class: 'kart' }, ust), kisit, ...kartlar);
 }
 
 // Geri alma iki adimlidir: once neyin olacagi gosterilir (deneme), sonra "Eminim" ile uygulanir.

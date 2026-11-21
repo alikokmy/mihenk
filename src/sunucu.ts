@@ -135,6 +135,7 @@ export function sunucuKur(defter: Defter): McpServer {
         secenekler: z.array(z.string()).describe('Degerlendirilen secenekler (en az iki)'),
         secilen: z.string().describe('Uygulanan secenek'),
         karsi_gorus: z.string().describe('Secilene karsi en guclu gorus'),
+        kisit_ekler: z.boolean().optional().describe('Karar sira, on kosul ya da yeni bir basamak ekliyorsa true: bu kararlar ayri listelenir ve sayilir.'),
       }),
     },
     (g, ctx) => calistir('karar_yaz', ctx, () => defter.kararYaz(g)),

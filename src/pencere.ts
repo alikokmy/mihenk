@@ -145,6 +145,16 @@ function isler(kok: string) {
   }
 }
 
+function kisitlar(kok: string) {
+  if (!existsSync(join(kok, '.mihenk', 'defter.db'))) return [];
+  const d = new Defter(kok);
+  try {
+    return d.kisitKararlari();
+  } finally {
+    d.kapat();
+  }
+}
+
 function durum(kok: string) {
   const a = ayarlariOku(kok);
   let ozet = null;
@@ -159,7 +169,7 @@ function durum(kok: string) {
   return {
     secim: false, dil: hangiDil(), metinler: pencereMetinleri(),
     proje: { kok, ad: basename(kok), kurulu: existsSync(join(kok, '.mihenk', 'kurulum.json')), liste_var: existsSync(join(kok, 'mihenk-isler.json')) },
-    ozet, baglam: baglamYuku(kok),
+    ozet, baglam: baglamYuku(kok), kisitlar: kisitlar(kok),
     ayarlar: AYARLAR.map((t) => ({
       ad: t.ad, baslik: sec(t.baslik), deger: a[t.ad], varsayilan: t.varsayilan, secenekler: t.secenekler ?? null, sayi: t.sayi ?? null, etki: t.etki,
       secenek_adlari: t.secenek_adlari ? Object.fromEntries(Object.entries(t.secenek_adlari).map(([k, v]) => [k, sec(v)])) : null,

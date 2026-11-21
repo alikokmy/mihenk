@@ -1155,3 +1155,27 @@ adayı yapılmadı; bu tutucu bir seçim.
 - Maliyetle şampiyon devirmek karar 4'e (net katkı) bağlı; uygulanmadı.
 - "Ölçüt kusurlu çıkarsa eski sayım silinmez": defter zaten değişmez. Ölçüt düzeltmesinin ayrı bir kaydı yok; şampiyon gerekçesi bu
   işi kısmen görüyor.
+
+## Aşama 36 sonucu (2026-11-21)
+
+**Karar 7'nin taşınması.** metamorfik kararı 7 ("kısıt işareti", kullanıcı onayı 2026-11-20) taşındı.
+
+- `karar_yaz` artık `kisit_ekler` alıyor; değer kararlar tablosuna yeni bir sütunla yazılıyor. Eski defterde sütun açılışta ekleniyor.
+- Rapor sayfası kısıt ekleyen kararları ayrı bir bölümde, sayısıyla gösteriyor.
+- Pencerenin Defter sekmesi aynı listeyi uyarı kartında gösteriyor.
+- Karar notu skill'i işaretin ne zaman verileceğini anlatıyor.
+
+| Kod | Madde | Denetim |
+|---|---|---|
+| K13 | Kısıt ekleyen karar işaretlenir; rapor ve pencere ayrı listeler ve sayar | `test/kisit.test.ts` |
+
+K13 yeni bir işaret ekliyor ve eskimiş bir kuralın yerine geçmiyor; `kaldirmama_nedeni` alanı bunu söylüyor (karar 6).
+
+**Kanıt:** `test/kisit.test.ts`.
+- Üç karardan yalnız işaretli olan rapordaki kısıt bölümüne girdi (`data-kisit-sayisi="1"`).
+- İşaretsiz defterde bölüm çizilmedi.
+- Sütunu silinmiş eski bir defter açıldı: eski karar `false` okundu, yeni işaretli karar yazıldı.
+
+**Uygulanmayan.** "Toplu onay listesi" ve "ara değerlendirme" metamorfik'in süreç belgeleridir; mihenk'te karşılığı rapor ve pencere sayısıdır.
+
+Ters denetim: işaret yazılmayınca kabul testi kaldı. `npm test` 270/270.

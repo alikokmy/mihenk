@@ -25,3 +25,6 @@ Keep each field to a sentence or two. One note per real decision, not per line o
 - steps that need the user present: a login, an approval prompt, a physical action.
 
 Everywhere else: decide, record, continue. While the task list has work, do not stop.
+
+If the decision adds an order, a precondition or a new step that later work must follow, pass `kisit_ekler: true`. Such decisions are
+listed and counted separately so the user can review them. [K13]
