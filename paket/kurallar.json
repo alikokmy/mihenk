@@ -2,85 +2,155 @@
   "aciklama": "Yontem paketindeki her maddenin karsiligi. etiket=kural: bir test zorlar (denetim alani o testi gosterir). etiket=oneri: henuz mekanik denetimi yok, kural sayilmaz. test/paket.test.ts bu dosyayi dener: denetimi olmayan madde 'kural' etiketi tasiyamaz.",
   "maddeler": [
     {
-      "kod": "K1", "etiket": "kural", "skill": "mihenk-is-kaydi",
+      "kod": "K1",
+      "etiket": "kural",
+      "skill": "mihenk-is-kaydi",
       "metin": "Kayit acilmadan is baslamaz: defter, kaydi olmayan ise not, karar ve hukum yazmaz.",
-      "denetim": { "dosya": "test/defter.test.ts", "test": "ret: kaydi olmayan ise kanit eklenmez, karar yazilmaz, hukum verilmez (kayitsiz baslatma)" }
+      "denetim": { "dosya": "test/defter.test.ts",
+        "test": "ret: kaydi olmayan ise kanit eklenmez, karar yazilmaz, hukum verilmez (kayitsiz baslatma)"
+      }
     },
     {
-      "kod": "K2", "etiket": "kural", "skill": "mihenk-is-kaydi",
+      "kod": "K2",
+      "etiket": "kural",
+      "skill": "mihenk-is-kaydi",
       "metin": "Dogrulama komutu kabuksuz kosar; kabuk karakteri ve izin listesi disindaki program reddedilir.",
-      "denetim": { "dosya": "test/defter.test.ts", "test": "ret: is_ac izinsiz ya da kabuk karakterli dogrulama komutuyla kayit acmaz" }
+      "denetim": { "dosya": "test/defter.test.ts",
+        "test": "ret: is_ac izinsiz ya da kabuk karakterli dogrulama komutuyla kayit acmaz"
+      }
     },
     {
-      "kod": "K3", "etiket": "kural", "skill": "mihenk-is-kaydi",
+      "kod": "K3",
+      "etiket": "kural",
+      "skill": "mihenk-is-kaydi",
       "metin": "Kayit tam ve kisadir: zorunlu alan bos olamaz, alan 1000 karakteri gecemez, acilan kayit degismez.",
-      "denetim": { "dosya": "test/defter.test.ts", "test": "ret: is_ac zorunlu alanlardan biri bossa kayit acilmaz" }
+      "denetim": { "dosya": "test/defter.test.ts",
+        "test": "ret: is_ac zorunlu alanlardan biri bossa kayit acilmaz"
+      }
     },
     {
-      "kod": "K4", "etiket": "kural", "skill": "mihenk-kanit-ve-hukum",
+      "kod": "K4",
+      "etiket": "kural",
+      "skill": "mihenk-kanit-ve-hukum",
       "metin": "Kaniti ajan beyan etmez: ajanin notu hukmu etkilemez, dogrulamayi sunucu kosar.",
-      "denetim": { "dosya": "test/defter.test.ts", "test": "KABUL 1: ajanin beyani kanit sayilmaz; \"testler gecti\" notu isi kapatmaz" }
+      "denetim": { "dosya": "test/defter.test.ts",
+        "test": "KABUL 1: ajanin beyani kanit sayilmaz; \"testler gecti\" notu isi kapatmaz"
+      }
     },
     {
-      "kod": "K5", "etiket": "kural", "skill": "mihenk-kanit-ve-hukum",
+      "kod": "K5",
+      "etiket": "kural",
+      "skill": "mihenk-kanit-ve-hukum",
       "metin": "Dogrulama gecmeden is kapanmaz: komut kalirsa ya da zaman asimina ugrarsa is acik kalir.",
-      "denetim": { "dosya": "test/defter.test.ts", "test": "KABUL 2: dogrulama komutu kalan is kapanmaz, acik kalir, deneme sayilir" }
+      "denetim": { "dosya": "test/defter.test.ts",
+        "test": "KABUL 2: dogrulama komutu kalan is kapanmaz, acik kalir, deneme sayilir"
+      }
     },
     {
-      "kod": "K6", "etiket": "kural", "skill": "mihenk-kanit-ve-hukum",
+      "kod": "K6",
+      "etiket": "kural",
+      "skill": "mihenk-kanit-ve-hukum",
       "metin": "Kapanan is degismez: kapali ise not, karar ve yeni hukum yazilmaz.",
-      "denetim": { "dosya": "test/defter.test.ts", "test": "ret: kapali ise kanit eklenmez, karar yazilmaz, yeniden hukum verilmez" }
+      "denetim": { "dosya": "test/defter.test.ts",
+        "test": "ret: kapali ise kanit eklenmez, karar yazilmaz, yeniden hukum verilmez"
+      }
     },
     {
-      "kod": "K7", "etiket": "kural", "skill": "mihenk-kanit-ve-hukum",
+      "kod": "K7",
+      "etiket": "kural",
+      "skill": "mihenk-kanit-ve-hukum",
       "metin": "\"Kaldi\" ve \"belirsiz\" hukmu gerekce ister.",
-      "denetim": { "dosya": "test/defter.test.ts", "test": "ret: kaldi ve belirsiz hukmu gerekcesiz verilmez" }
+      "denetim": { "dosya": "test/defter.test.ts",
+        "test": "ret: kaldi ve belirsiz hukmu gerekcesiz verilmez"
+      }
     },
     {
-      "kod": "K8", "etiket": "kural", "skill": "mihenk-karar-notu",
+      "kod": "K8",
+      "etiket": "kural",
+      "skill": "mihenk-karar-notu",
       "metin": "Karar notu en az iki secenek, secilen ve en guclu karsi gorus olmadan yazilmaz.",
-      "denetim": { "dosya": "test/defter.test.ts", "test": "ret: karar_yaz karsi gorussuz, secimsiz ya da tek secenekle yazilmaz" }
+      "denetim": { "dosya": "test/defter.test.ts",
+        "test": "ret: karar_yaz karsi gorussuz, secimsiz ya da tek secenekle yazilmaz"
+      }
     },
     {
-      "kod": "K9", "etiket": "kural", "skill": "mihenk-kanit-ve-hukum",
+      "kod": "K9",
+      "etiket": "kural",
+      "skill": "mihenk-kanit-ve-hukum",
       "metin": "Arac donusu sinirlidir: uzun cikti kesilir, tam metin dosyaya yazilir.",
-      "denetim": { "dosya": "test/mcp.test.ts", "test": "sinirli cikti (MCP): uzun donus kesilir, tam metin dosyaya yazilir, yol donuste verilir" }
+      "denetim": { "dosya": "test/mcp.test.ts",
+        "test": "sinirli cikti (MCP): uzun donus kesilir, tam metin dosyaya yazilir, yol donuste verilir"
+      }
     },
     {
-      "kod": "O1", "etiket": "oneri", "skill": "mihenk-ucuz-denetim",
+      "kod": "O1",
+      "etiket": "oneri",
+      "skill": "mihenk-ucuz-denetim",
       "metin": "Once ucuz denetim: duman kosusu, gercek veriyle kisa deneme, sonra tam kosu.",
       "neden_denetlenemiyor": "Ajanin hangi sirayla ne kostugunu defter gormez.",
       "denetim_plani": "Asama 4: uyum senaryosu (pahali kosudan once ucuz kosu yapildi mi) ve Asama 7 kancalari."
     },
     {
-      "kod": "O2", "etiket": "oneri", "skill": "mihenk-tek-degisiklik",
-      "metin": "Tek kosuda tek degisiklik.",
-      "neden_denetlenemiyor": "Bir kosuda kac degisiklik yapildigi defterden olculemez.",
-      "denetim_plani": "Asama 4: dogrulama denemeleri arasindaki diff boyutunu olcen uyum isareti."
+      "kod": "K10",
+      "etiket": "kural",
+      "skill": "mihenk-is-ailesi",
+      "surum": "0.7",
+      "yerine": "O2",
+      "metin": "Birbirine bagli isler tek aile olarak birlikte yapilir; aile kaydi aile adini ve sonuc kotu cikarsa ikiye bolme planini yazar.",
+      "denetim": { "dosya": "test/is-ailesi.test.ts",
+        "test": "KABUL aile kaydi bolme plani olmadan acilmaz; plani olan aile kaydi acilir"
+      }
     },
     {
-      "kod": "O3", "etiket": "oneri", "skill": "mihenk-bagimsiz-dogrulama",
+      "kod": "K11",
+      "etiket": "kural",
+      "skill": "mihenk-is-ailesi",
+      "surum": "0.7",
+      "yerine": "O2",
+      "metin": "Dogrulamayi degistiren is ile dogrulanani degistiren is ayri istir: is sirasinda var olan test degisirse gecti hukmu supheli isaretlenir.",
+      "denetim": { "dosya": "test/bekci.test.ts",
+        "test": "KABUL test kurcalama: testi zayiflatan taklit gecti alir ama supheli notu tasir"
+      }
+    },
+    {
+      "kod": "O3",
+      "etiket": "oneri",
+      "skill": "mihenk-bagimsiz-dogrulama",
       "metin": "Yazan dogrulamaz: onemli sonuc bagimsiz dogrulayici ve curutucuden gecer.",
       "neden_denetlenemiyor": "Defter henuz hukmu isteyenle isi yapanin ayni oturum olup olmadigini ayirmiyor.",
       "denetim_plani": "Asama 3-4: surucu kipinde hukmu ayri oturum verir; tuzak gorevler zayif dogrulamayi yakalar."
     },
     {
-      "kod": "O4", "etiket": "oneri", "skill": "mihenk-kok-neden",
+      "kod": "O4",
+      "etiket": "oneri",
+      "skill": "mihenk-kok-neden",
       "metin": "Kok neden logdan bulunur; neden bilinmeden duzeltme denenmez.",
       "neden_denetlenemiyor": "Ajanin logu okuyup okumadigi olculemez.",
       "denetim_plani": "Asama 4: ayni iste art arda kalan deneme sayisi uyum isareti olarak izlenir."
     },
     {
-      "kod": "O5", "etiket": "oneri", "skill": "mihenk-karar-notu",
+      "kod": "O5",
+      "etiket": "oneri",
+      "skill": "mihenk-karar-notu",
       "metin": "Durmadan devam: karar gereken yerde onerilen secenek uygulanir; yalniz geri alinamaz, disa donuk, guvenlik ya da kullanici isteyen adimda durulur.",
       "neden_denetlenemiyor": "Etkilesimli oturumda ajanin durmasini MCP sunucusu engelleyemez.",
       "denetim_plani": "Asama 3: surucu, is listesinde is varken oturumu yeniden baslatir (Ilke 2)."
     },
     {
-      "kod": "O6", "etiket": "oneri", "skill": "mihenk-is-kaydi",
+      "kod": "O6",
+      "etiket": "oneri",
+      "skill": "mihenk-is-kaydi",
       "metin": "Iki vites: kesif hafif, hukum tam.",
       "neden_denetlenemiyor": "Hangi calismanin kesif oldugu ajanin beyanidir.",
       "denetim_plani": "Asama 6: is turu basina olcum; ayri bir denetim planlanmiyor."
+    }
+  ],
+  "cikanlar": [
+    {
+      "kod": "O2",
+      "metin": "Tek kosuda tek degisiklik.",
+      "surum": "0.7",
+      "gerekce": "metamorfik kullanici karari 2026-11-21 (is ailesi): bagli isleri ayirmak bozuk ara durumlar uretir; yerine K10 ve K11."
     }
   ]
 }

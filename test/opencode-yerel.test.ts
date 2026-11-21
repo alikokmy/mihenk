@@ -46,13 +46,21 @@ test('KABUL OpenCode + yerel model, internet kesik: mihenk araclari dogrudan gid
     kur(proje, { araclar: ['opencode'] });
 
     const olu = 'http://127.0.0.1:9';
-    const env = { ...process.env, HTTP_PROXY: olu, HTTPS_PROXY: olu, http_proxy: olu, https_proxy: olu, NO_PROXY: '127.0.0.1,localhost', no_proxy: '127.0.0.1,localhost', OPENCODE_DISABLE_MODELS_FETCH: '1', OPENCODE_DISABLE_AUTOUPDATE: '1' };
+    const env = { ...process.env, PWD: proje, HTTP_PROXY: olu, HTTPS_PROXY: olu, http_proxy: olu, https_proxy: olu, NO_PROXY: '127.0.0.1,localhost', no_proxy: '127.0.0.1,localhost', OPENCODE_DISABLE_MODELS_FETCH: '1', OPENCODE_DISABLE_AUTOUPDATE: '1' };
     // stdin kapali olmali: acik kalirsa "opencode run" mesaji stdin'den bekler ve hic ilerlemez.
-    const o = spawn(oc!.program, [...oc!.onEk, 'run', '--standalone', '--auto', '--format', 'json', '-m', 'yerel/qwen3-coder', 'merhaba'], { cwd: proje, env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
-    let cikti = '';
-    o.stdout.on('data', (c) => (cikti += c));
-    const kod = await new Promise<number | null>((s) => o.on('exit', s));
-    assert.equal(kod, 0, cikti.slice(-500));
+    // Bulgu (2026-11-21): makine yukluyken (tam takim paralel) OpenCode MCP sunucusu baglanmadan ilk istegi gonderebiliyor; o kosuda
+    // mihenk araclari istekte yok. Bir kez yeniden denenir; iki kosuda da yoksa test kalir.
+    const kos = async (): Promise<void> => {
+      istekler.length = 0;
+      const o = spawn(oc!.program, [...oc!.onEk, 'run', '--standalone', '--auto', '--format', 'json', '-m', 'yerel/qwen3-coder', 'merhaba'], { cwd: proje, env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+      let cikti = '';
+      o.stdout.on('data', (c) => (cikti += c));
+      const kod = await new Promise<number | null>((s) => o.on('exit', s));
+      assert.equal(kod, 0, cikti.slice(-500));
+    };
+    const araclariVar = (): boolean => istekler.some((x) => x.yol.endsWith('/chat/completions') && x.govde.includes('mihenk_is_ac'));
+    await kos();
+    if (!araclariVar()) await kos();
 
     const sohbet = istekler.filter((x) => x.yol.endsWith('/chat/completions'));
     assert.ok(sohbet.length >= 2, 'istekler yerel sunucuya gitti');

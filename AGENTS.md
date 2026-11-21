@@ -5,7 +5,7 @@
 - **Dil:** belgeler, commit mesajları ve kullanıcıyla konuşma Türkçe. Kod tanımlayıcıları ASCII.
 - **Üç ilke bağlayıcıdır** (IS_PLANI "İlke 1", "İlke 2", "İlke 3"): her kuralın bir denetimi olur; işin sürekliliğini ajan değil sürücü
   sağlar; program kodlama bilmeyen kullanıcı için kolaydır ve yönetici izni istemez.
-- **Yöntem:** işten önce kabul ölçütü yazılır; önce ucuz denetim (duman); tek seferde tek değişiklik; kanıt bir komutun çıktısıdır;
+- **Yöntem:** işten önce kabul ölçütü yazılır; önce ucuz denetim (duman); birbirine bağlı değişiklikler tek iş ailesi olarak birlikte yapılır ve sonuç kötü çıkarsa nasıl ikiye bölüneceği yazılır, doğrulamayı değiştiren iş ayrı iştir (kullanıcı onayı 2026-11-21, "tek seferde tek değişiklik"in yerine); kanıt bir komutun çıktısıdır;
   olumsuz sonuç da yazılır. Belge kısa tutulur: yeni belge açmadan önce var olan güncellenir.
 - **Durma:** iş listesinde iş varken durulmaz. Karar gereken yerde önerilen seçenek uygulanır ve karşı görüşüyle birlikte not edilir.
   Durulacak yerler: geri alınamaz ya da dışa dönük işlem, güvenlik, kullanıcının varlığını isteyen adım.

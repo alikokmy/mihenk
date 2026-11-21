@@ -36,6 +36,9 @@ export interface ListeIsi {
   zaman_asimi_sn?: number;
   /** Isin zorlugu (Asama 28): kolay, orta, zor. Oneri ajanlari ayni zorluk karisiminda karsilastirir. */
   zorluk?: Zorluk;
+  /** Is ailesi (Asama 33) ve sonuc kotu cikarsa ikiye bolme plani (aile verilirse zorunlu). */
+  aile?: string;
+  bolme_plani?: string;
 }
 
 export interface IsListesi {
@@ -186,6 +189,7 @@ function istemYaz(is: IsGorunumu, devirNotu: string | null): string {
     `Beklenti: ${is.beklenti}`,
     `Yanlissa ne gorulur: ${is.yanlissa}`,
     `Isin bittigini gosteren komut: ${is.dogrulama_komutu}`,
+    ...(is.aile ? [`Is ailesi: ${is.aile}. Bagli degisiklikler birlikte yapilir; sonuc kotuyse bolme plani: ${is.bolme_plani ?? ''}`] : []),
     'Kurallar: Bu komutu surucu kendisi kosacak; "bitti" demen yetmez, komut gecmeli. Hukmu surucu verir: hukum_ver cagirma (reddedilir); not icin kanit_ekle, karar icin karar_yaz kullanabilirsin.',
     'Yalniz bu proje klasorunde calis; disindaki hicbir dosyayi degistirme. Commit ya da push yapma, saklamayi surucu yapar.',
     'Karar gereken yerde onerdigin secenegi uygula ve devam et; soru sorma. Is bitince dur.',
@@ -539,6 +543,8 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
             istemci: SURUCU_ISTEMCISI, etiket: kimlik,
             ...(listeIsi.zaman_asimi_sn === undefined ? {} : { zaman_asimi_sn: listeIsi.zaman_asimi_sn }),
             ...(listeIsi.zorluk === undefined ? {} : { zorluk: listeIsi.zorluk }),
+            ...(listeIsi.aile === undefined ? {} : { aile: listeIsi.aile }),
+            ...(listeIsi.bolme_plani === undefined ? {} : { bolme_plani: listeIsi.bolme_plani }),
           });
         } catch (e) {
           // Kaydi acilamayan is (eksik alan, izinsiz komut) listeyi durdurmaz.

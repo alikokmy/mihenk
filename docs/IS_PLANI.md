@@ -269,7 +269,7 @@ düzelten madde.
 
 | Aşama | Karar | İş | Kabul ölçütü |
 |---|---|---|---|
-| 33 | 2. İş ailesi ("tek koşuda tek değişiklik" yerine) | `mihenk-tek-degisiklik` skill'i `mihenk-is-ailesi` olur. `is_ac`'a isteğe bağlı `aile` (ad) ve `bolme_plani` gelir; aile adı verilirse bölme planı zorunludur. "Doğrulamayı değiştiren iş ile doğrulananı değiştiren iş ayrı iştir" kurala bağlanır (test kurcalama bekçisi). `kurallar.json`'da O2 çıkar, yerine iki kural girer | bölme plansız aile kaydı reddediliyor; eski defter (aile sütunu yok) açılıyor; O2 yok, yeni iki kural testleriyle; skill sayısı 7, eski skill `kur` eşitlemesinde kaldırılıyor |
+| 33 | **tamam** (2026-11-21; bkz. [SONUCLAR.md](SONUCLAR.md) "Aşama 33 sonucu"). 2. İş ailesi ("tek koşuda tek değişiklik" yerine) | `mihenk-tek-degisiklik` skill'i `mihenk-is-ailesi` olur. `is_ac`'a isteğe bağlı `aile` (ad) ve `bolme_plani` gelir; aile adı verilirse bölme planı zorunludur. "Doğrulamayı değiştiren iş ile doğrulananı değiştiren iş ayrı iştir" kurala bağlanır (test kurcalama bekçisi). `kurallar.json`'da O2 çıkar, yerine iki kural girer | bölme plansız aile kaydı reddediliyor; eski defter (aile sütunu yok) açılıyor; O2 yok, yeni iki kural testleriyle; skill sayısı 7, eski skill `kur` eşitlemesinde kaldırılıyor |
 | 34 | 1. İki vites ve önce kusur | `is_ac`'a `vites` (`kesif` / `hukum`, varsayılan `hukum`). Keşif işi hafif kayıttır: doğrulama komutu isteğe bağlı; komutsuz keşif "geçti" diye kapanamaz. Öneri keşif işlerini doğrulanmış başarı saymaz; süre ve maliyetleri raporda kalır. Önce kusur: liste denetimi defterdeki giderilmemiş "kaldı" işlerini uyarı olarak yazar; listede `"kusur": true` işaretli işler sürücüde önce yürür | komutsuz keşif işi açılıyor ama "geçti" kapanmıyor; keşif işi öneri sayımına girmiyor; eski defterde hesap aynı; kusur işi listenin sonunda da olsa ilk yürüyor; giderilmemiş kusur uyarısı çıkıyor |
 | 35 | 3. Ölçütün kaynağı ve şampiyon | Öneri eşiklerinin her biri çıktıda ve ayar notunda "kaynak: tahmin" diye etiketlenir. Eşiğin altında kalan seçenek keşif adayı olmayı sürdürür (tahmin eşiği kalıcı dışlamaz). İş türü başına "şampiyon" defterde tutulur; yeni seçenek ancak başarı alt sınırı şampiyonun üst sınırını aşınca (aralıklar ayrışınca) ya da maliyet kuralıyla açıkça daha iyiyse şampiyon olur; değişim gerekçesiyle yazılır, eski kayıt silinmez | eşiği geçemeyen ajan keşifte seçiliyor; çakışan aralıkta şampiyon değişmiyor, ayrışınca değişiyor ve geçmiş iki satır; çıktıda eşiklerin kaynağı yazıyor |
 | 36 | 7. Kısıt işareti | `karar_yaz`'a `kisit_ekler`. Rapor ve pencere kısıt ekleyen kararları ayrı listeler ve sayısını yazar | işaretli karar raporda ayrı bölümde ve sayıda; eski defter açılıyor |
@@ -289,8 +289,7 @@ düzelten madde.
 özgüdür. İş ailesindeki "aynı anda en çok iki aktif hat" kuralı da taşınmaz: mihenk'in sürücüsü listeyi sırayla yürütür, paralel hat yoktur.
 
 **Kullanıcıya bırakılan:**
-- Bu deponun kendi `AGENTS.md` dosyasındaki "tek seferde tek değişiklik" kuralı da iş ailesine çevrilsin mi? O kural kullanıcının bu depo
-  için koyduğu kuraldır; yalnız ürünün yöntem paketi değiştirildi.
+- ~~Bu deponun kendi `AGENTS.md` dosyasındaki kural~~: kullanıcı 2026-11-21 onayladı ("tek seferde tek değişiklik kuralını ve diğer kural değişimlerini ... onaylıyorum"); değiştirildi.
 - Karar 4'ün birimi.
 - Eşli kıyas: şampiyonla adayı aynı işlerde kıyaslamak için aynı işin iki ajana yaptırılması gerekir. Bunun maliyeti var; isteğe bağlı bir
   "eşli deneme" kipi önerilir.

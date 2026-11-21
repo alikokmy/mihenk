@@ -1045,3 +1045,43 @@ klasöründe yapıldı; "başlayamadı" durumu kaldırıldı.
 `npm test` 257/257.
 
 **Sürüm 0.6:** Aşama 30-32 kapandı.
+
+## Aşama 33 sonucu (2026-11-21)
+
+**Karar 2'nin taşınması.** metamorfik kararı 2 ("iş ailesi", kullanıcı onayı 2026-11-21) yöntem paketine taşındı.
+
+- `mihenk-tek-degisiklik` skill'i `mihenk-is-ailesi` oldu.
+- `kurallar.json`'dan O2 ("tek koşuda tek değişiklik", öneri) çıktı ve `cikanlar` listesine gerekçesiyle yazıldı. Yerine iki kural girdi:
+
+| Kod | Madde | Denetim |
+|---|---|---|
+| K10 | Aile kaydı aile adını ve bölme planını yazar | `test/is-ailesi.test.ts` |
+| K11 | Doğrulamayı değiştiren iş ayrı iştir: iş sırasında var olan test değişirse "geçti" şüpheli | `test/bekci.test.ts` (Aşama 10 bekçisi) |
+
+- `is_ac`, iş listesi ve pencerenin işe özel bölümü `aile` ve `bolme_plani` alanlarını alıyor. Sürücü aileyi ajan istemine yazıyor.
+
+**Kanıt:** `test/is-ailesi.test.ts`.
+- Bölme plansız ya da boş planlı aile kaydı reddediliyor; planlı kayıt açılıyor; ailesiz kayıt eskisi gibi.
+- Aile sütunları silinmiş (0.6 biçimindeki) bir defter açıldı, eski iş okundu ve yeni aile işi yazıldı.
+- Eşleşme testi (Aşama 30) iki yeni iş alanının pencerede olmasını zorladı ve geçti.
+
+**Uygulanmayan.**
+- "Aynı anda en çok iki aktif hat" kuralı taşınmadı: sürücü sırayla yürütüyor.
+- Eski skill'in, daha önce kurulmuş projelerde yeniden kurulumla kaldırıldığı ayrıca sınanmadı. Bu, var olan eşitleme davranışına
+  dayanıyor (Aşama 14).
+
+**Bu aşamada bulunan ve düzeltilen ortam sorunları.** Bunlar tam takımın ilk kez PowerShell yerine Git Bash'ten koşmasıyla görüldü:
+
+- `paketle` PATH'teki ilk `tar`'ı çağırıyordu. Git'in GNU tar'ı `-a` ile zip üretmez. Artık Windows'un kendi `tar.exe`'si tam yoluyla
+  çağrılıyor; test de zip'i onunla açıyor.
+- OpenCode testi, Git Bash'in bıraktığı Unix biçimli `PWD` yüzünden test projesi yerine mihenk deposunun ayarını okuyordu. Sürücü ajanları
+  başlatırken `PWD`'yi zaten düzeltiyor; düzeltme yalnız testte eksikti.
+- **Ürün bulgusu:** makine yüklüyken (tam takım paralel koşarken) OpenCode, MCP sunucusu bağlanmadan ilk isteği modele gönderebiliyor.
+  O koşuda mihenk araçları istekte yok. Test bir kez yeniden deniyor. Gerçek kullanımda bu, ilk turda kayıt açılmaması demek; sürücüde
+  ölçülmedi.
+- İş kaydı şemasına alan eklendiği için araç tanımı bağlam ölçüsü 4456'dan 4952 karaktere çıktı; sabit yeni ölçümle güncellendi.
+
+**Bu deponun kuralı.** Kullanıcı onayıyla (2026-11-21) bu deponun `AGENTS.md` dosyasındaki "tek seferde tek değişiklik" de iş ailesine
+çevrildi.
+
+`npm test` 260/260.

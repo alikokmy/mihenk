@@ -14,7 +14,7 @@ import { kur } from './kur.js';
  * Defter sunucusunun bes aracinin tanimi (ad, aciklama, girdi semasi) tools/list yanitinda kac karakter tutuyor.
  * Olculur, tahmin edilmez: test/ayar.test.ts gercek sunucudan olcup bu degerle %10 icinde uyustugunu denetler.
  */
-export const MCP_ARAC_TANIMI_KARAKTER = 4456; // 2026-11-20 olcumu
+export const MCP_ARAC_TANIMI_KARAKTER = 4952; // 2026-11-21 olcumu (is_ac: zorluk, aile, bolme_plani)
 
 export interface BaglamYuku {
   yontem_metni: number;

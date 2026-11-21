@@ -115,7 +115,9 @@ export function paketle(cikis: string, o: { zip?: boolean; depo?: string } = {})
   if (o.zip !== false) {
     zip = `${klasor}.zip`;
     rmSync(zip, { force: true });
-    const r = spawnSync('tar', ['-a', '-c', '-f', zip, '-C', resolve(cikis), ad], { encoding: 'utf8', windowsHide: true });
+    // Windows'un kendi tar.exe'si (bsdtar) tam yoluyla: PATH'te Git'in GNU tar'i varsa -a ile zip uretmez (2026-11-21, Git Bash'te goruldu).
+    const tar = process.platform === 'win32' ? join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe') : 'tar';
+    const r = spawnSync(tar, ['-a', '-c', '-f', zip, '-C', resolve(cikis), ad], { encoding: 'utf8', windowsHide: true });
     if (r.status !== 0) zip = null;
   }
   return { klasor, zip, paket_sayisi: paketler.length, boyut_mb: Math.round(dizinBoyutu(klasor) / 1048576) };

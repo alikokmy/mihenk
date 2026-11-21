@@ -115,6 +115,9 @@ export interface IsGirdisi {
   etiket?: string;
   /** Isin zorlugu (Asama 28): kolay, orta, zor. Istege bagli; listedeki deger ajaninkinden onceliklidir. */
   zorluk?: Zorluk;
+  /** Is ailesi (Asama 33): birbirine bagli isler tek aile olarak yapilir; aile adi verilirse bolme plani zorunludur. */
+  aile?: string;
+  bolme_plani?: string;
 }
 
 export type Zorluk = 'kolay' | 'orta' | 'zor';
@@ -133,6 +136,8 @@ export interface IsKaydi {
   istemci: string | null;
   etiket: string | null;
   zorluk: Zorluk | null;
+  aile: string | null;
+  bolme_plani: string | null;
   durum: Durum;
   baslangic: string;
   bitis: string | null;
@@ -415,7 +420,7 @@ export class Defter {
     this.db.exec(SEMA);
     // Sema gocu: etiket (Asama 3), bekci sutunlari (Asama 10) sonradan eklendi; eski defterler acilirken tamamlanir.
     const sutunlar = this.db.prepare('PRAGMA table_info(isler)').all() as Array<{ name: string }>;
-    for (const [ad, tur] of [['etiket', 'TEXT'], ['testler_ozeti', 'TEXT'], ['baslangic_dogrulama', 'INTEGER'], ['supheler', 'TEXT'], ['zorluk', 'TEXT']] as const) {
+    for (const [ad, tur] of [['etiket', 'TEXT'], ['testler_ozeti', 'TEXT'], ['baslangic_dogrulama', 'INTEGER'], ['supheler', 'TEXT'], ['zorluk', 'TEXT'], ['aile', 'TEXT'], ['bolme_plani', 'TEXT']] as const) {
       if (sutunlar.some((s) => s.name === ad)) continue;
       try {
         this.db.exec(`ALTER TABLE isler ADD COLUMN ${ad} ${tur}`);
@@ -465,6 +470,12 @@ export class Defter {
       komutuCoz(komut, this.ayarlar.izinli_programlar);
       const etiket = g.etiket === undefined ? null : dolu('etiket', g.etiket, SINIRLAR.kisa);
       const zorluk = g.zorluk === undefined || g.zorluk === null ? null : g.zorluk;
+      // Is ailesi (K10): aile adi verilirse sonuc kotu cikarsa ikiye bolme plani da yazilir.
+      const aile = g.aile === undefined || g.aile === null || String(g.aile).trim() === '' ? null : dolu('aile', g.aile, SINIRLAR.kisa);
+      const bolmePlani = g.bolme_plani === undefined || g.bolme_plani === null || String(g.bolme_plani).trim() === '' ? null : dolu('bolme_plani', g.bolme_plani, SINIRLAR.kayit);
+      if (aile !== null && bolmePlani === null) {
+        throw new Ret('EKSIK_ALAN', 'aile kaydi bolme plani ister: sonuc kotu cikarsa aileyi hangi iki parcaya boleceginizi bolme_plani alanina yazin.');
+      }
       if (zorluk !== null && !ZORLUKLAR.includes(zorluk)) {
         throw new Ret('GECERSIZ_DEGER', `zorluk kolay, orta ya da zor olmalidir; gelen: ${JSON.stringify(zorluk)}.`);
       }
@@ -474,10 +485,10 @@ export class Defter {
       }
       const sonuc = this.db
         .prepare(
-          `INSERT INTO isler (tur, soru, beklenti, yanlissa, dogrulama_komutu, zaman_asimi_sn, ajan, model, istemci, etiket, zorluk, baslangic, testler_ozeti)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO isler (tur, soru, beklenti, yanlissa, dogrulama_komutu, zaman_asimi_sn, ajan, model, istemci, etiket, zorluk, aile, bolme_plani, baslangic, testler_ozeti)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .run(tur, soru, beklenti, yanlissa, komut, zamanAsimi, ajan, model, g.istemci ?? null, etiket, zorluk, new Date().toISOString(),
+        .run(tur, soru, beklenti, yanlissa, komut, zamanAsimi, ajan, model, g.istemci ?? null, etiket, zorluk, aile, bolmePlani, new Date().toISOString(),
           ozellikleriOku(this.kok).bekci_test_kurcalama === false ? null : JSON.stringify(testOzeti(this.kok)));
       const is = this.isGetir(Number(sonuc.lastInsertRowid));
       this.fotograf(is.id, 'bas');

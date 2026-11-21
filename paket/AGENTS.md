@@ -11,4 +11,4 @@ This project uses the mihenk ledger (MCP server `mihenk`). The ledger enforces t
 - **Long output:** tool results are bounded; the full text is in the file path the tool returns.
 
 Skills with the details: `mihenk-is-kaydi`, `mihenk-kanit-ve-hukum`, `mihenk-karar-notu`, `mihenk-ucuz-denetim`,
-`mihenk-tek-degisiklik`, `mihenk-bagimsiz-dogrulama`, `mihenk-kok-neden`.
+`mihenk-is-ailesi`, `mihenk-bagimsiz-dogrulama`, `mihenk-kok-neden`.

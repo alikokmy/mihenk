@@ -168,7 +168,8 @@ async function listeCiz() {
       zaman.onchange = () => { const v = sayiOku(zaman); if (v === null) delete is.zaman_asimi_sn; else is.zaman_asimi_sn = v; };
       kart.append(el('details', {}, el('summary', { metin: m('p_is_ozel') }),
         el('label', { class: 'alan' }, el('span', { metin: m('p_alan_is_ajan') }), isAjan),
-        el('label', { class: 'alan' }, el('span', { metin: m('p_alan_zaman_asimi') }), zaman)));
+        el('label', { class: 'alan' }, el('span', { metin: m('p_alan_zaman_asimi') }), zaman),
+        ...[['aile', 'p_alan_aile'], ['bolme_plani', 'p_alan_bolme']].map(([k, mt]) => { const g = el('input', { 'data-alan': k }); g.value = is[k] || ''; g.oninput = () => { if (g.value.trim()) is[k] = g.value; else delete is[k]; }; return el('label', { class: 'alan' }, el('span', { metin: m(mt) }), g); })));
       kutu.append(kart);
     });
   }

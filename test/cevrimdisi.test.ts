@@ -36,7 +36,7 @@ test('KABUL: zip baska klasore acilinca PATH\'te Node yokken kurulum, doktor ve 
   assert.ok(p.zip && existsSync(p.zip), 'zip uretildi');
   // Zip'i depodan ve paketin yapildigi yerden ayri bir klasore ac.
   const acilan = mkdtempSync(join(tmpdir(), 'mihenk-acilan-'));
-  assert.equal(spawnSync('tar', ['-x', '-f', p.zip!, '-C', acilan]).status, 0);
+  assert.equal(spawnSync(join(process.env.SystemRoot ?? 'C:/Windows', 'System32', 'tar.exe'), ['-x', '-f', p.zip!, '-C', acilan]).status, 0);
   const kok = join(acilan, readdirSync(acilan)[0]!);
   for (const g of ['node/node.exe', 'Mihenk-Ac.cmd', 'mihenk.cmd', 'Projeye-kur.cmd', 'KURULUM.txt', 'app/dist/src/cli.js', 'app/paket/AGENTS.md', 'app/node_modules/@modelcontextprotocol/server/package.json']) {
     assert.ok(existsSync(join(kok, g)), g);

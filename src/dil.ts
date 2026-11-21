@@ -359,6 +359,8 @@ export const METINLER = {
   p_alan_yanlissa: { tr: 'Yanlışsa ne görülür?', en: 'What do you see if it is wrong?' },
   p_alan_komut: { tr: 'İşin bittiğini gösteren komut (bilmiyorsanız boş bırakın: yapay zekâ önce bu işin testini yazar)', en: 'Command that shows the job is done (leave empty if unsure: the AI first writes a test for this job)' },
   p_alan_tur: { tr: 'İş türü', en: 'Kind of job' },
+  p_alan_aile: { tr: 'İş ailesi (birlikte yapılması gereken bağlı işlerin ortak adı; isteğe bağlı)', en: 'Task family (shared name of dependent jobs done together; optional)' },
+  p_alan_bolme: { tr: 'Aile için bölme planı: sonuç kötü çıkarsa iki parçaya nasıl bölünür (aile adı yazıldıysa zorunlu)', en: 'Split plan for the family: how it is split in two if the result is bad (required with a family name)' },
   p_fk_baslik: { tr: 'Fikrinizi yazın', en: 'Describe your idea' },
   p_fk_aciklama: { tr: 'Ne yapmak istediğinizi kendi cümlelerinizle anlatın. Yapay zekâ bunu küçük işlere böler; siz kontrol edip başlatırsınız. Komut yazmanız gerekmez.', en: 'Describe what you want in your own words. The AI splits it into small jobs; you review them and start. You do not need to write any command.' },
   p_fk_ornek: { tr: 'Örn: Ailemin tariflerini saklayıp malzemeye göre arayabileceğim basit bir uygulama istiyorum.', en: 'E.g.: I want a simple app to keep my family\'s recipes and search them by ingredient.' },
