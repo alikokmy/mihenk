@@ -6,7 +6,7 @@
 - **Sıradaki üç iş:** plan listesinde açık aşama yok; adaylar: karar 4 (net katkı, birim kararından sonra), eşli kıyas kipi,
   sürücüde MCP bağlantısını bekleme (yük altındaki OpenCode bulgusu).
 - **Açık hatlar:** yok (sürücü sırayla yürütür).
-- **Kullanıcıda bekleyen kararlar:** karar 4'ün (net katkı) birimi; eşli kıyas kipi (aynı işi iki ajana yaptırmanın maliyeti);
+- **Kullanıcıda bekleyen kararlar:** karar 4 (net katkı) beklemede, öneri: süre birimi; eşli kıyas kipi (aynı işi iki ajana yaptırmanın maliyeti);
   Cline, Qwen Code ve gerçek Qwen / DeepSeek sunucusuyla deneme için hesap ya da ortam.
 - **Bilinen açık:** yük altında OpenCode, MCP bağlanmadan ilk isteği gönderebiliyor (Aşama 33 sonucu).
 
@@ -300,7 +300,7 @@ düzelten madde.
 
 **Kullanıcıya bırakılan:**
 - ~~Bu deponun kendi `AGENTS.md` dosyasındaki kural~~: kullanıcı 2026-11-21 onayladı ("tek seferde tek değişiklik kuralını ve diğer kural değişimlerini ... onaylıyorum"); değiştirildi.
-- Karar 4'ün birimi.
+- Karar 4'ün birimi: **beklemede** (kullanıcı, 2026-11-21: 'doların başarıya oranı desek bile ücretli olmayan ajanların başarısı ölçülemez ... şimdilik kalabilir'). Öneri olarak not: her ajanda ölçülen tek ortak birim süredir (başarı başına süre); ücretsiz ajan dahil karşılaştırılabilir. Kullanıcı isterse bu birimle açılır.
 - Eşli kıyas: şampiyonla adayı aynı işlerde kıyaslamak için aynı işin iki ajana yaptırılması gerekir. Bunun maliyeti var; isteğe bağlı bir
   "eşli deneme" kipi önerilir.
 
