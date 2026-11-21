@@ -1252,6 +1252,6 @@ olduğunu test ayıramaz. `paket/AGENTS.md` ve skill'ler kısa; gerekçeler bu d
 
 **Etkileşim (Aşama 39-32).** Temizlik, kaydı açılmış işin hazırlık çıktısını siliyor. Aşama 32'nin kabul testi bu dosyayı kanıt olarak okuduğu için o testte temizlik kapatıldı. Ürün davranışı doğru: hazırlığın sonucu (test kaldı) defterde sürücü notu olarak duruyor.
 
-`npm test` 275/275 (bilgi takımı 15, engel takımı 260).
+`npm test` 275/275 (bilgi takımı 16, engel takımı 259).
 
 **Sürüm 0.7:** Aşama 33-40 kapandı; `v0.7.0`.
