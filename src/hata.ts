@@ -9,6 +9,7 @@ export type RetKodu =
   | 'GEREKCE_YOK' // "kaldi" ya da "belirsiz" hukmu gerekcesiz verilmez
   | 'HUKUM_CELISKILI' // istenen hukum dogrulama sonucuyla celisiyor
   | 'SURUCU_ISI' // isi surucu yonetiyor: hukmu ajan degil surucu verir
+  | 'KESIF_HUKUM' // komutsuz kesif isi "gecti" diye kapanamaz: hukum iddiasi yoktur (Asama 34)
   | 'GECERSIZ_DEGER';
 
 export class Ret extends Error {

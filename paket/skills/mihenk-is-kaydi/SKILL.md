@@ -29,6 +29,8 @@ Every field is required and short (1000 characters at most). The record cannot b
 
 One task, one record. If a task will not fit in one session, split it and open a record per piece.
 
-## Two gears (suggestion)
+## Two gears
 
-Exploring can be light: a quick look, a smoke run, no ceremony. Anything you will report as a result goes through a record and a verdict.
+Exploring is light: open the record with `vites: "kesif"` and only the question, expectation and what you would see if wrong; the
+command is optional. A command-less exploration can never close as "gecti" and never counts as verified success. Anything you will report
+as a result goes through a full record (`vites: "hukum"`, the default) and a verdict. [K12]

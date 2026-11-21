@@ -79,13 +79,15 @@ export function sunucuKur(defter: Defter): McpServer {
         yanlissa: z.string().describe('Yaklasim yanlissa ne gorulur (yanlislama olcutu)'),
         dogrulama_komutu: z
           .string()
+          .optional()
           .describe(
-            'Isin bittigini gosteren tek komut, or. "npm test" ya da "pytest -q tests/test_x.py". Proje kokunde, kabuksuz kosar: ' +
+            'Isin bittigini gosteren tek komut (hukum vitesinde zorunlu), or. "npm test" ya da "pytest -q tests/test_x.py". Proje kokunde, kabuksuz kosar: ' +
               '&&, |, >, $ gibi kabuk karakterleri ve izin listesi disindaki programlar reddedilir.',
           ),
         ajan: z.string().describe('Isi yuruten ajan araci, or. claude-code, codex, gemini-cli'),
         model: z.string().describe('Kullanilan model kimligi'),
         zaman_asimi_sn: z.number().int().optional().describe('Dogrulama komutunun zaman asimi, saniye (varsayilan 120)'),
+        vites: z.enum(['kesif', 'hukum']).optional().describe('hukum (varsayilan): tam yontem, dogrulama komutu zorunlu. kesif: hafif kayit (soru, beklenti, yanlissa); komut istege bagli; komutsuz kesif "gecti" diye kapanmaz ve oneride basari sayilmaz.'),
         aile: z.string().optional().describe('Is ailesi adi: birbirine bagli isler (ayni kok neden, birbirini gerektiren parcalar) tek aile olarak birlikte yapilir. Verilirse bolme_plani zorunlu.'),
         bolme_plani: z.string().optional().describe('Aile isi icin: sonuc kotu cikarsa aileyi hangi iki parcaya bolersiniz.'),
         zorluk: z.enum(['kolay', 'orta', 'zor']).optional().describe('Isin zorlugu, durust tahmin: kolay, orta ya da zor. Oneri hesabi ajanlari ayni zorluk karisiminda karsilastirir.'),

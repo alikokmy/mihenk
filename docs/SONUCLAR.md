@@ -1085,3 +1085,37 @@ klasöründe yapıldı; "başlayamadı" durumu kaldırıldı.
 çevrildi.
 
 `npm test` 260/260.
+
+## Aşama 34 sonucu (2026-11-21)
+
+**Karar 1'in taşınması.** metamorfik kararı 1 ("iki vites" ve "önce kusur", kullanıcı onayı 2026-11-20) taşındı.
+
+- `is_ac` artık `vites` alıyor: `kesif` ya da `hukum` (varsayılan).
+- Keşif işi hafif kayıttır: doğrulama komutu verilmeyebilir. Komutsuz keşif "geçti" diye kapanamaz (yeni ret kodu `KESIF_HUKUM`);
+  gerekçeyle "belirsiz" ya da "kaldı" kapanır.
+- Öneri keşif işlerini doğrulanmış başarı saymaz.
+- Kapanış tetikleyicisi komutsuz keşife izin verecek biçimde genişletildi; eski defterde açılışta bir kez yeniden kuruluyor. "Geçti"yi
+  koruyan ayrı tetikleyici değişmedi.
+- Önce kusur iki parçalı:
+  - listede `"kusur": true` işaretli işler sürücüde önce yürüyor (pencerede "önce yapılsın" kutusu);
+  - liste denetimi, defterde "kaldı" kapanmış ve aynı etiketli (yoksa aynı sorulu) sonraki bir "geçti" kaydı olmayan işleri genel uyarı
+    olarak yazıyor.
+- Bir girer, bir çıkar: O6 ("iki vites", denetimsiz öneri) çıktı; yerine mekanik denetimli K12 girdi.
+
+| Kod | Madde | Denetim |
+|---|---|---|
+| K12 | Komutsuz keşif "geçti" kapanmaz; öneri keşfi başarı saymaz | `test/vites.test.ts` |
+
+**Kanıt:** `test/vites.test.ts` (5 test).
+- Komutsuz keşif açılıyor, "geçti" `KESIF_HUKUM` ile reddediliyor, gerekçeyle "belirsiz" kapanıyor. Hüküm vitesinde komutsuz kayıt
+  reddediliyor.
+- 20 keşif işi olan ajan öneride seçenek olarak görünmüyor. Vitesi olmayan (eski) ölçümle sonuç bayt bayt aynı.
+- Vites sütunu ve yeni tetikleyicisi olmayan (0.6 biçimindeki) defter açıldı. Eski iş okundu ve kapandı; aynı defterde komutsuz keşif de
+  kapandı.
+- Listenin sonundaki kusur işi ilk yürüdü.
+- Giderilmemiş kusur uyarısı çıktı; aynı etiketli iş geçince kalktı.
+
+**Uygulanmayan ya da öneri kalan.** "Aynı alana dokunan yeni iş için uyarı" ölçülemiyor: bir işin hangi dosyalara dokunacağı iş
+başlamadan bilinmiyor. Uyarı bu yüzden kusurun adıyla genel olarak veriliyor.
+
+İki ters denetim de yakalandı: öneriden keşif süzgeci kaldırıldı; kusur sıralaması kaldırıldı. `npm test` 265/265.

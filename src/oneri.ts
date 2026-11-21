@@ -217,6 +217,8 @@ function secenekHesapla(isler: IsOlcumu[], a: OneriAyarlari, ref: ZorlukReferans
 /** Is turu basina secenekleri ve oneriyi hesaplar. Girdi yalniz kapanmis islerdir. */
 export function oneriHesapla(olcumler: IsOlcumu[], ayarlar: Partial<OneriAyarlari> = {}): TurOnerisi[] {
   const a: OneriAyarlari = { ...VARSAYILAN_ONERI_AYARLARI, ...ayarlar };
+  // Kesif vitesindeki isler (Asama 34) hukum iddiasi tasimaz: dogrulanmis basari sayimina girmez. Sure ve maliyetleri raporda kalir.
+  olcumler = olcumler.filter((o) => o.vites !== 'kesif');
   const turler = [...new Set(olcumler.map((o) => o.tur))].sort();
   const kesifListesi = (kendi: IsOlcumu[]): TurOnerisi['kesif'] => (a.kurulu ?? [])
     .map((ajan) => ({ ajan, is_sayisi: kendi.filter((o) => o.ajan === ajan).length }))

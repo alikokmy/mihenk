@@ -2,6 +2,7 @@
 // "npm test"i yazmisti). Her is icin anlasilir uyari: bos alan, calistirilamayan komut, tanimsiz betik, olmayan dosya, bulunmayan arac.
 // Engellemez: uyarilar liste baslarken ve pencerede gosterilir; surucu calistirilamayan isi zaten "kayit acilamadi" diye atlar.
 import { existsSync, readFileSync } from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
 import { join } from 'node:path';
 import { AJANLAR, type AjanTanimi } from './ajanlar.js';
 import { t } from './dil.js';
@@ -52,6 +53,8 @@ export function listeDenetimi(kok: string, isler: DenetlenecekIs[], o: { ajan?: 
     return paket;
   };
   const bulunanAjan = new Map<string, boolean>();
+  // Once kusur (Asama 34): defterde "kaldi" kapanmis ve ayni isin (ayni etiket ya da soru) sonradan gecen bir kaydi olmayan isler.
+  for (const k of giderilmemisKusurlar(kok)) sonuc.push({ is: 0, uyari: t('l_kusur', { id: k.id, soru: k.soru.slice(0, 80) }) });
   isler.forEach((is, i) => {
     const n = i + 1;
     const ekle = (uyari: string, program?: string): void => { sonuc.push({ is: n, uyari, ...(program ? { program } : {}) }); };
@@ -92,6 +95,22 @@ export function listeDenetimi(kok: string, isler: DenetlenecekIs[], o: { ajan?: 
     }
   });
   return sonuc;
+}
+
+/** Defterdeki giderilmemis kusurlar: "kaldi" kapanmis, ayni etiketli (yoksa ayni sorulu) daha yeni bir "gecti" kaydi olmayan isler. */
+export function giderilmemisKusurlar(kok: string): Array<{ id: number; soru: string }> {
+  const yol = join(kok, '.mihenk', 'defter.db');
+  if (!existsSync(yol)) return [];
+  let db: DatabaseSync | undefined;
+  try {
+    db = new DatabaseSync(yol, { readOnly: true });
+    return db.prepare(`SELECT i.id, i.soru FROM isler i WHERE i.durum = 'kaldi' AND NOT EXISTS (
+      SELECT 1 FROM isler j WHERE j.id > i.id AND j.durum = 'gecti' AND coalesce(j.etiket, j.soru) = coalesce(i.etiket, i.soru)) ORDER BY i.id`).all() as Array<{ id: number; soru: string }>;
+  } catch {
+    return [];
+  } finally {
+    db?.close();
+  }
 }
 
 export function listeDenetimMetni(u: ListeUyarisi[]): string {

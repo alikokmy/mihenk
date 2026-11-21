@@ -105,7 +105,8 @@ export interface IsGirdisi {
   soru: string;
   beklenti: string;
   yanlissa: string;
-  dogrulama_komutu: string;
+  /** Hukum vitesinde zorunlu; komutsuz kesif isinde bos (Asama 34). */
+  dogrulama_komutu?: string;
   ajan: string;
   model: string;
   zaman_asimi_sn?: number;
@@ -115,12 +116,18 @@ export interface IsGirdisi {
   etiket?: string;
   /** Isin zorlugu (Asama 28): kolay, orta, zor. Istege bagli; listedeki deger ajaninkinden onceliklidir. */
   zorluk?: Zorluk;
+  /**
+   * Vites (Asama 34): "hukum" (varsayilan) tam yontem; "kesif" hafif kayit: dogrulama komutu istege bagli, komutsuz kesif "gecti" diye
+   * kapanamaz, oneri kesif islerini dogrulanmis basari saymaz.
+   */
+  vites?: Vites;
   /** Is ailesi (Asama 33): birbirine bagli isler tek aile olarak yapilir; aile adi verilirse bolme plani zorunludur. */
   aile?: string;
   bolme_plani?: string;
 }
 
 export type Zorluk = 'kolay' | 'orta' | 'zor';
+export type Vites = 'kesif' | 'hukum';
 export const ZORLUKLAR: readonly Zorluk[] = ['kolay', 'orta', 'zor'];
 
 export interface IsKaydi {
@@ -138,6 +145,7 @@ export interface IsKaydi {
   zorluk: Zorluk | null;
   aile: string | null;
   bolme_plani: string | null;
+  vites: Vites | null;
   durum: Durum;
   baslangic: string;
   bitis: string | null;
@@ -247,6 +255,8 @@ export interface IsOlcumu {
   geri_alindi?: boolean;
   /** Isin zorlugu (Asama 28); yazilmamissa null. */
   zorluk?: Zorluk | null;
+  /** Vites (Asama 34); eski defterde null -> hukum. */
+  vites?: Vites;
   /** Abonelikli ajan (Asama 27): mihenk.json "kota"da adi geciyor ya da dolar maliyeti bilinmiyor ama token biliniyor. */
   abonelik?: boolean;
   /** Butun oturumlarin kota birimi (agirlikli token); hic oturum olcumu yoksa null. */
@@ -361,7 +371,7 @@ CREATE TRIGGER IF NOT EXISTS kayit_degismez BEFORE UPDATE OF tur, soru, beklenti
 BEGIN SELECT RAISE(ABORT, 'mihenk: is kaydi acildiktan sonra degismez'); END;
 
 CREATE TRIGGER IF NOT EXISTS kapanis_dogrulama_ister BEFORE UPDATE OF durum ON isler
-WHEN NEW.durum <> 'acik' AND NOT EXISTS (SELECT 1 FROM kanitlar WHERE is_id = NEW.id AND kaynak = 'sunucu')
+WHEN NEW.durum <> 'acik' AND OLD.dogrulama_komutu <> '' AND NOT EXISTS (SELECT 1 FROM kanitlar WHERE is_id = NEW.id AND kaynak = 'sunucu')
 BEGIN SELECT RAISE(ABORT, 'mihenk: sunucunun kostugu dogrulama olmadan is kapanmaz'); END;
 
 CREATE TRIGGER IF NOT EXISTS gecti_gecen_dogrulama_ister BEFORE UPDATE OF durum ON isler
@@ -418,9 +428,24 @@ export class Defter {
     // Birden cok surec (her ajan araci kendi sunucusunu baslatir) ayni dosyaya yazar.
     this.db.exec('PRAGMA busy_timeout = 10000; PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
     this.db.exec(SEMA);
+    // Gocu (Asama 34): komutsuz kesif isi sunucu dogrulamasi olmadan kapanabilir (gecti haric: gecti_gecen_dogrulama_ister korur).
+    // Eski defterde tetikleyicinin eski hali durur; bir kez yeniden kurulur.
+    const tetik = this.db.prepare("SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = 'kapanis_dogrulama_ister'").get() as { sql?: string } | undefined;
+    if (tetik?.sql && !tetik.sql.includes('OLD.dogrulama_komutu')) {
+      const yeni = SEMA.slice(SEMA.indexOf('CREATE TRIGGER IF NOT EXISTS kapanis_dogrulama_ister'));
+      this.db.exec('BEGIN IMMEDIATE');
+      try {
+        this.db.exec('DROP TRIGGER IF EXISTS kapanis_dogrulama_ister;');
+        this.db.exec(yeni.slice(0, yeni.indexOf('END;') + 4));
+        this.db.exec('COMMIT');
+      } catch (e) {
+        this.db.exec('ROLLBACK');
+        if (!String(e).includes('already exists')) throw e;
+      }
+    }
     // Sema gocu: etiket (Asama 3), bekci sutunlari (Asama 10) sonradan eklendi; eski defterler acilirken tamamlanir.
     const sutunlar = this.db.prepare('PRAGMA table_info(isler)').all() as Array<{ name: string }>;
-    for (const [ad, tur] of [['etiket', 'TEXT'], ['testler_ozeti', 'TEXT'], ['baslangic_dogrulama', 'INTEGER'], ['supheler', 'TEXT'], ['zorluk', 'TEXT'], ['aile', 'TEXT'], ['bolme_plani', 'TEXT']] as const) {
+    for (const [ad, tur] of [['etiket', 'TEXT'], ['testler_ozeti', 'TEXT'], ['baslangic_dogrulama', 'INTEGER'], ['supheler', 'TEXT'], ['zorluk', 'TEXT'], ['aile', 'TEXT'], ['bolme_plani', 'TEXT'], ['vites', 'TEXT']] as const) {
       if (sutunlar.some((s) => s.name === ad)) continue;
       try {
         this.db.exec(`ALTER TABLE isler ADD COLUMN ${ad} ${tur}`);
@@ -464,10 +489,14 @@ export class Defter {
       const soru = dolu('soru', g.soru, SINIRLAR.kayit);
       const beklenti = dolu('beklenti', g.beklenti, SINIRLAR.kayit);
       const yanlissa = dolu('yanlissa', g.yanlissa, SINIRLAR.kayit);
-      const komut = dolu('dogrulama_komutu', g.dogrulama_komutu, SINIRLAR.komut);
+      const vites: Vites = g.vites ?? 'hukum';
+      if (vites !== 'kesif' && vites !== 'hukum') throw new Ret('GECERSIZ_DEGER', `vites kesif ya da hukum olmalidir; gelen: ${JSON.stringify(vites)}.`);
+      // Kesif vitesi hafif kayittir: komut verilmeyebilir (duman, log okumasi). Hukum vitesinde komut zorunlu.
+      const komutsuzKesif = vites === 'kesif' && (g.dogrulama_komutu === undefined || String(g.dogrulama_komutu).trim() === '');
+      const komut = komutsuzKesif ? '' : dolu('dogrulama_komutu', g.dogrulama_komutu, SINIRLAR.komut);
       const ajan = dolu('ajan', g.ajan, SINIRLAR.kisa);
       const model = dolu('model', g.model, SINIRLAR.kisa);
-      komutuCoz(komut, this.ayarlar.izinli_programlar);
+      if (!komutsuzKesif) komutuCoz(komut, this.ayarlar.izinli_programlar);
       const etiket = g.etiket === undefined ? null : dolu('etiket', g.etiket, SINIRLAR.kisa);
       const zorluk = g.zorluk === undefined || g.zorluk === null ? null : g.zorluk;
       // Is ailesi (K10): aile adi verilirse sonuc kotu cikarsa ikiye bolme plani da yazilir.
@@ -485,10 +514,10 @@ export class Defter {
       }
       const sonuc = this.db
         .prepare(
-          `INSERT INTO isler (tur, soru, beklenti, yanlissa, dogrulama_komutu, zaman_asimi_sn, ajan, model, istemci, etiket, zorluk, aile, bolme_plani, baslangic, testler_ozeti)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO isler (tur, soru, beklenti, yanlissa, dogrulama_komutu, zaman_asimi_sn, ajan, model, istemci, etiket, zorluk, aile, bolme_plani, vites, baslangic, testler_ozeti)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .run(tur, soru, beklenti, yanlissa, komut, zamanAsimi, ajan, model, g.istemci ?? null, etiket, zorluk, aile, bolmePlani, new Date().toISOString(),
+        .run(tur, soru, beklenti, yanlissa, komut, zamanAsimi, ajan, model, g.istemci ?? null, etiket, zorluk, aile, bolmePlani, vites, new Date().toISOString(),
           ozellikleriOku(this.kok).bekci_test_kurcalama === false ? null : JSON.stringify(testOzeti(this.kok)));
       const is = this.isGetir(Number(sonuc.lastInsertRowid));
       this.fotograf(is.id, 'bas');
@@ -562,7 +591,7 @@ export class Defter {
   baslangicDogrula(isId: number): Promise<{ is_id: number; kosuldu: boolean; gecti: boolean | null }> {
     return this.log.sarAsenk('baslangic_dogrula', { is_id: isId }, async () => {
       const is = this.acikIs(isId);
-      if (ozellikleriOku(this.kok).bekci_bos_kanit === false || is.baslangic_dogrulama !== null) {
+      if (ozellikleriOku(this.kok).bekci_bos_kanit === false || is.baslangic_dogrulama !== null || is.dogrulama_komutu === '') {
         return { is_id: isId, kosuldu: false, gecti: is.baslangic_dogrulama === null ? null : is.baslangic_dogrulama === 1 };
       }
       const k = await this.dogrulamaKos(is, `is-${is.id}-baslangic-${process.pid}.txt`);
@@ -590,6 +619,23 @@ export class Defter {
         throw new Ret('GEREKCE_YOK', `"${istenen}" hukmu gerekcesiz verilmez: gerekce alanina neden yazin.`);
       }
       if (gerekce.length > SINIRLAR.kayit) throw new Ret('COK_UZUN', `gerekce en fazla ${SINIRLAR.kayit} karakter olabilir.`);
+
+      // Komutsuz kesif (Asama 34): hukum iddiasi yok. "gecti" reddedilir; "kaldi" / "belirsiz" gerekceyle, komut kosulmadan kapanir.
+      if (is.dogrulama_komutu === '') {
+        if (istenen === 'gecti') {
+          throw new Ret('KESIF_HUKUM', `is ${is.id} komutsuz bir kesif isidir: hukum iddiasi tasimaz, "gecti" diye kapanamaz. Sonucu kanit_ekle ile yazin ve "belirsiz" (gerekceyle) kapatin; dogrulanacak bir sonuc icin dogrulama komutlu yeni kayit acin.`);
+        }
+        const simdi = new Date().toISOString();
+        this.db.prepare('UPDATE isler SET durum = ?, bitis = ?, gerekce = ?, deneme_sayisi = deneme_sayisi + 1 WHERE id = ? AND durum = \'acik\'').run(istenen, simdi, gerekce, is.id);
+        this.fotograf(is.id, 'son');
+        this.dokumYaz();
+        const son = this.isGetir(is.id);
+        return {
+          is_id: is.id, durum: son.durum, kapandi: son.durum !== 'acik', istenen, deneme_sayisi: son.deneme_sayisi,
+          dogrulama: { komut: '', gecti: false, cikis_kodu: null, zaman_asimi: false, sure_ms: 0, cikti_ozeti: '', cikti_dosyasi: '' },
+          supheler: [], mesaj: `Kesif isi ${is.id} "${istenen}" diye kapandi (hukum iddiasi yok).`,
+        };
+      }
 
       const deneme = is.deneme_sayisi + 1;
       const goreliDosya = `.mihenk/ciktilar/is-${is.id}-deneme-${deneme}-${process.pid}.txt`;
@@ -820,7 +866,7 @@ export class Defter {
         durum: is.durum as Exclude<Durum, 'acik'>, sure_sn: sureSn(is), deneme_sayisi: is.deneme_sayisi,
         maliyet_usd: maliyet,
         geri_alindi: geriAlinan.has(is.id),
-        zorluk: is.zorluk ?? null, abonelik, kota_birimi: birim, kota_payi: pay, kota_kaynagi: kapasite?.kaynak ?? null,
+        zorluk: is.zorluk ?? null, vites: is.vites ?? 'hukum', abonelik, kota_birimi: birim, kota_payi: pay, kota_kaynagi: kapasite?.kaynak ?? null,
         kota_usd: pay !== null && ayar?.pencere_usd ? pay * ayar.pencere_usd : null,
       };
     });

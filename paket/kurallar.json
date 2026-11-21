@@ -137,12 +137,15 @@
       "denetim_plani": "Asama 3: surucu, is listesinde is varken oturumu yeniden baslatir (Ilke 2)."
     },
     {
-      "kod": "O6",
-      "etiket": "oneri",
+      "kod": "K12",
+      "etiket": "kural",
       "skill": "mihenk-is-kaydi",
-      "metin": "Iki vites: kesif hafif, hukum tam.",
-      "neden_denetlenemiyor": "Hangi calismanin kesif oldugu ajanin beyanidir.",
-      "denetim_plani": "Asama 6: is turu basina olcum; ayri bir denetim planlanmiyor."
+      "surum": "0.7",
+      "yerine": "O6",
+      "metin": "Iki vites: kesif isi hafif kayittir (komut istege bagli) ve komutsuzsa gecti diye kapanamaz; oneri kesif islerini dogrulanmis basari saymaz.",
+      "denetim": { "dosya": "test/vites.test.ts",
+        "test": "KABUL komutsuz kesif isi acilir, \"gecti\" kapanmaz, gerekceyle \"belirsiz\" kapanir; hukum vitesinde komut zorunlu"
+      }
     }
   ],
   "cikanlar": [
@@ -151,6 +154,12 @@
       "metin": "Tek kosuda tek degisiklik.",
       "surum": "0.7",
       "gerekce": "metamorfik kullanici karari 2026-11-21 (is ailesi): bagli isleri ayirmak bozuk ara durumlar uretir; yerine K10 ve K11."
+    },
+    {
+      "kod": "O6",
+      "metin": "Iki vites: kesif hafif, hukum tam.",
+      "surum": "0.7",
+      "gerekce": "metamorfik kullanici karari 2026-11-20 (iki vites): artik mekanik denetimi var; yerine K12."
     }
   ]
 }

@@ -36,6 +36,8 @@ export interface ListeIsi {
   zaman_asimi_sn?: number;
   /** Isin zorlugu (Asama 28): kolay, orta, zor. Oneri ajanlari ayni zorluk karisiminda karsilastirir. */
   zorluk?: Zorluk;
+  /** Bilinen bir kusuru gideren is (Asama 34, "once kusur"): listede nerede olursa olsun once yurutulur. */
+  kusur?: boolean;
   /** Is ailesi (Asama 33) ve sonuc kotu cikarsa ikiye bolme plani (aile verilirse zorunlu). */
   aile?: string;
   bolme_plani?: string;
@@ -475,7 +477,9 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
         ? `liste sure tavani (${s.liste.sure_tavani_dk} dk) doldu`
         : s.liste.butce_usd !== undefined && maliyet(listeIsleri) >= s.liste.butce_usd
           ? `liste dolar tavani (${s.liste.butce_usd} USD) doldu (harcanan ${round6(maliyet(listeIsleri))} USD)` : '';
-    for (const [sira, listeIsi] of s.liste.isler.entries()) {
+    // Once kusur (Asama 34): "kusur" isaretli isler once, kendi aralarinda ve otekiler kendi aralarinda liste sirasiyla.
+    const sirali = [...s.liste.isler.filter((x) => x.kusur === true), ...s.liste.isler.filter((x) => x.kusur !== true)];
+    for (const [sira, listeIsi] of sirali.entries()) {
       if (!durdu) durdu = listeTavaniNe(); // tavan dolduysa yeni is acilmaz
       if (durdu) break;
       const kimlik = isKimligi(listeIsi);

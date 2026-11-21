@@ -40,6 +40,7 @@ function isEkleri(x: Record<string, unknown>): Record<string, unknown> {
   if (Number.isInteger(x.zaman_asimi_sn)) e.zaman_asimi_sn = x.zaman_asimi_sn;
   if (typeof x.zorluk === 'string' && ['kolay', 'orta', 'zor'].includes(x.zorluk)) e.zorluk = x.zorluk;
   for (const a of ['aile', 'bolme_plani'] as const) if (typeof x[a] === 'string' && x[a].trim()) e[a] = x[a].trim();
+  if (x.kusur === true) e.kusur = true;
   return e;
 }
 
@@ -110,7 +111,7 @@ export const SECENEK_ESLEME: Record<string, SecenekKarsiligi[]> = {
   '--zipsiz': [{ yok: 'paketle: gelistirici araci' }],
 };
 /** Isin formundaki alanlar (data-alan); kimlik ic kullanimdir: listedeki isin kalici adi, pencere korur ama gostermez. */
-export const IS_ALANLARI = ['tur', 'soru', 'beklenti', 'yanlissa', 'dogrulama_komutu', 'zorluk', 'ajan', 'zaman_asimi_sn', 'aile', 'bolme_plani'] as const;
+export const IS_ALANLARI = ['tur', 'soru', 'beklenti', 'yanlissa', 'dogrulama_komutu', 'zorluk', 'ajan', 'zaman_asimi_sn', 'aile', 'bolme_plani', 'kusur'] as const;
 
 function dilKur(kok: string): void {
   if (!kok) { dilAyarla('tr'); return; } // baslangic ekrani: proje yok, varsayilan dil

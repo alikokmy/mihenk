@@ -169,6 +169,7 @@ async function listeCiz() {
       kart.append(el('details', {}, el('summary', { metin: m('p_is_ozel') }),
         el('label', { class: 'alan' }, el('span', { metin: m('p_alan_is_ajan') }), isAjan),
         el('label', { class: 'alan' }, el('span', { metin: m('p_alan_zaman_asimi') }), zaman),
+        (() => { const k = el('input', { type: 'checkbox', 'data-alan': 'kusur' }); k.checked = is.kusur === true; k.onchange = () => { if (k.checked) is.kusur = true; else delete is.kusur; }; return el('label', { class: 'satir' }, k, document.createTextNode(' ' + m('p_alan_kusur'))); })(),
         ...[['aile', 'p_alan_aile'], ['bolme_plani', 'p_alan_bolme']].map(([k, mt]) => { const g = el('input', { 'data-alan': k }); g.value = is[k] || ''; g.oninput = () => { if (g.value.trim()) is[k] = g.value; else delete is[k]; }; return el('label', { class: 'alan' }, el('span', { metin: m(mt) }), g); })));
       kutu.append(kart);
     });
@@ -197,7 +198,7 @@ async function listeCiz() {
     try { const g = await api('/api/gelismis'); await api('/api/gelismis', { alan: 'izinli_programlar', deger: g.izinli_programlar.concat([program]) }); await kaydet(); ileti(sonuc, m('p_izin_verildi', { program })); }
     catch (e) { ileti(sonuc, m('p_hata', { hata: e.message }), true); }
   };
-  const uyarilariGoster = (u) => { koy(uyariKutusu, ...(u && u.length ? [el('b', { metin: m('p_uyarilar') }), el('ul', {}, ...u.map((x) => el('li', { metin: m('p_uyari_satir', { n: x.is, uyari: x.uyari }) },
+  const uyarilariGoster = (u) => { koy(uyariKutusu, ...(u && u.length ? [el('b', { metin: m('p_uyarilar') }), el('ul', {}, ...u.map((x) => el('li', { metin: x.is === 0 ? x.uyari : m('p_uyari_satir', { n: x.is, uyari: x.uyari }) },
     x.program ? el('button', { class: 'dugme ikincil kucuk', 'data-izin-ver': x.program, metin: m('p_izin_ver', { program: x.program }), onclick: () => izinVer(x.program) }) : null)))] : [])); uyariKutusu.hidden = !(u && u.length); };
   uyarilariGoster(l.uyarilar);
   const kaydet = async () => { const r = await api('/api/liste', { isler, ajan: ajan.value, liste_ayarlari: la }); uyarilariGoster(r.uyarilar); };
