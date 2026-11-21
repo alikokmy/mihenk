@@ -261,6 +261,40 @@ gösterilmez.
 - **Son projeler.** Liste kullanıcının kendi uygulama verisinde tutulur (`%LOCALAPPDATA%\mihenk`). Burası mihenk'in kendi dosyasıdır;
   hiçbir aracın küresel ayarına dokunulmaz.
 
+## Sürüm 0.7: metamorfik süreç kararlarının yönteme taşınması (kullanıcı isteği, 2026-11-21)
+
+Kaynak: metamorfik'te 2026-11-20 ve 11-21'de alınan, kullanıcı onaylı kararlar. Kararların özetini ve mihenk'teki karşılığına dair önerileri
+metamorfik oturumu iletti. Eşlemeler önerildi ve burada yeniden değerlendirildi; uymayan kısımlar nedeniyle yazıldı. Sıra: önce çelişen kuralı
+düzelten madde.
+
+| Aşama | Karar | İş | Kabul ölçütü |
+|---|---|---|---|
+| 33 | 2. İş ailesi ("tek koşuda tek değişiklik" yerine) | `mihenk-tek-degisiklik` skill'i `mihenk-is-ailesi` olur. `is_ac`'a isteğe bağlı `aile` (ad) ve `bolme_plani` gelir; aile adı verilirse bölme planı zorunludur. "Doğrulamayı değiştiren iş ile doğrulananı değiştiren iş ayrı iştir" kurala bağlanır (test kurcalama bekçisi). `kurallar.json`'da O2 çıkar, yerine iki kural girer | bölme plansız aile kaydı reddediliyor; eski defter (aile sütunu yok) açılıyor; O2 yok, yeni iki kural testleriyle; skill sayısı 7, eski skill `kur` eşitlemesinde kaldırılıyor |
+| 34 | 1. İki vites ve önce kusur | `is_ac`'a `vites` (`kesif` / `hukum`, varsayılan `hukum`). Keşif işi hafif kayıttır: doğrulama komutu isteğe bağlı; komutsuz keşif "geçti" diye kapanamaz. Öneri keşif işlerini doğrulanmış başarı saymaz; süre ve maliyetleri raporda kalır. Önce kusur: liste denetimi defterdeki giderilmemiş "kaldı" işlerini uyarı olarak yazar; listede `"kusur": true` işaretli işler sürücüde önce yürür | komutsuz keşif işi açılıyor ama "geçti" kapanmıyor; keşif işi öneri sayımına girmiyor; eski defterde hesap aynı; kusur işi listenin sonunda da olsa ilk yürüyor; giderilmemiş kusur uyarısı çıkıyor |
+| 35 | 3. Ölçütün kaynağı ve şampiyon | Öneri eşiklerinin her biri çıktıda ve ayar notunda "kaynak: tahmin" diye etiketlenir. Eşiğin altında kalan seçenek keşif adayı olmayı sürdürür (tahmin eşiği kalıcı dışlamaz). İş türü başına "şampiyon" defterde tutulur; yeni seçenek ancak başarı alt sınırı şampiyonun üst sınırını aşınca (aralıklar ayrışınca) ya da maliyet kuralıyla açıkça daha iyiyse şampiyon olur; değişim gerekçesiyle yazılır, eski kayıt silinmez | eşiği geçemeyen ajan keşifte seçiliyor; çakışan aralıkta şampiyon değişmiyor, ayrışınca değişiyor ve geçmiş iki satır; çıktıda eşiklerin kaynağı yazıyor |
+| 36 | 7. Kısıt işareti | `karar_yaz`'a `kisit_ekler`. Rapor ve pencere kısıt ekleyen kararları ayrı listeler ve sayısını yazar | işaretli karar raporda ayrı bölümde ve sayıda; eski defter açılıyor |
+| 37 | 5. İki takım | `is_ac`'a isteğe bağlı `bilgi_komutu`: ana doğrulama geçer, bilgi denetimi kalırsa iş "geçti" kapanır ama kayda "bilgi denetimi kaldı" notu düşer. mihenk'in kendi testlerinde belgeyi sınayanlar `npm run test:bilgi`, ötekiler `npm run test:engel` | bilgi komutu kalan iş geçti + not; bilgi komutu geçerse not yok; iki betik birlikte bütün test dosyalarını tam bir kez kapsıyor |
+| 38 | 9. Kısa durum | IS_PLANI'nin başında en çok 15 satırlık "Şimdi" bloğu (sıradaki üç iş, açık hatlar, kullanıcıda bekleyen kararlar); tarihçe SONUCLAR'da | test blok var ve 15 satırı aşmıyor |
+| 39 | 8. Kullanım ölçütüyle silme | `.mihenk/ciktilar`: "geçti" kapanan işin ajan ve doğrulama çıktıları liste sonunda silinir; "kaldı" ve "belirsiz" işlerinki (kök neden için) giderilene dek kalır; hazırlık ve planlama çıktısı iş kaydı açılınca silinir. Defterdeki atıf kalır, rapor "silindi" yazar | sentetik projede yalnız kullanılmayan dosyalar siliniyor; kaldı işinin çıktısı duruyor |
+| 40 | 6. Kural dosyasında yalnız kural; bir girer, bir çıkar | `kurallar.json`'da 0.7 ve sonrası eklenen her madde `yerine` (kaldırdığı kod) ya da `kaldirmama_nedeni` taşır; çıkan madde `cikanlar` listesinde gerekçesiyle durur | alansız yeni madde testte kalıyor |
+
+**Karar 4 (kabul yolu, net katkı): yalnız plan notu, kullanıcı görüşüne kadar uygulanmaz.**
+- Öneri: net katkı ajan ve model kıyasına uygulanır. Örneğin belirgin ucuz ama başarısı biraz düşük bir seçenek, başarı kaybı küçükse ve
+  maliyet kazancı ondan büyükse önerilebilir.
+- Gerileme tabanına uygulanmaz. Kodda önceden geçen bir testi bozan iş geçmez; bozulan test küçük kayıp değil kusurdur.
+- Karşı görüş: kayıp ve kazancın birimi farklı (başarı oranı ve dolar). "%3" eşiği tahmindir ve 0.7'deki kaynak kuralıyla eleme yapamaz.
+  Bu nedenle uygulamadan önce kullanıcının birim seçimi gerekir.
+
+**Taşınmayanlar:** dünya / ajan ayrımı, donmuş bellek, kamera toplaması, sıcaklık kesicisi ve Ergin'in hafıza yönetimi. Bunlar metamorfik'e
+özgüdür. İş ailesindeki "aynı anda en çok iki aktif hat" kuralı da taşınmaz: mihenk'in sürücüsü listeyi sırayla yürütür, paralel hat yoktur.
+
+**Kullanıcıya bırakılan:**
+- Bu deponun kendi `AGENTS.md` dosyasındaki "tek seferde tek değişiklik" kuralı da iş ailesine çevrilsin mi? O kural kullanıcının bu depo
+  için koyduğu kuraldır; yalnız ürünün yöntem paketi değiştirildi.
+- Karar 4'ün birimi.
+- Eşli kıyas: şampiyonla adayı aynı işlerde kıyaslamak için aynı işin iki ajana yaptırılması gerekir. Bunun maliyeti var; isteğe bağlı bir
+  "eşli deneme" kipi önerilir.
+
 ## Öneri nasıl hesaplanacak (ilk tasarım)
 
 - **Birim:** kapanmış iş. Alanlar: iş türü, ajan, model, süre, maliyet, hüküm (geçti / kaldı / belirsiz), yeniden deneme sayısı, uyum işaretleri.
