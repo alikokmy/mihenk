@@ -62,7 +62,8 @@ Kurallar metinde değil, kodda ve veritabanında durur: kaydı olmayan işe yaz�
 
 ```
 npm install
-npm test          # derler ve testleri koşar
+npm test          # derler ve testleri koşar (geçici dosyalar .gecici/ altında, iş bitince silinir)
+npm run test:dosya -- fikir takim    # yalnız adı verilen test dosyaları
 node dist/src/bin.js --kok <proje dizini>    # sunucuyu stdio üzerinden başlatır
 ```
 

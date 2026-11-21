@@ -1305,3 +1305,25 @@ yalnız 140 ms var, yani yarış dar. Önleme gerçek kullanımdaki ölçüme g�
 
 **Sınır.** Ajan alt süreçleri de bu geçici klasörü kullanır. Gerçek araçla koşan testler (OpenCode) bu kosucu altında bir kez geçti;
 kilitli dosya yüzünden "silinemedi" çıkarsa koşu düşer, bu kasıtlı.
+
+### Geçici dosyalar proje altında (2026-11-22, kullanıcı: "bundan sonra tempe yazmanı istemiyorum")
+
+Kullanıcı kararı: Claude'un ve sistemin geçici klasörü şişince bilgisayar açılmıyor. İşin geçici dosyaları depodaki git-dışı `.gecici/`
+altına yazılır. Kural `AGENTS.md`'de.
+
+- Kosucu her koşuya `.gecici/kosu-*` veriyor ve koşu bitince siliyor. Yarıda kesilmiş, 6 saatten eski koşu klasörleri de siliniyor.
+  `npm run test:dosya -- <ad>` tek dosya koşusunu da kosucudan geçiriyor; doğrudan `node --test` sistemin geçici klasörüne yazar.
+- **Kalkan.** Sahte projeler artık mihenk deposunun altında duruyor. İlk tam koşu 277'de 30 kaldı: Node en yakın `package.json` olarak
+  mihenk'inkini (`"type": "module"`) buldu, sahte projelerin `require` betikleri bozuldu. `.gecici/package.json` (boş) bunu gizliyor.
+  Git için `GIT_CEILING_DIRECTORIES` konuyor.
+- **Olumsuz sonuç.** Tavanı çıkaran ters denetimde sürücü testi kaydı mihenk deposuna commit attı. Commit henüz gönderilmemiş
+  çalışma değişikliklerini içeriyordu; `git reset --soft` ile geri alındı, kayıp yok.
+- **Depo bekçisi** bu yüzden eklendi: kosucu koşudan önce ve sonra mihenk deposunun dallarına bakıyor; değiştiyse koşu düşüyor.
+- **Ters denetimler.** Koşu klasörü silinmeyince `takim.test` kaldı. Bekçi devre dışı bırakılınca da `takim.test` kaldı. Tavansız
+  koşuda commit sızdı (yukarıda).
+- **Bilinen sınır.** Ürün kodunda `fikriBol`'un planlama klasörü sistemin geçici klasöründe açılıyor ve iş bitince siliniyor. Proje
+  altına alınmadı: planlayıcı ajan projenin içini görmemeli, ama proje altındaki klasörden üst klasörleri tarayabilir. Karşı görüş:
+  kullanıcının diskinde de geçici klasör kullanılmasın. Klasör iş bitince silindiği için şimdilik böyle bırakıldı.
+- Arka plan komutlarının çıktı dosyalarını Claude Code kendisi geçici klasöre yazıyor; bu bizim elimizde değil. Kendi betik ve
+  çıktılarım `.gecici/` altında.
+- `npm test` 278/278; sistemin geçici klasöründe yeni `mihenk-*` yok, mihenk deposunun dalları değişmedi.

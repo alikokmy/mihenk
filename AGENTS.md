@@ -9,4 +9,7 @@
   olumsuz sonuç da yazılır. Belge kısa tutulur: yeni belge açmadan önce var olan güncellenir.
 - **Durma:** iş listesinde iş varken durulmaz. Karar gereken yerde önerilen seçenek uygulanır ve karşı görüşüyle birlikte not edilir.
   Durulacak yerler: geri alınamaz ya da dışa dönük işlem, güvenlik, kullanıcının varlığını isteyen adım.
+- **Geçici dosyalar** (betik, çıktı, test klasörü) sistemin ya da aracın geçici klasörüne değil, depodaki git-dışı `.gecici/` altına yazılır
+  ve iş bitince silinir (kullanıcı kararı 2026-11-22: geçici klasör şişince bilgisayar açılmıyor). Testler `npm test` ya da
+  `npm run test:dosya -- <ad>` ile koşulur; doğrudan `node --test` sistemin geçici klasörüne yazar.
 - **Depo gizlidir;** görünürlüğü yalnız kullanıcı değiştirir.
