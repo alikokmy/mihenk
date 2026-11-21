@@ -21,6 +21,7 @@ import { ajanSec, ONERI_AJANI, VARSAYILAN_KESIF_ORANI } from './kesif.js';
 import { projeOneriAyarlari } from './oneri.js';
 import { projeOnerisi } from './proje-onerisi.js';
 import { raporYaz } from './rapor.js';
+import { baglantiOlc } from './mcp-olcum.js';
 import { ciktilariTemizle } from './temizlik.js';
 import { testOnceYazdir, type TestOnceSonucu } from './test-once.js';
 import { kisalt } from './sinir.js';
@@ -210,6 +211,8 @@ export interface AjanKosusu {
   esik_asildi: boolean;
   baglam: number;
   son_metin: string;
+  /** Oturum basindan ilk ciktiya dek gecen sure (MCP baglanti olcumu icin); cikti yoksa null. */
+  ilk_cikti_ms?: number | null;
   /** Oturumun kullanimi (aracin bildirdigi); maliyet_usd null: arac bildirmedi. */
   kullanim: { girdi: number; onbellek_okuma: number; onbellek_yazma: number; cikti: number; maliyet_usd: number | null; model: string | null };
   sure_ms: number;
@@ -301,6 +304,7 @@ export function ajaniKostur(
 
     cocuk.stdout?.on('data', (parca: Buffer) => {
       if (bitti) return;
+      if (sonuc.ilk_cikti_ms === undefined || sonuc.ilk_cikti_ms === null) sonuc.ilk_cikti_ms = Date.now() - t0;
       bayt += parca.length;
       writeSync(fd, parca);
       tampon += parca.toString('utf8');
@@ -621,10 +625,13 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
         const once = korunan.map((d) => depoDurumu(d));
         const ciktiDosyasi = join(defter.dizin, 'ciktilar', `ajan-is-${isId}-oturum-${deneme + devir + 1}.txt`);
         olay('oturum_basla', { is_id: isId, ajan: tanim.ad, deneme: deneme + 1, devir });
+        const oturumBasi = Date.now();
         const kosu = await ajaniKostur(tanim, istemYaz(defter.rapor({ is_id: isId }).is as IsGorunumu, devirNotu), {
           cwd: kok, zamanAsimiMs: ajanZamanAsimiMs, baglamEsigi, ciktiDosyasi,
         });
-        olay('oturum_bitti', { is_id: isId, ajan: tanim.ad, cikis_kodu: kosu.cikis_kodu, zaman_asimi: kosu.zaman_asimi, esik_asildi: kosu.esik_asildi, baglam: kosu.baglam, sure_ms: kosu.sure_ms, hata: kosu.baslatma_hatasi ?? null });
+        // MCP baglanti olcumu: arac deftere oturumda ne zaman baglandi (ilk ciktiya gore).
+        const baglanti = baglantiOlc(kok, { baslangic: oturumBasi, bitis: Date.now() + 1000, istemci: tanim.istemci, ilkCiktiMs: kosu.ilk_cikti_ms ?? null });
+        olay('oturum_bitti', { is_id: isId, ajan: tanim.ad, cikis_kodu: kosu.cikis_kodu, zaman_asimi: kosu.zaman_asimi, esik_asildi: kosu.esik_asildi, baglam: kosu.baglam, sure_ms: kosu.sure_ms, hata: kosu.baslatma_hatasi ?? null, ...baglanti });
 
         // Ajan proje disinda bir sey degistirdi mi?
         if (!kosu.baslatma_hatasi) {

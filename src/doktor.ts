@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { AJANLAR, type AjanTanimi } from './ajanlar.js';
 import { ARAC_ADLARI, ayarlariOku } from './ayar.js';
 import { t } from './dil.js';
+import { baglantiOzeti } from './mcp-olcum.js';
 import { uykuAyariniOku, uykuUyarisi } from './uyanik.js';
 
 export interface DoktorSatiri {
@@ -94,6 +95,10 @@ export function doktor(kok: string, o: { nodeSurumu?: string; ajanlar?: Readonly
   const bulunan = Object.entries(ajanlar).filter(([, a]) => a.komutBul() !== null).map(([ad]) => ad);
   s.push(bulunan.length ? { kimlik: 'araclar', durum: 'tamam', metin: t('d_araclar', { liste: bulunan.join(', ') }) }
     : { kimlik: 'araclar', durum: 'sorun', metin: t('d_arac_yok'), cozum: t('d_arac_cozum') });
+
+  // MCP baglanti olcumu (2026-11-21): surucu oturumlarinda arac deftere gec mi baglandi? Olcumdur; onlem olcume gore karar.
+  const bo = baglantiOzeti(kok);
+  if (bo.oturum > 0) s.push({ kimlik: 'mcp_baglanti', durum: 'bilgi', metin: t('d_mcp_baglanti', { oturum: bo.oturum, gec: bo.gec, baglanmayan: bo.baglanmayan }) });
 
   const db = join(kok, '.mihenk', 'defter.db');
   if (existsSync(db)) {

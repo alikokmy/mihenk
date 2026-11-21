@@ -227,6 +227,7 @@ export const METINLER = {
   r_kisit_baslik: { tr: 'Kısıt ekleyen kararlar ({sayi})', en: 'Decisions that add constraints ({sayi})' },
   r_kisit_satir: { tr: '[kısıt ekler] iş {id}: {konu} → {secilen}', en: '[adds constraint] job {id}: {konu} → {secilen}' },
   r_bilgi_notu: { tr: 'Bilgi denetimi: {not}', en: 'Information check: {not}' },
+  d_mcp_baglanti: { tr: 'Son {oturum} surucu oturumunun {gec} tanesinde yapay zeka araci deftere gec baglandi ({baglanmayan} tanesinde hic baglanmadi). Olcum: ilk turda defter araclari eksik kalmis olabilir.', en: 'In {gec} of the last {oturum} driver sessions the AI tool connected to the ledger late ({baglanmayan} never connected). Measurement: the ledger tools may have been missing in the first turn.' },
   o_karsilastirilamadi: { tr: 'maliyeti bilinmedigi icin maliyetle karsilastirilamadi: {liste}', en: 'could not be compared on cost because the cost is unknown: {liste}' },
   o_durum_aday: { tr: 'aday', en: 'candidate' },
   o_durum_veri_yetersiz: { tr: 'veri yetersiz', en: 'not enough data' },

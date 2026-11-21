@@ -1255,3 +1255,29 @@ olduğunu test ayıramaz. `paket/AGENTS.md` ve skill'ler kısa; gerekçeler bu d
 `npm test` 275/275 (bilgi takımı 16, engel takımı 259).
 
 **Sürüm 0.7:** Aşama 33-40 kapandı; `v0.7.0`.
+
+## MCP bağlantı ölçümü (2026-11-21, kullanıcı: "şimdilik ölçmekle yetinelim")
+
+Aşama 33 bulgusu (yük altında OpenCode ilk isteği mihenk'e bağlanmadan gönderebiliyor) için önlem değil, ölçüm eklendi
+(`src/mcp-olcum.ts`).
+
+**Ne ölçülüyor.** Sürücü her ajan oturumunda `oturum_bitti` olayına üç alan yazar:
+- `mcp_baglanti_ms`: oturum başından aracın deftere bağlandığı ana dek geçen süre; kaynak defterin `baglanti` günlük satırı, araç adına
+  göre süzülüyor.
+- `ilk_cikti_ms`: aracın ilk çıktısına dek geçen süre.
+- `mcp_gec`: bağlantı yok ya da ilk çıktıdan sonra geldiyse doğru.
+
+Doktor, son 50 oturumun özetini bilgi satırı olarak gösteriyor.
+
+**Sınır.** Modele giden ilk isteğin anı dışarıdan görülmüyor; "ilk çıktı" yaklaşık bir işaret.
+
+**Kanıt.**
+- `test/mcp-olcum.test.ts`: üç sahte araç kullanıldı. Zamanında bağlanan "geç değil", ilk çıktıdan sonra bağlanan "geç", hiç bağlanmayan
+  "geç ve bağlantı yok" sayıldı. Doktor "Son 3 oturumun 2'sinde geç (1'inde hiç)" yazdı.
+- Testin ilk koşusunda arama penceresi için başlangıçtan çıkarılan 1 saniyelik pay süre hesabına karışmıştı. Zamanında bağlanan araç
+  "geç" görünüyordu; pay referanstan ayrıldı.
+
+**Gerçek OpenCode 2.3.2** (sürücü, sahte yerel model, internet yok): bağlantı 2354 ms, ilk çıktı 2493 ms; "geç" değil. Ama arada
+yalnız 140 ms var, yani yarış dar. Önleme gerçek kullanımdaki ölçüme göre karar verilecek.
+
+`npm test` 276/276.

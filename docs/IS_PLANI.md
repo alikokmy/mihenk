@@ -4,7 +4,7 @@
 
 - **Sürüm:** 0.7 yayında (v0.7.0): metamorfik süreç kararları taşındı (Aşama 33-40).
 - **Sıradaki üç iş:** plan listesinde açık aşama yok; adaylar: karar 4 (net katkı, birim kararından sonra), eşli kıyas kipi,
-  sürücüde MCP bağlantısını bekleme (yük altındaki OpenCode bulgusu).
+  sürücüde MCP bağlantısını bekleme (önce ölçüm: doktordaki 'geç bağlandı' sayısı; ilk gerçek ölçümde fark 140 ms).
 - **Açık hatlar:** yok (sürücü sırayla yürütür).
 - **Kullanıcıda bekleyen kararlar:** karar 4 (net katkı) beklemede, öneri: süre birimi; eşli kıyas kipi (aynı işi iki ajana yaptırmanın maliyeti);
   Cline, Qwen Code ve gerçek Qwen / DeepSeek sunucusuyla deneme için hesap ya da ortam.
