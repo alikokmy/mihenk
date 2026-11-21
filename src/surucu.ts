@@ -21,6 +21,7 @@ import { ajanSec, ONERI_AJANI, VARSAYILAN_KESIF_ORANI } from './kesif.js';
 import { projeOneriAyarlari } from './oneri.js';
 import { projeOnerisi } from './proje-onerisi.js';
 import { raporYaz } from './rapor.js';
+import { ciktilariTemizle } from './temizlik.js';
 import { testOnceYazdir, type TestOnceSonucu } from './test-once.js';
 import { kisalt } from './sinir.js';
 
@@ -796,6 +797,15 @@ export async function listeyiYurut(s: SurucuSecenekleri): Promise<SurucuRaporu> 
   yaz(t('liste_bitti', { gecti: ozet.gecti, kaldi: ozet.kaldi, belirsiz: ozet.belirsiz, toplam: ozet.toplam }));
   // Duz dilde rapor her liste sonunda yenilenir; bildirim istenirse gonderilir (Asama 14).
   try {
+    // Kullanim olcutuyle temizlik (Asama 39): isi biten ciktilar silinir; kaldi ve belirsiz isinkiler kok neden icin durur.
+    if (ayarlariOku(kok).cikti_temizligi !== false) {
+      try {
+        const tz = ciktilariTemizle(kok);
+        if (tz.silinen.length) olay('cikti_temizligi', { silinen: tz.silinen.length, kalan: tz.kalan });
+      } catch {
+        // temizlik listeyi bozmaz
+      }
+    }
     const raporYolu = raporYaz(kok);
     yaz(t('rapor_satiri', { yol: raporYolu }));
     if (s.bildirim && ayarlariOku(kok).bildirim !== false) {

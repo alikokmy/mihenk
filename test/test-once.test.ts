@@ -48,7 +48,7 @@ const IS = { tur: 'ozellik', soru: 'Iki sayiyi toplayan topla islevini yaz', bek
 async function kos(ajan: string, kurulum = false) {
   const kok = mkdtempSync(join(tmpdir(), 'mihenk-testonce-'));
   if (kurulum) kur(kok, { araclar: ['opencode'] });
-  ayarYaz(kok, { bekci_dongu: false });
+  ayarYaz(kok, { bekci_dongu: false, cikti_temizligi: false }); // hazirlik ciktisi kanit olarak okunur (Asama 39 temizligi silerdi)
   const r = await listeyiYurut({ kok, liste: { ajan, isler: [IS] }, saklama: 'yok', ajanlar: AJANLAR, korunanDizinler: [], yaz: () => {} });
   const s = r.isler[0]!;
   const d = new Defter(kok);

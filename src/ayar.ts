@@ -134,6 +134,13 @@ export const AYARLAR: readonly AyarTanimi[] = [
     varsayilan_aciklama: { tr: 'Son 5 kapanan isin fotografi tutulur, daha eskiler ve artik kullanilmayan icerikler silinir.', en: 'Snapshots of the last 5 closed jobs are kept; older ones and unused contents are deleted.' },
   },
   {
+    ad: 'cikti_temizligi', baslik: { tr: 'Kullanılmayan çıktıları sil', en: 'Delete unused outputs' }, varsayilan: true, etki: 'calisma',
+    aciklama: { tr: 'Liste bitince basariyla biten islerin ve giderilmis kusurlarin ciktilari silinir; kalan ve belirsiz islerinki kok neden icin durur.', en: 'When a list ends, outputs of passed jobs and resolved defects are deleted; those of failed and inconclusive jobs stay for root-cause analysis.' },
+    amac: { tr: 'Veri yalniz bir is onu kullandigi surece dursun; disk dolmasin.', en: 'Keep data only while a job uses it; do not fill the disk.' },
+    sonuc: { tr: 'Kapatinca hic cikti silinmez; uzun kullanimda .mihenk klasoru buyur.', en: 'When off, no output is deleted; the .mihenk folder grows over time.' },
+    varsayilan_aciklama: { tr: 'Acik. Defterdeki kayit ve hukum silinmez; yalniz ham cikti dosyalari silinir ve rapor bunlari "silindi" diye gosterir.', en: 'On. Ledger records and verdicts are never deleted; only raw output files are, and the report shows them as deleted.' },
+  },
+  {
     ad: 'oneri_esik', baslik: { tr: 'Öneri için en düşük başarı (yüzde)', en: 'Minimum success for a recommendation (percent)' }, varsayilan: 50, sayi: { en_az: 0, en_cok: 100 }, etki: 'calisma',
     aciklama: { tr: 'Bir aracin onerilebilmesi icin basari oraninin guvenle en az bu kadar olmasi gerekir.', en: 'A tool can be recommended only if its success rate is confidently at least this high.' },
     amac: { tr: 'Az ama sansli sonuclarla zayif bir aracin onerilmesini onlemek.', en: 'To avoid recommending a weak tool on a few lucky results.' },

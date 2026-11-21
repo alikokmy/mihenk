@@ -114,3 +114,25 @@ test('paket: plan belgesindeki tablo butun madde kodlarini iceriyor (belge ile p
   const plan = readFileSync(join(DEPO, 'docs', 'SONUCLAR.md'), 'utf8');
   for (const m of maddeler) assert.ok(new RegExp(`\\| ${m.kod} \\|`).test(plan), `SONUCLAR.md tablosunda ${m.kod} yok`);
 });
+
+test('KABUL bir girer, bir cikar (Asama 40): 0.7 ve sonrasi eklenen her madde kaldirdigi kodu ya da kaldirmama nedenini yazar; cikan madde gerekcesiyle durur', () => {
+  const k = JSON.parse(readFileSync(join(DEPO, 'paket', 'kurallar.json'), 'utf8')) as {
+    maddeler: Array<Madde & { surum?: string; yerine?: string; kaldirmama_nedeni?: string }>;
+    cikanlar?: Array<{ kod: string; gerekce: string; surum: string }>;
+  };
+  const cikanlar = k.cikanlar ?? [];
+  const yeni = k.maddeler.filter((m) => m.surum !== undefined && Number(m.surum) >= 0.7);
+  assert.ok(yeni.length >= 1);
+  for (const m of yeni) {
+    assert.ok((m.yerine && m.yerine.trim()) || (m.kaldirmama_nedeni && m.kaldirmama_nedeni.trim().length > 10), `${m.kod}: yerine ya da kaldirmama_nedeni yok`);
+    if (m.yerine) assert.ok(cikanlar.some((c) => c.kod === m.yerine), `${m.kod}: yerine gectigi ${m.yerine} cikanlar listesinde yok`);
+  }
+  for (const c of cikanlar) {
+    assert.ok(c.gerekce.trim().length > 10, `${c.kod}: gerekce yok`);
+    assert.ok(!k.maddeler.some((m) => m.kod === c.kod), `${c.kod}: hem cikmis hem yururlukte`);
+  }
+  // Surumu olmayan madde eski (0.7 oncesi) sayilir; yeni madde surum yazmadan eklenemez: kod siralamasinda en buyuk K kodu surumlu olmali.
+  const kNo = (kod: string) => Number(kod.replace(/^\D+/, ''));
+  const enYeniK = k.maddeler.filter((m) => m.kod.startsWith('K')).sort((a, b) => kNo(b.kod) - kNo(a.kod))[0]!;
+  assert.ok(enYeniK.surum, `${enYeniK.kod}: yeni madde surum yazmali`);
+});

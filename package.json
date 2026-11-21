@@ -1,6 +1,6 @@
 {
   "name": "mihenk",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Kodlama ajanlari icin is defteri: kaydi tutar, kaniti kendisi denetler (MCP sunucusu)",
   "private": true,
   "type": "module",

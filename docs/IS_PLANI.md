@@ -1,5 +1,15 @@
 # İş planı (2026-11-19; kullanıcı onayı aynı gün, iki görüşle birlikte)
 
+## Şimdi (2026-11-21; en çok 15 satır; tarihçe [SONUCLAR.md](SONUCLAR.md))
+
+- **Sürüm:** 0.7 yayında (v0.7.0): metamorfik süreç kararları taşındı (Aşama 33-40).
+- **Sıradaki üç iş:** plan listesinde açık aşama yok; adaylar: karar 4 (net katkı, birim kararından sonra), eşli kıyas kipi,
+  sürücüde MCP bağlantısını bekleme (yük altındaki OpenCode bulgusu).
+- **Açık hatlar:** yok (sürücü sırayla yürütür).
+- **Kullanıcıda bekleyen kararlar:** karar 4'ün (net katkı) birimi; eşli kıyas kipi (aynı işi iki ajana yaptırmanın maliyeti);
+  Cline, Qwen Code ve gerçek Qwen / DeepSeek sunucusuyla deneme için hesap ya da ortam.
+- **Bilinen açık:** yük altında OpenCode, MCP bağlanmadan ilk isteği gönderebiliyor (Aşama 33 sonucu).
+
 Dayanak: [ARASTIRMA.md](ARASTIRMA.md).
 
 **Kullanıcının onayla birlikte verdiği iki görüş (bu sürüm onlara göre yeniden sıralandı):**
@@ -274,9 +284,9 @@ düzelten madde.
 | 35 | **tamam, plandan sapmayla** (2026-11-21; bkz. [SONUCLAR.md](SONUCLAR.md) "Aşama 35 sonucu"). 3. Ölçütün kaynağı ve şampiyon | Öneri eşiklerinin her biri çıktıda ve ayar notunda "kaynak: tahmin" diye etiketlenir. Eşiğin altında kalan seçenek keşif adayı olmayı sürdürür (tahmin eşiği kalıcı dışlamaz). İş türü başına "şampiyon" defterde tutulur; yeni seçenek ancak başarı alt sınırı şampiyonun üst sınırını aşınca (aralıklar ayrışınca) ya da maliyet kuralıyla açıkça daha iyiyse şampiyon olur; değişim gerekçesiyle yazılır, eski kayıt silinmez | eşiği geçemeyen ajan keşifte seçiliyor; çakışan aralıkta şampiyon değişmiyor, ayrışınca değişiyor ve geçmiş iki satır; çıktıda eşiklerin kaynağı yazıyor |
 | 36 | **tamam** (2026-11-21; bkz. [SONUCLAR.md](SONUCLAR.md) "Aşama 36 sonucu"). 7. Kısıt işareti | `karar_yaz`'a `kisit_ekler`. Rapor ve pencere kısıt ekleyen kararları ayrı listeler ve sayısını yazar | işaretli karar raporda ayrı bölümde ve sayıda; eski defter açılıyor |
 | 37 | **tamam** (2026-11-21; bkz. [SONUCLAR.md](SONUCLAR.md) "Aşama 37 sonucu"). 5. İki takım | `is_ac`'a isteğe bağlı `bilgi_komutu`: ana doğrulama geçer, bilgi denetimi kalırsa iş "geçti" kapanır ama kayda "bilgi denetimi kaldı" notu düşer. mihenk'in kendi testlerinde belgeyi sınayanlar `npm run test:bilgi`, ötekiler `npm run test:engel` | bilgi komutu kalan iş geçti + not; bilgi komutu geçerse not yok; iki betik birlikte bütün test dosyalarını tam bir kez kapsıyor |
-| 38 | 9. Kısa durum | IS_PLANI'nin başında en çok 15 satırlık "Şimdi" bloğu (sıradaki üç iş, açık hatlar, kullanıcıda bekleyen kararlar); tarihçe SONUCLAR'da | test blok var ve 15 satırı aşmıyor |
-| 39 | 8. Kullanım ölçütüyle silme | `.mihenk/ciktilar`: "geçti" kapanan işin ajan ve doğrulama çıktıları liste sonunda silinir; "kaldı" ve "belirsiz" işlerinki (kök neden için) giderilene dek kalır; hazırlık ve planlama çıktısı iş kaydı açılınca silinir. Defterdeki atıf kalır, rapor "silindi" yazar | sentetik projede yalnız kullanılmayan dosyalar siliniyor; kaldı işinin çıktısı duruyor |
-| 40 | 6. Kural dosyasında yalnız kural; bir girer, bir çıkar | `kurallar.json`'da 0.7 ve sonrası eklenen her madde `yerine` (kaldırdığı kod) ya da `kaldirmama_nedeni` taşır; çıkan madde `cikanlar` listesinde gerekçesiyle durur | alansız yeni madde testte kalıyor |
+| 38 | **tamam** (2026-11-21; bkz. [SONUCLAR.md](SONUCLAR.md) "Aşama 38 sonucu"). 9. Kısa durum | IS_PLANI'nin başında en çok 15 satırlık "Şimdi" bloğu (sıradaki üç iş, açık hatlar, kullanıcıda bekleyen kararlar); tarihçe SONUCLAR'da | test blok var ve 15 satırı aşmıyor |
+| 39 | **tamam** (2026-11-21; bkz. [SONUCLAR.md](SONUCLAR.md) "Aşama 39 sonucu"). 8. Kullanım ölçütüyle silme | `.mihenk/ciktilar`: "geçti" kapanan işin ajan ve doğrulama çıktıları liste sonunda silinir; "kaldı" ve "belirsiz" işlerinki (kök neden için) giderilene dek kalır; hazırlık ve planlama çıktısı iş kaydı açılınca silinir. Defterdeki atıf kalır, rapor "silindi" yazar | sentetik projede yalnız kullanılmayan dosyalar siliniyor; kaldı işinin çıktısı duruyor |
+| 40 | **tamam, bir notla** (2026-11-21; bkz. [SONUCLAR.md](SONUCLAR.md) "Aşama 40 sonucu"). 6. Kural dosyasında yalnız kural; bir girer, bir çıkar | `kurallar.json`'da 0.7 ve sonrası eklenen her madde `yerine` (kaldırdığı kod) ya da `kaldirmama_nedeni` taşır; çıkan madde `cikanlar` listesinde gerekçesiyle durur | alansız yeni madde testte kalıyor |
 
 **Karar 4 (kabul yolu, net katkı): yalnız plan notu, kullanıcı görüşüne kadar uygulanmaz.**
 - Öneri: net katkı ajan ve model kıyasına uygulanır. Örneğin belirgin ucuz ama başarısı biraz düşük bir seçenek, başarı kaybı küçükse ve

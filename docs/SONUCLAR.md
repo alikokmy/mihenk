@@ -1205,3 +1205,53 @@ Ters denetim: işaret yazılmayınca kabul testi kaldı. `npm test` 270/270.
 **Sınır.** Ayrım dosya düzeyindedir. `el-oturumu.test.ts` içindeki README "Sorular" denetimi bir belge testidir, ama dosyanın geri
 kalanı ürün testi olduğu için engelleyen takımda kaldı. mihenk'in bu depoda kendi commit kancası yok; ayrımı bir kancanın zorlaması
 metamorfik'teki gibi yapılmadı.
+
+## Aşama 38 sonucu (2026-11-21)
+
+**Karar 9'un taşınması.** metamorfik kararı 9 ("kısa durum") taşındı.
+- `IS_PLANI.md`'nin ilk bölümü artık en çok 15 satırlık "Şimdi" bloğu: sürüm, sıradaki üç iş, açık hatlar, kullanıcıda bekleyen
+  kararlar, bilinen açık. Tarihçe bu dosyada.
+- Belge testi `test/belge.test.ts` bilgi takımında: blok ilk bölüm, 15 satırı aşmıyor, sıradaki işleri ve bekleyen kararları içeriyor.
+- Rapor özeti zaten 3 satır ve pencere özeti kısa; ayrıca bir şey gerekmedi.
+
+## Aşama 39 sonucu (2026-11-21)
+
+**Karar 8'in taşınması.** metamorfik kararı 8 ("kullanım ölçütüyle silme", kullanıcı 2026-11-20) taşındı (`src/temizlik.ts`). Liste
+bitince `.mihenk/ciktilar` içinde şunlar silinir:
+- "geçti" işlerin çıktıları;
+- giderilmiş kusurların çıktıları;
+- kaydı açılmış işlerin hazırlık çıktıları;
+- planlama çıktısı.
+
+Durur:
+- "kaldı" ve "belirsiz" işlerinki (kök neden için);
+- açık işlerinki;
+- başarısız hazırlıklarınki (kusurun kanıtı).
+
+Defter kaydı ve hüküm silinmez. Kanıttaki atıf durur ve `cikti_silindi: true` işareti taşır. Ayar `cikti_temizligi` (varsayılan açık)
+kapatır; pencerede görünüyor.
+
+**Kanıt:** `test/temizlik.test.ts`. Beş iş ve sekiz dosyalık sentetik projede beklenen beş grup silindi, dört grup durdu. Kaldı işinin
+doğrulama çıktısı durdu. Atıf "silindi" işaretli; duran dosyanın atıfı işaretsiz. Ters denetim: her şeyi silen kural testte kaldı.
+
+**Uygulanmayan.** Fotoğraflar (geri alma) için zaten "en fazla 5" kuralı var (Aşama 15). Kullanım ölçütüne göre geri alınabilecek iş
+kalmayınca silinmeleri ayrıca değiştirilmedi.
+
+## Aşama 40 sonucu (2026-11-21)
+
+**Karar 6'nın taşınması.** metamorfik kararı 6 ("kural dosyasında yalnız kural; bir girer, bir çıkar") taşındı.
+- `kurallar.json`'da 0.7 ve sonrasında eklenen her madde `surum` ve şunlardan birini taşıyor: kaldırdığı kod (`yerine`) ya da kaldırmama
+  nedeni (`kaldirmama_nedeni`).
+- Çıkan maddeler (O2, O6) `cikanlar` listesinde gerekçesiyle duruyor.
+- `test/paket.test.ts` (bilgi takımı) şunları zorluyor: alanların varlığı, `yerine` kodunun gerçekten çıkmış olması, çıkan maddenin
+  yürürlükte olmaması, en yeni K kodunun sürüm yazması.
+- Bu sürümdeki muhasebe: O2 ve O6 çıktı; K10, K11 ve K12 onların yerine girdi; K13 kaldırmama nedeniyle girdi.
+
+**Öneri kalan.** "Kural dosyasında alıntı, gerekçe ve ders olmaz" mekanik olarak denetlenmiyor: bir cümlenin gerekçe mi kural mı
+olduğunu test ayıramaz. `paket/AGENTS.md` ve skill'ler kısa; gerekçeler bu dosyada ve `kurallar.json`'un `cikanlar` alanında.
+
+**Etkileşim (Aşama 39-32).** Temizlik, kaydı açılmış işin hazırlık çıktısını siliyor. Aşama 32'nin kabul testi bu dosyayı kanıt olarak okuduğu için o testte temizlik kapatıldı. Ürün davranışı doğru: hazırlığın sonucu (test kaldı) defterde sürücü notu olarak duruyor.
+
+`npm test` 275/275 (bilgi takımı 15, engel takımı 260).
+
+**Sürüm 0.7:** Aşama 33-40 kapandı; `v0.7.0`.

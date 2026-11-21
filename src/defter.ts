@@ -181,6 +181,8 @@ export interface KanitKaydi {
   sure_ms: number | null;
   cikti_ozeti: string | null;
   cikti_dosyasi: string | null;
+  /** Cikti dosyasi kullanim olcutuyle silindi (Asama 39); atif durur. */
+  cikti_silindi?: boolean;
 }
 
 export interface KararKaydi {
@@ -977,7 +979,9 @@ export class Defter {
   }
 
   private kanitlar(isId: number): KanitKaydi[] {
-    return this.db.prepare('SELECT * FROM kanitlar WHERE is_id = ? ORDER BY id').all(isId) as unknown as KanitKaydi[];
+    // Cikti dosyasi kullanim olcutuyle silindiyse (Asama 39) atif kalir, "silindi" isareti eklenir.
+    return (this.db.prepare('SELECT * FROM kanitlar WHERE is_id = ? ORDER BY id').all(isId) as unknown as KanitKaydi[])
+      .map((k) => (k.cikti_dosyasi && !existsSync(join(this.kok, k.cikti_dosyasi)) ? { ...k, cikti_silindi: true } : k));
   }
 
   private kararlar(isId: number): KararKaydi[] {
