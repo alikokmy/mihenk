@@ -1,13 +1,83 @@
 # mihenk
 
-Kodlama ajanlarının bağlandığı, işi kayda alan, kanıtı kendisi denetleyen, iş listesini kesintisiz yürüten ve hangi işin hangi ajana verileceğini
-ölçerek öneren ince bir katman.
+**Fikrinizi yazın, yapay zekâ yazılıma çevirsin; mihenk de işin gerçekten yapıldığını denetlesin.**
 
-Ad: mihenk taşı, altının ayarını sınamak için kullanılan taştır. Proje iki şeyi sınar: yapılan işin doğruluğunu ve işi yapan ajanın o iş türündeki
-değerini (doğruluk, süre, maliyet).
+mihenk, bilgisayarınızdaki bir yapay zekâ kodlama aracına (örneğin Claude Code) iş yaptıran bir penceredir. Siz ne istediğinizi kendi
+cümlelerinizle yazarsınız. mihenk bunu küçük işlere böler, işleri sırayla yapay zekâya verir ve her işin bittiğini kendi denetimiyle
+doğrular. Yapay zekâ "bitti" dedi diye iş bitmiş sayılmaz.
 
-**Durum: sürüm 0.6.** Kodlama bilmeyen kullanıcı için: tek dosyaya çift tıklayarak başlanır, fikir düz dille yazılır ve işlere bölünür, her ayar penceredendir. Sürüm 0.5: Öneri zorluğu, abonelikteki kota payını ve az denenen araçların keşfini hesaba katıyor. Sürüm 0.4: internetsiz ortam için tek zip paket ve OpenCode + yerel model uyumu. Defter, yöntem paketi, sürücü, uyum testleri, süre ve maliyet, öneri, kanıtsız "bitti"ye kapı ve temiz kaldırma
-yazıldı ve denendi. Açık kalemler ve sürüm 0.2 taslağı [docs/IS_PLANI.md](docs/IS_PLANI.md) içinde.
+Kod yazmayı bilmeniz, komut satırı kullanmanız ya da yönetici izni almanız gerekmez. Şu an yalnız **Windows** için.
+
+## Başlamak
+
+### 1. Yapay zekâ aracı edinin (bir kez)
+
+mihenk işi kendisi yapmaz; bilgisayarınızda kurulu bir yapay zekâ kodlama aracına yaptırır. En çok denenen araç **Claude Code**'dur:
+
+- Kurulum: [Claude Code kurulum sayfası](https://code.claude.com/docs/en/setup). Windows bölümündeki tek satırlık komutu
+  PowerShell'e yapıştırmanız yeter; yönetici izni gerekmez.
+- Kurulumdan sonra bir kez `claude` yazıp Anthropic hesabınızla giriş yapın. Claude Code ücretli bir abonelik ya da API hesabı ister.
+
+Başka seçenekler: [OpenCode](https://opencode.ai) (kendi bilgisayarınızdaki ücretsiz bir modelle de çalışabilir), Codex CLI, Kilo Code
+CLI. Hangi aracın ne kadar denendiği aşağıdaki "Ayrıntılar" bölümünde.
+
+### 2. mihenk'i indirin
+
+**[mihenk'i indir (Windows, zip)](https://github.com/alikokmy/mihenk/releases/latest/download/mihenk-windows.zip)**
+
+İçinde gereken her şey var; ayrıca bir şey kurmanız gerekmez.
+
+1. İndirilen zip dosyasına sağ tıklayıp **Tümünü ayıkla**'yı seçin.
+2. Çıkan klasörü kalıcı bir yere koyun, örneğin **Belgeler**. Sonra yerini değiştirmeyin.
+
+### 3. Açın
+
+1. Klasördeki **`Mihenk-Ac.cmd`** dosyasına çift tıklayın. Siyah bir pencere açılır, ardından tarayıcınızda mihenk sayfası gelir.
+2. İnternetten indirildiği için Windows bir güvenlik uyarısı gösterebilir. **Çalıştır**'a basın; uyarıda bu düğme yoksa önce **Ek
+   bilgi**'ye, sonra **Yine de çalıştır**'a basın.
+3. Sayfada **Yeni proje** açın ya da üzerinde çalışmak istediğiniz klasörü seçin. mihenk o klasöre kurulmak için izninizi ister.
+4. Bir dahaki sefere kolay açmak için sayfadaki **Masaüstüne kısayol koy** düğmesine basın.
+
+### 4. Fikrinizi yazın
+
+1. **İş listesi** sekmesinde "Fikrinizi yazın" kutusuna ne istediğinizi yazın. Örnek: "Yemek tariflerimi saklayıp arayabileceğim basit
+   bir uygulama istiyorum."
+2. **İşlere böl**'e basın. Yapay zekâ fikri küçük işlere böler. Önerilen işleri okuyun; istemediğinizi silin, yanlışı düzeltin.
+3. **Listeyi başlat**'a basın. İşler sırayla yapılır. Her işin durumunu sayfada görürsünüz: sırada, yapılıyor, bitti, olmadı.
+4. Bir iş ancak mihenk'in denetimi geçince **bitti** sayılır. Yapay zekâ kendi denetimini kolaylaştırmaya çalışırsa iş **şüpheli**
+   diye işaretlenir.
+
+Bilgisayarı kapatmadan uzun bir listeyi gece boyu çalıştırabilirsiniz. **Ayarlar** sekmesindeki "Liste sürerken bilgisayarı uyanık
+tut" uykuyu önler.
+
+Tarayıcı sekmesini kapatınca mihenk birkaç dakika içinde kendiliğinden kapanır; liste çalışıyorsa bitmesini bekler.
+
+### Sık sorulanlar
+
+- **Bir şey ters gitti, ne yapayım?** **Proje** sekmesindeki **Durum** her satırda TAMAM ya da SORUN yazar ve ne yapılacağını söyler.
+  "Bu bilgisayarda yapay zekâ aracı bulunamadı" yazıyorsa 1. adıma dönün.
+- **Yapay zekânın yaptığı bir değişikliği geri almak istiyorum.** **Defter** sekmesinde o işin yanındaki **Değişikliklerini geri al**.
+  Önce ne olacağını gösterir.
+- **Ne kadar harcadım, hangi araç daha iyi?** **Öneri ve maliyet** sekmesi.
+- **Dili İngilizce yapmak istiyorum.** **Ayarlar** sekmesinde **Dil**.
+- **Hata bildirmek istiyorum.** **Proje** sekmesinde **Hata raporu oluştur**. Kişisel yollar ve anahtarlar temizlenmiş tek dosya üretir;
+  onu [GitHub'da yeni bir konu](https://github.com/alikokmy/mihenk/issues) açarak ekleyin.
+- **mihenk'i kaldırmak istiyorum.** Bir projeden: **Proje** sekmesinde **Kaldır**; proje mihenk'ten önceki haline döner. Bilgisayardan:
+  indirdiğiniz klasörü silin.
+- **İnternetim yok / kendi modelimi kullanmak istiyorum.** Aşağıda "İnternetsiz ortam ve yerel model".
+
+---
+
+## Ayrıntılar (meraklısı ve geliştirici için)
+
+Bundan sonrası teknik bilgidir; mihenk'i kullanmak için okumanız gerekmez.
+
+mihenk, kodlama ajanlarının bağlandığı, işi kayda alan, kanıtı kendisi denetleyen, iş listesini kesintisiz yürüten ve hangi işin hangi
+ajana verileceğini ölçerek öneren ince bir katmandır. Ad: mihenk taşı, altının ayarını sınamak için kullanılan taştır. Proje iki şeyi
+sınar: yapılan işin doğruluğunu ve işi yapan ajanın o iş türündeki değerini (doğruluk, süre, maliyet).
+
+**Durum: sürüm 0.7.** Ayrıntılı geçmiş ve açık kalemler [docs/IS_PLANI.md](docs/IS_PLANI.md) ve [docs/SONUCLAR.md](docs/SONUCLAR.md)
+içinde.
 
 | Araç | Kurulum | Gerçek denemede | Kapı (kanca) |
 |---|---|---|---|
@@ -20,28 +90,7 @@ yazıldı ve denendi. Açık kalemler ve sürüm 0.2 taslağı [docs/IS_PLANI.md
 | Qwen Code | var | **denenmedi**: ücretsiz katmanı kapandı; kurulum belgeye göre yazıldı | belgeye göre yazıldı, denenmedi |
 | Gemini CLI | var | **denenmedi**: ücretsiz katmanda kaldırılmış | yok |
 
-## Başlamak (kodlama bilmeyen kullanıcı için)
-
-1. mihenk klasörünü (zip'ten açılmış haliyle) kalıcı bir yere koyun, örneğin Belgeler.
-2. İçindeki **`Mihenk-Ac.cmd`** dosyasına çift tıklayın. Tarayıcıda mihenk penceresi açılır.
-3. Pencerede var olan bir projeyi seçin (Windows'un klasör seçicisiyle ya da yolu yapıştırarak) ya da fikriniz için **yeni proje**
-   açın. Proje kurulu değilse mihenk önce sorar, sonra kurar.
-4. İşleri pencerede yazar ve takip edersiniz. "Masaüstüne kısayol koy" ile bir dahaki sefere masaüstünden açabilirsiniz.
-
-**Fikirden yazılıma.** İş listesi sekmesinin en üstündeki "Fikrinizi yazın" kutusuna ne istediğinizi kendi cümlelerinizle yazın ve
-"İşlere böl"e basın. Sonra adım adım şunlar olur:
-
-1. Kurulu bir yapay zekâ aracı fikri küçük işlere böler. Önerilen işler düz dille forma eklenir; siz okur, düzeltir ya da silersiniz.
-2. Hiçbir işe komut yazmanız gerekmez. Komutu boş bir işte yapay zekâ önce o işin **kabul testini** yazar. mihenk bu testin iş
-   yapılmadan kaldığını kendisi denetler.
-3. İş ancak bu test geçince "bitti" sayılır. Yapay zekâ işi yaparken testi değiştirirse sonuç "şüpheli" diye işaretlenir.
-4. "İşlerin durumu" kartı her işi düz dille gösterir: sırada, şu an yapılıyor, bitti, olmadı, başlayamadı ve nedeni.
-
-Komut satırı, `npm install` ya da ayar dosyası düzenlemek gerekmez; yönetici izni istenmez. Tarayıcıdaki sayfayı kapatınca mihenk
-birkaç dakika içinde kendiliğinden kapanır (iş listesi çalışıyorsa bitmesini bekler). Paket, internetli bir bilgisayarda
-`npm run paketle` ile üretilir (bkz. "İnternetsiz ortam ve yerel model").
-
-- [README.en.md](README.en.md): English. İletileri İngilizce yapmak için: `mihenk ayar dil en`.
+- [README.en.md](README.en.md): English.
 - [docs/ARASTIRMA.md](docs/ARASTIRMA.md): benzer açık kaynak projelerin taraması ve hüküm.
 - [docs/IS_PLANI.md](docs/IS_PLANI.md): onaylı iş planı, iki bağlayıcı ilke, aşama sonuçları ve açık kararlar.
 - [AGENTS.md](AGENTS.md): bu depoda çalışan ajanlar için kısa kurallar.
@@ -154,11 +203,12 @@ Paket, PATH'te Node olmayan ortamda ve başka bir klasöre açılmış haliyle d
 
 ## Pencere: her şeyi tek yerden yönetmek
 
-Proje klasöründeki `mihenk-pencere.cmd` dosyasına çift tıklayın. Tarayıcıda beş sekmeli bir pencere açılır: **Proje** (kur, güncelle,
+Pencere `Mihenk-Ac.cmd` ya da masaüstü kısayoluyla açılır; kurulu bir projede proje klasöründeki `mihenk-pencere.cmd` doğrudan o projeyi
+açar. Tarayıcıda beş sekmeli bir pencere açılır: **Proje** (kur, güncelle,
 kaldır), **İş listesi** (işleri yazın, başlatın, ilerlemeyi canlı izleyin, durdurun), **Defter** (geçmiş işler, nedenleri, şüpheler,
 tek tıkla geri alma, rapor), **Ayarlar** (her ayarın anlaşılır adı, kısa açıklaması, Açık / Kapalı anahtarı ve "Dosyayı aç";
 altında amacı, sonucu ve varsayılanın ne yaptığı; bu notlar en üstteki kutuyla gizlenir) ve **Öneri ve maliyet**. Pencere yalnız bu bilgisayardan açılır (127.0.0.1) ve her açılışta değişen bir
-anahtarla korunur; başka bir web sitesi ona ulaşamaz. Kurulum ve yönetici izni gerekmez. İşiniz bitince siyah komut penceresini kapatın.
+anahtarla korunur; başka bir web sitesi ona ulaşamaz. Kurulum ve yönetici izni gerekmez. Tarayıcı sekmesini kapatınca mihenk birkaç dakika içinde kendiliğinden kapanır.
 
 **Dosya ya da komut satırı gerekmez.** Komut satırının yapabildiği her şey ve ayar dosyalarının her alanı pencerede de var:
 

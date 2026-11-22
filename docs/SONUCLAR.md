@@ -1327,3 +1327,18 @@ altına yazılır. Kural `AGENTS.md`'de.
 - Arka plan komutlarının çıktı dosyalarını Claude Code kendisi geçici klasöre yazıyor; bu bizim elimizde değil. Kendi betik ve
   çıktılarım `.gecici/` altında.
 - `npm test` 278/278; sistemin geçici klasöründe yeni `mihenk-*` yok, mihenk deposunun dalları değişmedi.
+
+## Sürüm 0.7.1: sıradan kullanıcı için README ve indirme bağlantısı (2026-11-22)
+
+Kullanıcı isteği: README'nin ilk bölümü sıradan bir insanın yapacağı şeyi anlatsın, zip GitHub'dan indirilsin.
+
+- README ve README.en artık düz dille başlıyor: ne olduğu, yapay zekâ aracı edinmek (Claude Code; seçenek OpenCode), zip'i indirip
+  açmak, `Mihenk-Ac.cmd`, fikri yazmak, sık sorulanlar. Hepsi pencereden; komut yok (yapay zekâ aracının kendi kurulumu hariç).
+- Teknik içerik "Ayrıntılar" başlığının altına indi. Eski çelişkiler düzeltildi: sürüm 0.6 yazıyordu, pencere bölümü "siyah pencereyi
+  kapatın" diyordu.
+- Düğme adları penceredeki metinlerle karşılaştırıldı; İngilizcesi `src/dil.ts` kataloğundan alındı.
+- Zip GitHub sürümüne `mihenk-windows.zip` adıyla yükleniyor. Bağlantı `releases/latest/download/mihenk-windows.zip` olduğu için
+  yeni sürümde değişmiyor.
+- **Duman.** Zip sistem tar'ıyla `.gecici/` altına açıldı; `mihenk.cmd kur` 41 dosya yazdı, `doktor` çalıştı.
+- **Sınır.** Bağlantı depo açık (public) olana dek yalnız depoya erişimi olana çalışır; görünürlüğü kullanıcı değiştirecek.
+  Claude Code kurulumu tek satırlık bir PowerShell komutu istiyor; bu mihenk'in elinde değil.
